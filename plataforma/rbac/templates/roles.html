@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block titulo %}Roles{% endblock %}
+{% block cuerpo %}
+<h1>Catálogo de roles</h1>
+<p class="sub">19 roles de la Determinación 7 (Decisión No. 02) + roles TI del SGSI + roles externos.
+Los roles desactivados salen de la matriz y de las asignaciones, pero conservan su historial.</p>
+
+<div class="panel">
+  <h2>Crear rol</h2>
+  <form class="linea" method="post" action="{{ url_for('rol_crear') }}">{{ csrf_campo() }}
+    <label class="campo">Código<input name="codigo" required placeholder="205 / TI5" style="width:80px"></label>
+    <label class="campo">Abrev.<input name="abreviatura" required placeholder="DXX" style="width:80px"></label>
+    <label class="campo">Denominación oficial<input name="denominacion" required style="width:250px"></label>
+    <label class="campo">Grupo
+      <select name="grupo_id">{% for g in grupos %}<option value="{{ g.id }}">{{ g.nombre }}</option>{% endfor %}</select></label>
+    <label class="campo">Cosecha<input name="cosecha" placeholder="01 al 05 / N/A" style="width:100px"></label>
+    <label class="campo">¿En Det. 7?
+      <select name="en_det7"><option value="1">Sí</option><option value="0">No</option></select></label>
+    <label class="campo">MFA
+      <select name="mfa_requerido"><option>No</option><option>Sí — sistemas críticos</option><option>Sí — obligatorio</option><option>N/A</option></select></label>
+    <label class="campo">Riesgo ATT&CK
+      <select name="riesgo_attack"><option>Bajo</option><option>Medio</option><option>Alto</option></select></label>
+    <label class="campo">Revisión
+      <select name="revision_periodica"><option>Semestral</option><option>Trimestral</option><option>Mensual</option><option>Anual</option></select></label>
+    <label class="campo">Clonar accesos desde
+      <select name="clonar_de">
+        <option value="">Ninguno — iniciar sin accesos</option>
+        {% for r in roles_todos %}<option value="{{ r.id }}">{{ r.abreviatura }} — {{ r.denominacion }}</option>{% endfor %}
+      </select></label>
+    <button type="submit">Crear rol</button>
+  </form>
+  <p class="sub" style="margin:6px 0 0">Si no clona un rol existente, la fila del nuevo rol en la matriz se inicializa <b>sin accesos</b> (mínimo privilegio); defínalos luego en la Matriz.</p>
+</div>
+
+<form class="filtros" method="get" action="{{ url_for('roles') }}">
+  <label class="campo">Buscar
+    <input type="search" name="q" value="{{ f_q }}" placeholder="Código, abreviatura o denominación…"></label>
+  <label class="campo">Grupo
+    <select name="grupo">
+      <option value="">Todos</option>
+      {% for g in grupos %}<option value="{{ g.id }}" {% if f_grupo==g.id %}selected{% endif %}>{{ g.nombre }}</option>{% endfor %}
+    </select></label>
+  <label class="campo">Riesgo ATT&CK
+    <select name="riesgo">
+      <option value="">Todos</option>
+      {% for r in riesgos %}<option value="{{ r }}" {% if r==f_riesgo %}selected{% endif %}>{{ r }}</option>{% endfor %}
+    </select></label>
+  <label class="campo">Estado
+    <select name="estado">
+      <option value="">Todos</option>
+      <option value="Activo" {% if f_estado=='Activo' %}selected{% endif %}>Activo</option>
+      <option value="Desactivado" {% if f_estado=='Desactivado' %}selected{% endif %}>Desactivado</option>
+    </select></label>
+  <button type="submit" class="secundario">Filtrar</button>
+  {% if f_q or f_grupo or f_riesgo or f_estado %}<a class="boton secundario" href="{{ url_for('roles') }}">Limpiar</a>{% endif %}
+</form>
+
+<table>
+  <tr><th>Código</th><th>Abrev.</th><th>Denominación oficial</th><th>Grupo</th>
+      <th>Det. 7</th><th>MFA</th><th>Riesgo</th><th>Revisión</th>
+      <th class="num">Accesos</th><th class="num">Nivel A</th><th>Estado</th><th></th></tr>
+  {% for r in roles %}
+  <tr {% if not r.activo %}style="opacity:.55"{% endif %}>
+    <td>{{ r.codigo }}</td>
+    <td><a href="{{ url_for('rol_detalle', rid=r.id) }}"><b>{{ r.abreviatura }}</b></a></td>
+    <td>{{ r.denominacion }}</td><td>{{ r.grupo }}</td>
+    <td>{{ 'Sí' if r.en_det7 else 'No — rol SGSI' }}</td>
+    <td>{{ r.mfa_requerido }}</td>
+    <td class="riesgo-{{ r.riesgo_attack }}">{{ r.riesgo_attack }}</td>
+    <td>{{ r.revision_periodica }}
+      {% if r.activo %}
+      <br><small class="{{ 'riesgo-Alto' if r.revision_vencida else 'sub' }}">
+        {{ r.ultima_revision or 'nunca revisado' }}{% if r.revision_vencida %} — vencida{% endif %}</small>
+      {% endif %}</td>
+    <td class="num">{{ r.n_accesos }}</td>
+    <td class="num">{% if r.n_admin %}<b class="riesgo-Alto">{{ r.n_admin }}</b>{% else %}0{% endif %}</td>
+    <td class="{{ 'estado-Activo' if r.activo else 'estado-Revocado' }}">{{ 'Activo' if r.activo else 'Desactivado' }}</td>
+    <td>
+      {% if r.activo %}
+      <form class="inline" method="post" action="{{ url_for('rol_revisar', rid=r.id) }}">{{ csrf_campo() }}
+        <button type="submit" class="secundario">Marcar revisado</button>
+      </form>
+      {% endif %}
+      <form class="inline" method="post" action="{{ url_for('rol_activo', rid=r.id) }}">{{ csrf_campo() }}
+        <button type="submit" class="secundario">{{ 'Desactivar' if r.activo else 'Reactivar' }}</button>
+      </form>
+      <form class="inline" method="post" action="{{ url_for('rol_eliminar', rid=r.id) }}"
+            data-confirm="¿Eliminar definitivamente el rol {{ r.abreviatura }}? Esta acción borra su fila de la matriz y no se puede deshacer. Si desea conservar el historial, use Desactivar.">{{ csrf_campo() }}
+        <button type="submit" class="peligro">Eliminar</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  {% if not roles %}<tr><td colspan="12" class="sub">Ningún rol coincide con el filtro aplicado.</td></tr>{% endif %}
+</table>
+{% endblock %}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingreso — Soluciones SUIIN</title>
+<style>
+  :root{--verde-profundo:#0d2b23;--verde-medio:#164a3b;--acento:#3fa87f;--dorado:#c9a94e;--borde:#d9e2dd}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--verde-profundo);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .box{background:#fff;border-radius:14px;width:100%;max-width:390px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .head{background:var(--verde-profundo);color:#fff;padding:26px 28px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden}
+  .head::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border:2px solid rgba(63,168,127,.25);border-radius:50%;box-shadow:0 0 0 16px rgba(63,168,127,.08)}
+  .ring{width:46px;height:46px;border:3px solid var(--acento);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ring span{font-weight:bold;color:var(--dorado);font-size:16px}
+  .head h1{font-size:16px} .head .s{font-size:11px;color:#a9c7ba;margin-top:2px}
+  form{padding:26px 28px}
+  label{display:block;font-size:12px;font-weight:bold;color:#3a4b44;margin:12px 0 4px}
+  input{width:100%;padding:11px 12px;border:1px solid var(--borde);border-radius:8px;font-size:14px}
+  button{width:100%;margin-top:20px;padding:12px;background:var(--acento);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer}
+  button:hover{background:var(--verde-medio)}
+  .err{background:#fbeae9;color:#8a1c17;border:1px solid #e7b3af;border-radius:7px;padding:9px 12px;font-size:13px;margin-top:14px}
+  .foot{text-align:center;font-size:11px;color:#7c8a83;padding:0 28px 22px}
+  a{color:var(--acento);text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="head">
+      <div class="ring"><span>SU</span></div>
+      <div><h1>Soluciones SUIIN</h1><div class="s">Inventario de Activos SGSI · Matriz RBAC</div></div>
+    </div>
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      {% if form.errors %}<div class="err">Usuario o contraseña incorrectos.</div>{% endif %}
+      <label for="id_username">Usuario</label>
+      {{ form.username }}
+      <label for="id_password">Contraseña</label>
+      {{ form.password }}
+      <input type="hidden" name="next" value="/">
+      <button type="submit">Ingresar</button>
+    </form>
+    <div class="foot">Acceso restringido · Roles: Consultor · Dinamizador · Administrador<br>
+      <a href="/">← Volver al tablero (solo consulta)</a></div>
+  </div>
+</body>
+</html>

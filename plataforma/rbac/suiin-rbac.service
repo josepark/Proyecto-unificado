@@ -1,0 +1,15 @@
+# Unidad systemd de ejemplo — copie a /etc/systemd/system/suiin-rbac.service
+[Unit]
+Description=SUIIN-RBAC — Matriz de Control de Acceso (SGSI CRIC)
+After=network.target
+
+[Service]
+User=suiin
+WorkingDirectory=/opt/suiin-rbac
+Environment=SUIIN_RBAC_SECRET=CAMBIE-ESTE-VALOR-ALEATORIO-LARGO
+ExecStart=/opt/suiin-rbac/venv/bin/gunicorn --workers 4 \
+          --bind 127.0.0.1:5000 app:app
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

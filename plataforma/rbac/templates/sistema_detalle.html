@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}{{ sis.nombre }}{% endblock %}
+{% block cuerpo %}
+<h1>{{ sis.nombre }}
+  {% if not sis.activo %}<span class="estado-Revocado" style="font-size:15px"> · DESACTIVADO</span>{% endif %}</h1>
+<p class="sub">{{ sis.categoria }} · Clasificación: <b>{{ sis.clasificacion }}</b>
+  {% if sis.tecnicas_attack %} · ATT&CK: {{ sis.tecnicas_attack }}{% endif %} ·
+  <a href="{{ url_for('auditoria', q=sis.nombre) }}">Ver historial de auditoría de este sistema →</a></p>
+
+<div class="panel">
+  <h2>Editar sistema</h2>
+  <form class="linea" method="post" action="{{ url_for('sistema_editar', sid=sis.id) }}">{{ csrf_campo() }}
+    <label class="campo">Nombre<input name="nombre" value="{{ sis.nombre }}" required style="width:260px"></label>
+    <label class="campo">Categoría
+      <select name="categoria_id">{% for c in categorias %}<option value="{{ c.id }}" {% if c.nombre==sis.categoria %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}</select></label>
+    <label class="campo">Clasificación
+      <select name="clasificacion">{% for x in ['Altamente Confidencial','Confidencial','Interna','Pública'] %}
+        <option {% if x==sis.clasificacion %}selected{% endif %}>{{ x }}</option>{% endfor %}</select></label>
+    <div class="campo catalogo-attack" data-catalogo-attack style="flex:1 1 260px">
+      <label for="sis-editar-attack-buscar">Técnicas ATT&CK</label>
+      <input type="text" id="sis-editar-attack-buscar" class="catalogo-buscar"
+             autocomplete="off" placeholder="Buscar por código o nombre (p. ej. T1566 o phishing)…">
+      <div class="catalogo-lista" hidden></div>
+      <div class="catalogo-chips"></div>
+      <input type="hidden" name="tecnicas_attack" class="catalogo-valor"
+             value="{{ sis.tecnicas_attack or '' }}">
+    </div>
+    <button type="submit">Guardar cambios</button>
+  </form>
+  <form class="inline" method="post" action="{{ url_for('sistema_activo', sid=sis.id) }}" style="margin-top:8px">{{ csrf_campo() }}
+    <button type="submit" class="secundario">{{ 'Desactivar sistema' if sis.activo else 'Reactivar sistema' }}</button>
+  </form>
+  <form class="inline" method="post" action="{{ url_for('sistema_eliminar', sid=sis.id) }}" style="margin-top:8px;margin-left:8px"
+        data-confirm="¿Eliminar definitivamente «{{ sis.nombre }}»? Esta acción borra su columna de la matriz y no se puede deshacer. Si desea conservar el historial, use Desactivar.">{{ csrf_campo() }}
+    <button type="submit" class="peligro">Eliminar sistema</button>
+  </form>
+</div>
+
+<div class="dos-col">
+  <div class="panel">
+    <h2>Roles con acceso ({{ roles|length }})</h2>
+    <table><tr><th>Rol</th><th>Denominación</th><th>Nivel</th></tr>
+    {% for r in roles %}
+    <tr><td><a href="{{ url_for('rol_detalle', rid=r.id) }}"><b>{{ r.abreviatura }}</b></a></td>
+        <td>{{ r.denominacion }}</td>
+        <td><span class="chip niv-{{ r.nivel }}">{{ r.nivel }}</span> {{ r.nivel_nombre }}</td></tr>
+    {% endfor %}</table>
+  </div>
+  <div class="panel">
+    <h2>Usuarios con acceso efectivo ({{ usuarios|length }})</h2>
+    {% if usuarios %}
+    <table><tr><th>Usuario</th><th>Rol</th><th>Nivel</th><th>Estado</th></tr>
+    {% for u in usuarios %}
+    <tr><td>{{ u.nombre }}</td><td>{{ u.rol }}</td>
+        <td><span class="chip niv-{{ 'X' if u.nivel=='—' else u.nivel }}">{{ u.nivel }}</span>
+          {% if u.es_excepcion %}<small title="Nivel distinto al del rol, por excepción documentada">(excepción)</small>{% endif %}</td>
+        <td class="estado-{{ u.estado }}">{{ u.estado }}</td></tr>
+    {% endfor %}</table>
+    {% else %}<p class="sub">Ningún usuario registrado tiene acceso efectivo a este recurso.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

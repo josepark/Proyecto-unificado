@@ -1,0 +1,32 @@
+SUIIN-SGSI — Resumen semanal de alertas ({{ fecha }})
+============================================================
+
+INVENTARIO DE ACTIVOS
+------------------------------------------------------------
+Total de alertas: {{ alertas.total_alertas }} ({{ alertas.alertas_criticas }} crítica(s)/alta(s))
+{% if not alertas.grupos %}
+Sin alertas pendientes en el Inventario.
+{% else %}{% for g in alertas.grupos %}
+{{ g.titulo }} ({{ g.items|length }}):
+{% for i in g.items_mostrados %}  - [{{ i.severidad|upper }}] {{ i.id_activo }} — {{ i.nombre }}: {{ i.detalle }}
+{% endfor %}{% if g.items_restantes > 0 %}  ... y {{ g.items_restantes }} más (ver la pestaña Alertas).
+{% endif %}
+{% endfor %}{% endif %}
+
+MATRIZ RBAC
+------------------------------------------------------------
+{% if not rbac %}
+No se pudo consultar RBAC al generar este resumen (revisar que el servicio esté disponible).
+{% else %}Cumplimiento MFA: {{ rbac.mfa_pct }}% ({{ rbac.mfa_ok }} de {{ rbac.mfa_total }})
+
+{% if rbac.proximos_vencimientos %}Vencimientos en los próximos {{ rbac.dias_alerta }} días ({{ rbac.proximos_vencimientos|length }}):
+{% for v in rbac.proximos_vencimientos %}  - {{ v.tipo }}: {{ v.nombre }} ({{ v.contexto }}) — vence {{ v.fecha_fin }}, en {{ v.dias }} día(s)
+{% endfor %}
+{% endif %}{% if rbac.alertas_mfa %}Usuarios con MFA exigido pero no activo ({{ rbac.alertas_mfa|length }}):
+{% for a in rbac.alertas_mfa %}  - {{ a.nombre }} ({{ a.rol }})
+{% endfor %}
+{% endif %}{% if not rbac.proximos_vencimientos and not rbac.alertas_mfa %}Sin vencimientos próximos ni incumplimientos de MFA.
+{% endif %}{% endif %}
+------------------------------------------------------------
+Este es un resumen automático. Para el detalle completo, entre a la
+plataforma: pestañas Alertas (Inventario) y Auditoría/Inicio (Matriz RBAC).

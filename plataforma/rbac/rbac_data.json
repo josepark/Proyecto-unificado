@@ -1,0 +1,4211 @@
+{
+ "roles": [
+  {
+   "codigo": "001",
+   "abrev": "CM",
+   "denominacion": "Consejería Mayor",
+   "grupo": "Gobierno",
+   "cosecha": "01",
+   "mfa": "Sí — obligatorio",
+   "riesgo": "Alto",
+   "revision": "Trimestral",
+   "nota": "Acceso ejecutivo completo. MFA obligatorio. Revisión trimestral de accesos privilegiados.",
+   "funcion": "Máxima autoridad del CRIC. Aprueba políticas SI. Orienta la administración propia comunitaria central. Elegida por las 10 zonas y ratificada en congresos y juntas directivas regionales.",
+   "en_det7": true
+  },
+  {
+   "codigo": "002",
+   "abrev": "DOS",
+   "denominacion": "Dinamizador Orientador de Sistema",
+   "grupo": "Gobierno",
+   "cosecha": "01",
+   "mfa": "Sí — sistemas críticos",
+   "riesgo": "Alto",
+   "revision": "Semestral",
+   "nota": "Acceso completo a sistemas misionales. MFA en sistemas críticos. Revisión semestral.",
+   "funcion": "Orientación general, coordinación y formulación de políticas de la organización para vivenciar la plataforma de lucha, los planes de vida y los mandatos.",
+   "en_det7": true
+  },
+  {
+   "codigo": "003",
+   "abrev": "SGC",
+   "denominacion": "Secretaría General CRIC",
+   "grupo": "Gobierno",
+   "cosecha": "01 al 05",
+   "mfa": "Sí — sistemas críticos",
+   "riesgo": "Alto",
+   "revision": "Semestral",
+   "nota": "Acceso administrativo amplio. MFA en sistemas críticos. NDA-001 vigente.",
+   "funcion": "Actividades de apoyo administrativo y complementarias a la consejería mayor y a la organización.",
+   "en_det7": true
+  },
+  {
+   "codigo": "100",
+   "abrev": "DAO",
+   "denominacion": "Dinamizador Asesor Orientador",
+   "grupo": "Asesoría",
+   "cosecha": "01 al 05",
+   "mfa": "Sí — sistemas críticos",
+   "riesgo": "Alto",
+   "revision": "Semestral",
+   "nota": "Asesor con acceso amplio. MFA obligatorio. Revisar períodos de vinculación.",
+   "funcion": "Conocimientos ancestrales, políticos o académicos que promueven la palabra armónica para el buen vivir comunitario. Orienta sobre el respeto a los seres, la transmisión de saberes tradicionales y el equilibrio.",
+   "en_det7": true
+  },
+  {
+   "codigo": "101",
+   "abrev": "DCE",
+   "denominacion": "Dinamizador Comunitario Experto",
+   "grupo": "Asesoría",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Medio",
+   "revision": "Semestral",
+   "nota": "Acceso operativo. Sin MFA obligatorio. Revisar vigencia de vinculación.",
+   "funcion": "Reconocida trayectoria político-organizativa y vivencia comunitaria. Promueve los principios de Unidad, Tierra, Cultura y Autonomía. Su labor orienta, apoya y revitaliza los sistemas propios.",
+   "en_det7": true
+  },
+  {
+   "codigo": "102",
+   "abrev": "DAP",
+   "denominacion": "Dinamizador Apoyo Político",
+   "grupo": "Asesoría",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Medio",
+   "revision": "Semestral",
+   "nota": "Acceso informativo. Sin MFA. Revisar que no tenga accesos fuera de su área.",
+   "funcion": "Ejecución y aplicación de conocimientos políticos comunitarios o profesionales especiales en la vivencia de cada uno de los sistemas.",
+   "en_det7": true
+  },
+  {
+   "codigo": "200",
+   "abrev": "DLR",
+   "denominacion": "Dinamizador Líder Regional",
+   "grupo": "Liderazgo",
+   "cosecha": "01 al 05",
+   "mfa": "Sí — sistemas críticos",
+   "riesgo": "Alto",
+   "revision": "Semestral",
+   "nota": "Acceso regional completo. MFA en sistemas críticos. Revisar por territorio.",
+   "funcion": "Conocimientos propios en caminar político-organizativo o profesional. Lidera programas o componentes en nivel regional.",
+   "en_det7": true
+  },
+  {
+   "codigo": "201",
+   "abrev": "DLZ",
+   "denominacion": "Dinamizador Líder Zonal",
+   "grupo": "Liderazgo",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Medio",
+   "revision": "Semestral",
+   "nota": "Acceso zonal. Sin MFA. Verificar no tenga accesos fuera de su zona.",
+   "funcion": "Coordinación zonal. Lidera programas o componentes en nivel zonal.",
+   "en_det7": true
+  },
+  {
+   "codigo": "202",
+   "abrev": "DLL",
+   "denominacion": "Dinamizador Líder Local",
+   "grupo": "Liderazgo",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Medio",
+   "revision": "Semestral",
+   "nota": "Acceso local. Sin MFA. Verificar accesos correspondan a su localidad.",
+   "funcion": "Coordinación local. Lidera programas o componentes en nivel local.",
+   "en_det7": true
+  },
+  {
+   "codigo": "203",
+   "abrev": "DP",
+   "denominacion": "Dinamizador Profesional",
+   "grupo": "Profesional",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Medio",
+   "revision": "Semestral",
+   "nota": "Acceso profesional. Sin MFA. Verificar área de aplicación (ver caso Eduardo Isco — POR-004 REVOCADO).",
+   "funcion": "Conocimientos propios o de carrera profesional; formación más allá de la técnica o tecnológica. Desempeña funciones esenciales en el apoyo a la minga de los sistemas.",
+   "en_det7": true
+  },
+  {
+   "codigo": "204",
+   "abrev": "DC",
+   "denominacion": "Dinamizador Comunitario PPA",
+   "grupo": "Profesional",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Acceso básico. Sin MFA. Verificar orientaciones educativas asignadas.",
+   "funcion": "Conocimientos propios en orientaciones educativas en lo pedagógico, político y administrativo.",
+   "en_det7": true
+  },
+  {
+   "codigo": "206",
+   "abrev": "DST",
+   "denominacion": "Dinamizador Secretaría Técnica",
+   "grupo": "Profesional",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Apoyo técnico-secretarial. Sin MFA. Acceso limitado a documentación.",
+   "funcion": "Apoyo técnico, administrativo, político y planificación de actividades.",
+   "en_det7": true
+  },
+  {
+   "codigo": "300",
+   "abrev": "SA",
+   "denominacion": "Sabedor Ancestral",
+   "grupo": "Conocimiento",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Sabedor ancestral. Solo lectura. Sin MFA. Acceso cultural e informativo.",
+   "funcion": "Sabios y guías espirituales de la comunidad, reconocidos y legitimados en su ejercicio de cuidado y protección del territorio, la naturaleza, la comunidad y la familia. Mantienen la armonía y el equilibrio comunitario.",
+   "en_det7": true
+  },
+  {
+   "codigo": "400",
+   "abrev": "DTG",
+   "denominacion": "Dinamizador Tecnólogo",
+   "grupo": "Tecnología",
+   "cosecha": "01 al 05",
+   "mfa": "Sí — obligatorio",
+   "riesgo": "Alto",
+   "revision": "Trimestral",
+   "nota": "⚠ ROL CRÍTICO. Admin infraestructura. MFA OBLIGATORIO. Revisión TRIMESTRAL. Acceso físico cuarto servidores.",
+   "funcion": "Funciones que exigen el desarrollo de procesos y procedimientos en labores administrativas, tecnológicas y relacionadas con la aplicación de ciencia y tecnología.",
+   "en_det7": true
+  },
+  {
+   "codigo": "500",
+   "abrev": "DCO",
+   "denominacion": "Dinamizador Colaborador",
+   "grupo": "Colaboración",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Apoyo colaborativo. Sin MFA. Acceso mínimo — solo correo y documentos generales.",
+   "funcion": "Actividades de apoyo administrativo y complementarias a la organización.",
+   "en_det7": true
+  },
+  {
+   "codigo": "600",
+   "abrev": "DCM",
+   "denominacion": "Dinamizador Conductor Mecánico",
+   "grupo": "Operativo",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Operativo. SIN ACCESO a sistemas SI. Verificar que no tenga cuentas activas.",
+   "funcion": "Funciones de apoyo en el quehacer operativo: conductor mecánico de vehículos, mantenimiento y reparación, espacios locativos y logísticos.",
+   "en_det7": true
+  },
+  {
+   "codigo": "601",
+   "abrev": "DO",
+   "denominacion": "Dinamizador Operario",
+   "grupo": "Operativo",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Operativo. SIN ACCESO a sistemas SI. Verificar que no tenga cuentas activas.",
+   "funcion": "Operaciones generales. Sin acceso a sistemas de información.",
+   "en_det7": true
+  },
+  {
+   "codigo": "602",
+   "abrev": "DCU",
+   "denominacion": "Dinamizador Custodio",
+   "grupo": "Operativo",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Custodio. Solo acceso físico supervisado al cuarto de servidores. Sin acceso lógico.",
+   "funcion": "Responsable de salvaguardar y cuidar los espacios locativos y los bienes comunitarios. Fomenta la conciencia sobre el valor del patrimonio material, fortaleciendo el vínculo con el territorio.",
+   "en_det7": true
+  },
+  {
+   "codigo": "603",
+   "abrev": "DSG",
+   "denominacion": "Dinamizador Servicios Generales",
+   "grupo": "Operativo",
+   "cosecha": "01 al 05",
+   "mfa": "No",
+   "riesgo": "Bajo",
+   "revision": "Semestral",
+   "nota": "Servicios generales. SIN ACCESO a sistemas SI. Verificar que no tenga cuentas activas.",
+   "funcion": "Gestión, cuidado y limpieza de los espacios comunitarios. Asegura condiciones armónicas para el desarrollo de actividades.",
+   "en_det7": true
+  },
+  {
+   "codigo": "TI1",
+   "abrev": "ADM-TI",
+   "denominacion": "Administrador Infraestructura TI",
+   "grupo": "TI Privilegiado",
+   "cosecha": "N/A",
+   "mfa": "Sí — obligatorio",
+   "riesgo": "Alto",
+   "revision": "Trimestral",
+   "nota": "⚠ ROL CRÍTICO TI. Admin completo infraestructura. MFA OBLIGATORIO. Revisión TRIMESTRAL. Separación de funciones con DBA.",
+   "funcion": "Administración completa de infraestructura TI: servidores, redes, virtualización, almacenamiento. Gestión de incidentes. No definido en Det. 7 — rol SGSI/ISO 27002.",
+   "en_det7": false
+  },
+  {
+   "codigo": "TI2",
+   "abrev": "DBA",
+   "denominacion": "Administrador Base de Datos",
+   "grupo": "TI Privilegiado",
+   "cosecha": "N/A",
+   "mfa": "Sí — obligatorio",
+   "riesgo": "Alto",
+   "revision": "Trimestral",
+   "nota": "⚠ ROL CRÍTICO TI. Admin BD y datos personales comuneros (Ley 1581). MFA OBLIGATORIO. Revisión TRIMESTRAL.",
+   "funcion": "Administración de bases de datos Oracle (ODA). Gestión de datos de producción y datos personales de comuneros. No definido en Det. 7 — rol SGSI/ISO 27002.",
+   "en_det7": false
+  },
+  {
+   "codigo": "TI3",
+   "abrev": "CISO",
+   "denominacion": "Responsable Seguridad Información",
+   "grupo": "TI Privilegiado",
+   "cosecha": "N/A",
+   "mfa": "Sí — obligatorio",
+   "riesgo": "Alto",
+   "revision": "Trimestral",
+   "nota": "⚠ ROL CRÍTICO SI. Propietario del SGSI. MFA OBLIGATORIO. Solo lectura datos negocio — evitar conflicto de interés.",
+   "funcion": "Gestión del SGSI, monitoreo de seguridad, SIEM, respuesta a incidentes, gestión firewall y políticas de acceso. Solo lectura en datos de negocio. No definido en Det. 7 — rol SGSI.",
+   "en_det7": false
+  },
+  {
+   "codigo": "TI4",
+   "abrev": "AUD",
+   "denominacion": "Auditor Interno",
+   "grupo": "TI Privilegiado",
+   "cosecha": "N/A",
+   "mfa": "Sí — obligatorio",
+   "riesgo": "Medio",
+   "revision": "Anual",
+   "nota": "Auditor SGSI. MFA obligatorio. Acceso TEMPORAL durante auditoría. Revocar al finalizar período.",
+   "funcion": "Auditoría del SGSI. Solo lectura. Acceso habilitado temporalmente durante período de auditoría. No definido en Det. 7 — rol SGSI.",
+   "en_det7": false
+  },
+  {
+   "codigo": "EX1",
+   "abrev": "PROV",
+   "denominacion": "Proveedor / Contratista Externo",
+   "grupo": "Externo",
+   "cosecha": "N/A",
+   "mfa": "Sí — obligatorio",
+   "riesgo": "Alto",
+   "revision": "Mensual",
+   "nota": "⚠ EXTERNO. Acceso temporal con fecha FIN obligatoria. NDA-002 firmado. Mínimo privilegio. Revocar al vencer.",
+   "funcion": "Proveedor externo con acceso temporal al sistema específico del contrato. NDA-002 obligatorio. No definido en Det. 7 — rol SGSI.",
+   "en_det7": false
+  },
+  {
+   "codigo": "EX2",
+   "abrev": "VIS",
+   "denominacion": "Visitante Externo",
+   "grupo": "Externo",
+   "cosecha": "N/A",
+   "mfa": "N/A",
+   "riesgo": "Alto",
+   "revision": "Mensual",
+   "nota": "Visitante. SIN acceso a sistemas. Solo WiFi VLAN invitados segregada. NDA-004 si accede a áreas controladas.",
+   "funcion": "Visitante sin acceso a sistemas. Solo WiFi de invitados (VLAN segregada). NDA-004 si accede a áreas controladas. No definido en Det. 7 — rol SGSI.",
+   "en_det7": false
+  }
+ ],
+ "sistemas": [
+  {
+   "nombre": "Consola Virtualización",
+   "categoria": "INFRA CRÍTICA",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1190/T1611"
+  },
+  {
+   "nombre": "Servidor (SSH/RDP Admin)",
+   "categoria": "INFRA CRÍTICA",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1078/T1021"
+  },
+  {
+   "nombre": "DB Appliance — Consola Admin",
+   "categoria": "INFRA CRÍTICA",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1190/T1213"
+  },
+  {
+   "nombre": "DB — Datos de Producción",
+   "categoria": "INFRA CRÍTICA",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1213/T1530"
+  },
+  {
+   "nombre": "NAS Open Media Vault",
+   "categoria": "INFRA CRÍTICA",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1530/T1005"
+  },
+  {
+   "nombre": "Firewall — Admin Console",
+   "categoria": "INFRA CRÍTICA",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1190/T1499"
+  },
+  {
+   "nombre": "Switches Gestionados — Admin",
+   "categoria": "INFRA CRÍTICA",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1557/T1040"
+  },
+  {
+   "nombre": "Sistema Indígena Admón Propia (SIAP)",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Confidencial",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Confidencial",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Sistema Indígena Salud (SISPI)",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1213/T1530"
+  },
+  {
+   "nombre": "Sistema Educativo Indígena (SEIP)",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Confidencial",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Sistema Gobierno Propio (SIGP)",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Gestión Documental Institucional",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Confidencial",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Portal de Reportes e Indicadores",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Interna",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Plataforma SIEM / Logs de Seguridad",
+   "categoria": "SISTEMAS",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1562/T1070"
+  },
+  {
+   "nombre": "Datos Personales de Comuneros (Ley 1581)",
+   "categoria": "DATOS",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1213/TA0010"
+  },
+  {
+   "nombre": "Datos de Salud — SISPI (datos sensibles)",
+   "categoria": "DATOS",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Registros Financieros y Contratos",
+   "categoria": "DATOS",
+   "clasificacion": "Confidencial",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Archivos Compartidos (carpetas área)",
+   "categoria": "DATOS",
+   "clasificacion": "Confidencial",
+   "attck": "T1039/T1530"
+  },
+  {
+   "nombre": "Documentos Internos — Repositorio",
+   "categoria": "DATOS",
+   "clasificacion": "Interna",
+   "attck": "T1213"
+  },
+  {
+   "nombre": "Correo Electrónico Institucional",
+   "categoria": "COMUNIC",
+   "clasificacion": "Confidencial",
+   "attck": "T1566/T1114"
+  },
+  {
+   "nombre": "VPN Corporativa",
+   "categoria": "COMUNIC",
+   "clasificacion": "Confidencial",
+   "attck": "T1133/T1078"
+  },
+  {
+   "nombre": "Red WiFi Corporativa",
+   "categoria": "COMUNIC",
+   "clasificacion": "Confidencial",
+   "attck": "T1040/T1557"
+  },
+  {
+   "nombre": "Laptops / Portátiles Asignados",
+   "categoria": "EQUIPOS",
+   "clasificacion": "Confidencial",
+   "attck": "T1200/T1052"
+  },
+  {
+   "nombre": "Desktops — Equipos de Escritorio",
+   "categoria": "EQUIPOS",
+   "clasificacion": "Interna",
+   "attck": "T1200"
+  },
+  {
+   "nombre": "Sala de Sistemas — Acceso Físico",
+   "categoria": "EQUIPOS",
+   "clasificacion": "Confidencial",
+   "attck": "T1200"
+  },
+  {
+   "nombre": "Cuarto de Servidores — Acceso Físico",
+   "categoria": "EQUIPOS",
+   "clasificacion": "Altamente Confidencial",
+   "attck": "T1200"
+  },
+  {
+   "nombre": "Impresoras / Escáneres de Red",
+   "categoria": "EQUIPOS",
+   "clasificacion": "Interna",
+   "attck": "T1119"
+  },
+  {
+   "nombre": "DVR CCTV (Hikvision/Dahua)",
+   "categoria": "EQUIPOS",
+   "clasificacion": "Confidencial",
+   "attck": "T1078/T1190"
+  }
+ ],
+ "matriz": [
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "001",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "Consola Virtualización",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "001",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "TI4",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "Servidor (SSH/RDP Admin)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "001",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "400",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "TI1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "TI2",
+   "nivel": "A"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "DB Appliance — Consola Admin",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "001",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "400",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "TI1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "TI2",
+   "nivel": "C"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DB — Datos de Producción",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "001",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "002",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "003",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "100",
+   "nivel": "M"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "101",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "201",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "NAS Open Media Vault",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "001",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "TI3",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Firewall — Admin Console",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "001",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "Switches Gestionados — Admin",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "002",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "102",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "200",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "202",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "400",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "TI1",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Admón Propia (SIAP)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "002",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "003",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "102",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "400",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "TI1",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Autorid. Territ. Económico Ambiental (ATEA)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "002",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "003",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "201",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "400",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "TI1",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "TI2",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Indígena Salud (SISPI)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "002",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "003",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "202",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "400",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "TI1",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Educativo Indígena (SEIP)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "002",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "102",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "200",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "202",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "206",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "400",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "TI1",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sistema Gobierno Propio (SIGP)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "002",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "102",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "200",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "202",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "204",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "206",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "400",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "500",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "TI3",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Gestión Documental Institucional",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "002",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "101",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "102",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "200",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "201",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "400",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "TI1",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "TI4",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Portal de Reportes e Indicadores",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "001",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "400",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "TI3",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Plataforma SIEM / Logs de Seguridad",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "001",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "003",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "100",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "101",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "200",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "400",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "TI1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "TI2",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos Personales de Comuneros (Ley 1581)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "001",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "100",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "101",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "400",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "TI1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "TI2",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Datos de Salud — SISPI (datos sensibles)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "002",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "100",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "200",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "400",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "TI1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Registros Financieros y Contratos",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "001",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "002",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "003",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "100",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "102",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "400",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "500",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "TI3",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Archivos Compartidos (carpetas área)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "001",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "002",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "003",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "100",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "102",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "300",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "400",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "500",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "TI3",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Documentos Internos — Repositorio",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "002",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "101",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "102",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "200",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "201",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "202",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "203",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "204",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "206",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "400",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "500",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "TI3",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Correo Electrónico Institucional",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "002",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "101",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "102",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "200",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "201",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "202",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "203",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "400",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "TI2",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "TI3",
+   "nivel": "C"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "VPN Corporativa",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "001",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "002",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "003",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "100",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "101",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "102",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "200",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "201",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "203",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "500",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "TI4",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "Red WiFi Corporativa",
+   "rol_codigo": "EX2",
+   "nivel": "T"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "001",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "002",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "003",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "100",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "102",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "202",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "204",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "206",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "500",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Laptops / Portátiles Asignados",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "001",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "002",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "003",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "100",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "101",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "102",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "200",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "201",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "202",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "203",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "204",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "206",
+   "nivel": "M"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "500",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Desktops — Equipos de Escritorio",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "001",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "002",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "003",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "100",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "101",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "102",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "200",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "201",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "203",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "400",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "TI3",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "Sala de Sistemas — Acceso Físico",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "001",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "400",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "602",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "TI1",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "TI2",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "TI3",
+   "nivel": "C"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "TI4",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "Cuarto de Servidores — Acceso Físico",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "001",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "002",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "003",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "100",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "101",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "102",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "200",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "201",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "202",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "203",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "204",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "206",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "500",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "TI4",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "EX1",
+   "nivel": "—"
+  },
+  {
+   "sistema": "Impresoras / Escáneres de Red",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "001",
+   "nivel": "L"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "002",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "003",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "100",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "101",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "102",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "200",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "201",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "202",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "203",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "204",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "206",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "300",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "400",
+   "nivel": "A"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "500",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "600",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "601",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "602",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "603",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "TI1",
+   "nivel": "A"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "TI2",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "TI3",
+   "nivel": "L"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "TI4",
+   "nivel": "—"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "EX1",
+   "nivel": "T"
+  },
+  {
+   "sistema": "DVR CCTV (Hikvision/Dahua)",
+   "rol_codigo": "EX2",
+   "nivel": "—"
+  }
+ ],
+ "usuarios": [
+  {
+   "nombre": "[Consejero Mayor]",
+   "rol_codigo": "001",
+   "mfa_activo": "Sí",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "[Dinamizador Orient. Sistema]",
+   "rol_codigo": "002",
+   "mfa_activo": "Sí — sistemas críticos",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "[Asesor Orientador]",
+   "rol_codigo": "100",
+   "mfa_activo": "Sí — sistemas críticos",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "[Líder Regional]",
+   "rol_codigo": "200",
+   "mfa_activo": "Sí — sistemas críticos",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "MERY AVIRAMA",
+   "rol_codigo": "203",
+   "mfa_activo": "No",
+   "nda": "NDA-001",
+   "estado": "Activo — POR-001"
+  },
+  {
+   "nombre": "LUCELIA MONTENEGRO",
+   "rol_codigo": "203",
+   "mfa_activo": "No",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "[Sabedor Ancestral]",
+   "rol_codigo": "300",
+   "mfa_activo": "No",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "[Dinamizador Tecnólogo]",
+   "rol_codigo": "400",
+   "mfa_activo": "Sí — obligatorio",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "[Dinamizador Custodio]",
+   "rol_codigo": "602",
+   "mfa_activo": "No",
+   "nda": "NDA-001",
+   "estado": "Activo"
+  },
+  {
+   "nombre": "[Proveedor TI Externo]",
+   "rol_codigo": "EX1",
+   "mfa_activo": "Sí — obligatorio",
+   "nda": "NDA-002",
+   "estado": "Temporal — hasta [fecha]"
+  },
+  {
+   "nombre": "Eduardo Isco",
+   "rol_codigo": "203",
+   "mfa_activo": "N/A",
+   "nda": "NDA-001",
+   "estado": "⚠ REVOCADO — Equipo POR-004 robado"
+  }
+ ]
+}

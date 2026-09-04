@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}SUIIN-RBAC{% endblock %} · SUIIN-SGSI-MCA-001</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ static_v('style.css') }}">
+<link rel="icon" type="image/svg+xml" href="{{ static_v('favicon.svg') }}">
+</head>
+<body class="{% if request.args.get('embed') %}incrustado{% endif %}" data-attack-catalog-url="{{ static_v('attack_tecnicas.json') }}">
+{% if not request.args.get('embed') %}
+<header class="cab">
+  <div class="cab-marca">
+    <span class="anillos" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div>
+      <strong>SUIIN-RBAC</strong>
+      <small>Matriz de Control de Acceso · SUIIN-SGSI-MCA-001 v2.0 · ISO/IEC 27002:2022 (5.15–5.18)</small>
+    </div>
+  </div>
+</header>
+{% endif %}
+<nav class="cab-nav{% if request.args.get('embed') %} nav-incrustada{% endif %}">
+  <a href="{{ url_for('inicio') }}" {% if request.endpoint=='inicio' %}class="act"{% endif %}>Inicio</a>
+  <a href="{{ url_for('matriz') }}" {% if request.endpoint=='matriz' %}class="act"{% endif %}>Matriz</a>
+  <a href="{{ url_for('roles') }}" {% if request.endpoint in ('roles','rol_detalle') %}class="act"{% endif %}>Roles</a>
+  <a href="{{ url_for('sistemas') }}" {% if request.endpoint in ('sistemas','sistema_detalle') %}class="act"{% endif %}>Sistemas</a>
+  <a href="{{ url_for('usuarios') }}" {% if request.endpoint=='usuarios' %}class="act"{% endif %}>Usuarios</a>
+  <a href="{{ url_for('excepciones') }}" {% if request.endpoint=='excepciones' %}class="act"{% endif %}>Excepciones</a>
+  <a href="{{ url_for('auditoria') }}" {% if request.endpoint=='auditoria' %}class="act"{% endif %}>Auditoría</a>
+  {% if not request.args.get('embed') %}
+  <a href="/" title="Volver al Inventario de Activos SGSI">↩ Inventario SGSI</a>
+  {% endif %}
+</nav>
+
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% if mensajes %}
+  <div class="avisos">
+    {% for cat, m in mensajes %}
+      <div class="aviso {{ 'aviso-warn' if cat=='warn' else '' }}">{{ m }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<main>{% block cuerpo %}{% endblock %}</main>
+
+{% if not request.args.get('embed') %}
+<footer class="pie">
+  Consejo Regional Indígena del Cauca — CRIC · Sistema Único de Información Indígena — SUIIN ·
+  Camino del SUIIN · Determinación 7 CRIC-Nacional (Decisión No. 02 / 02-Ene-2025)
+</footer>
+{% endif %}
+<script src="{{ static_v('app.js') }}"></script>
+</body>
+</html>

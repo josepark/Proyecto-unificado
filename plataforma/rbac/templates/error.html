@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Error {{ codigo }}{% endblock %}
+{% block cuerpo %}
+<div class="panel" style="text-align:center;padding:52px 24px;max-width:520px;margin:24px auto">
+  <span class="anillos" aria-hidden="true" style="margin:0 auto 18px;display:block">
+    <i></i><i></i><i></i></span>
+  <h1 style="font-size:52px;margin:0;color:var(--verde-800);letter-spacing:normal">{{ codigo }}</h1>
+  <h2 style="margin-top:6px">{{ titulo }}</h2>
+  <p class="sub">{{ mensaje }}</p>
+  <a class="boton" href="{{ url_for('inicio') }}">Volver al inicio</a>
+</div>
+{% endblock %}

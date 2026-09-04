@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titulo %}Auditoría{% endblock %}
+{% block cuerpo %}
+<h1>Bitácora de auditoría</h1>
+<p class="sub">Registro encadenado por hash SHA-256: cada entrada sella la anterior, de modo que cualquier alteración externa rompe la cadena (ISO/IEC 27002:2022 — 8.15). {{ total }} movimiento(s) en total.
+  <a class="boton secundario" style="margin-left:10px" href="{{ url_for('auditoria_verificar') }}">Verificar integridad de la cadena</a></p>
+
+<form class="filtros" method="get" action="{{ url_for('auditoria') }}">
+  <label class="campo">Buscar
+    <input type="search" name="q" value="{{ f_q }}" placeholder="Nombre, detalle o responsable…"></label>
+  <label class="campo">Entidad
+    <select name="entidad">
+      <option value="">Todas</option>
+      {% for e in entidades %}<option value="{{ e }}" {% if e==f_entidad %}selected{% endif %}>{{ e }}</option>{% endfor %}
+    </select></label>
+  <label class="campo">Acción
+    <select name="accion">
+      <option value="">Todas</option>
+      {% for a in acciones %}<option value="{{ a }}" {% if a==f_accion %}selected{% endif %}>{{ a }}</option>{% endfor %}
+    </select></label>
+  <button type="submit" class="secundario">Filtrar</button>
+  {% if f_entidad or f_accion or f_q %}<a class="boton secundario" href="{{ url_for('auditoria') }}">Limpiar</a>{% endif %}
+</form>
+
+<table>
+  <tr><th>#</th><th>Fecha</th><th>Entidad</th><th>Acción</th><th>Detalle</th><th>Responsable</th><th>Hash</th></tr>
+  {% for l in log %}
+  <tr><td>{{ l.id }}</td><td>{{ l.fecha }}</td><td>{{ l.entidad }}</td>
+      <td>{{ l.accion }}</td><td>{{ l.detalle }}</td><td>{{ l.responsable }}</td>
+      <td style="font-family:monospace;font-size:11px" title="{{ l.hash }}">{{ l.hash[:10] }}…</td></tr>
+  {% else %}
+  <tr><td colspan="7" class="sub">Ningún movimiento coincide con el filtro aplicado.</td></tr>
+  {% endfor %}
+</table>
+
+{% if total_paginas > 1 %}
+<div class="paginacion">
+  {% set base = {'entidad': f_entidad, 'accion': f_accion, 'q': f_q} %}
+  {% if pagina > 1 %}
+    <a class="boton secundario" href="{{ url_for('auditoria', pagina=pagina-1, **base) }}">« Anterior</a>
+  {% endif %}
+  <span class="actual">Página {{ pagina }} de {{ total_paginas }}</span>
+  {% if pagina < total_paginas %}
+    <a class="boton secundario" href="{{ url_for('auditoria', pagina=pagina+1, **base) }}">Siguiente »</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

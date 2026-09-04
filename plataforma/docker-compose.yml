@@ -1,0 +1,103 @@
+services:
+  inventario:
+    build: ./inventario
+    container_name: suiin-inventario
+    env_file: .env
+    volumes:
+      - ./inventario/db.sqlite3:/app/db.sqlite3
+      - ./inventario/media:/app/media
+      - static_data:/app/staticfiles
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      # /api/sesion/ es de lectura libre (AllowAny) y no toca disco más
+      # allá de la sesión — liviano a propósito para un healthcheck.
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/sesion/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  riesgos-backend:
+    build: ./riesgos/backend
+    container_name: suiin-riesgos-backend
+    env_file: .env
+    environment:
+      # DJANGO_SECRET_KEY NO se toma de env_file arriba a propósito: si se
+      # heredara tal cual, riesgos-backend firmaría sus sesiones/tokens con la
+      # MISMA clave que inventario — cada aplicación Django debe tener la suya.
+      # Defina RIESGOS_SECRET_KEY en .env (ver .env.example).
+      DJANGO_SECRET_KEY: ${RIESGOS_SECRET_KEY:?Defina RIESGOS_SECRET_KEY en .env}
+      # Nombre del servicio 'inventario' resuelto por DNS interno de docker-compose
+      # — riesgos consume de ahí el catálogo de activos (fuente canónica), en vez
+      # de mantener uno propio. Ver riesgos/backend/riesgos/management/commands/
+      # sincronizar_activos_inventario.py.
+      INVENTARIO_API_URL: ${INVENTARIO_API_URL:-http://inventario:8000/api}
+      ALERTAS_EMAIL_DESTINATARIOS: ${RIESGOS_ALERTAS_EMAIL_DESTINATARIOS:-}
+    volumes:
+      - ./riesgos/backend/db.sqlite3:/app/db.sqlite3
+      - ./riesgos/backend/media:/app/media
+    expose:
+      - "8000"
+    depends_on:
+      inventario:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      # /api/dashboard/resumen/ es de lectura libre y no depende de que el
+      # inventario esté disponible en ese instante — liviano a propósito.
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/dashboard/resumen/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  rbac:
+    build: ./rbac
+    container_name: suiin-rbac
+    environment:
+      SUIIN_RBAC_SECRET: ${SUIIN_RBAC_SECRET:-cambiar-este-valor-en-produccion}
+    volumes:
+      - ./rbac/rbac.db:/app/rbac.db
+    expose:
+      - "5000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: suiin-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./inventario/media:/media:ro
+      - static_data:/static:ro
+    depends_on:
+      inventario:
+        condition: service_healthy
+      rbac:
+        condition: service_healthy
+      riesgos-backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  static_data:

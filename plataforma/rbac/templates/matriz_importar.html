@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titulo %}Importar matriz{% endblock %}
+{% block cuerpo %}
+<h1>Importar matriz desde CSV</h1>
+<p class="sub">Suba un archivo con el mismo formato que genera
+  <a href="{{ url_for('export_matriz') }}">Exportar matriz (CSV)</a>: primera columna con el
+  nombre del sistema, y una columna por cada abreviatura de rol activo, con el código de nivel
+  (A, C, M, L, T o —) en cada celda. No se guarda nada hasta que confirme los cambios detectados.</p>
+
+<div class="panel">
+  <form method="post" action="{{ url_for('matriz_importar') }}"
+        enctype="multipart/form-data" class="linea">{{ csrf_campo() }}
+    <label class="campo">Archivo CSV<input type="file" name="archivo" accept=".csv" required></label>
+    <button type="submit">Analizar archivo</button>
+  </form>
+</div>
+
+{% if errores %}
+<div class="panel">
+  <h2>Advertencias ({{ errores|length }})</h2>
+  <ul>
+    {% for e in errores %}<li class="sub">{{ e }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if cambios is not none %}
+<div class="panel">
+  <h2>Cambios detectados ({{ cambios|length }})</h2>
+  {% if cambios %}
+  <div style="max-height:420px;overflow:auto">
+    <table>
+      <tr><th>Sistema</th><th>Rol</th><th>Nivel actual</th><th>Nivel nuevo</th></tr>
+      {% for c in cambios %}
+      <tr>
+        <td>{{ c.sistema }}</td><td>{{ c.rol }}</td>
+        <td><span class="chip niv-{{ 'X' if c.actual=='—' else c.actual }}">{{ c.actual }}</span></td>
+        <td><span class="chip niv-{{ 'X' if c.nuevo=='—' else c.nuevo }}">{{ c.nuevo }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <form method="post" action="{{ url_for('matriz_importar_confirmar') }}" style="margin-top:12px"
+        data-confirm="¿Aplicar estos {{ cambios|length }} cambios a la matriz? Quedarán registrados en la bitácora.">{{ csrf_campo() }}
+    <input type="hidden" name="n" value="{{ cambios|length }}">
+    {% for c in cambios %}
+    <input type="hidden" name="c{{ loop.index0 }}_rol" value="{{ c.rol_id }}">
+    <input type="hidden" name="c{{ loop.index0 }}_sistema" value="{{ c.sistema_id }}">
+    <input type="hidden" name="c{{ loop.index0 }}_nivel" value="{{ c.nuevo }}">
+    {% endfor %}
+    <button type="submit">Confirmar y aplicar {{ cambios|length }} cambio(s)</button>
+  </form>
+  {% else %}
+  <p class="sub">No se detectaron cambios respecto al estado actual de la matriz.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
