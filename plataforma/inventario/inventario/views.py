@@ -828,14 +828,29 @@ def integridad_verificar(request):
     return Response({"integra": False, "registro_alterado": dato})
 
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.backends.db import SessionStore
 
 
 def _usuario_desde_sesion(request):
     """Usuario de la sesión Django — respaldo si DRF no re-hidrato request.user."""
-    if getattr(request.user, "is_authenticated", False):
-        return request.user
-    uid = request.session.get("_auth_user_id")
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        return user
+
+    sesion = request.session
+    if not sesion.session_key:
+        clave = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
+        if not clave:
+            return None
+        sesion = SessionStore(session_key=clave)
+        try:
+            sesion.load()
+        except Exception:
+            return None
+
+    uid = sesion.get("_auth_user_id")
     if not uid:
         return None
     try:

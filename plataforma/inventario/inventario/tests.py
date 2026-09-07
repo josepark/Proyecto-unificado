@@ -68,6 +68,18 @@ class AuthCheckRBACTest(TestCase):
         r = self.client.get(self.URL)
         self.assertNotIn("X-Usuario-Autorizado", r.headers)
 
+    def test_autoriza_con_cookie_de_sesion_sin_request_user_hidratado(self):
+        """Simula la subpetición nginx auth_request: cookie válida en sesión
+        Django pero request.user anónimo (DRF no siempre re-hidrata)."""
+        sesion = self.client.session
+        sesion["_auth_user_id"] = str(self.dinamizador.pk)
+        sesion.save()
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = sesion.session_key
+
+        r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(r.headers.get("X-Usuario-Autorizado"), "dinamizador_test")
+
 
 class PanelEjecutivoUnificadoTest(TestCase):
     """El Panel ejecutivo consolida indicadores propios del Inventario con

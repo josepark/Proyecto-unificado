@@ -16,7 +16,9 @@ ROL_ADMIN = "Administrador"
 
 
 def roles_de(user):
-    if not user or not user.is_authenticated:
+    # No usar solo is_authenticated: en subpeticiones nginx (auth_request) el
+    # usuario se reconstituye desde _auth_user_id y sigue siendo un User válido.
+    if user is None or not getattr(user, "pk", None):
         return set()
     if user.is_superuser:
         return {ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN}
