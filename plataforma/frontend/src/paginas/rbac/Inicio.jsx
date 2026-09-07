@@ -20,7 +20,10 @@ export default function Inicio() {
     <div>
       <h2 style={{ margin: '4px 0 4px', color: 'var(--verde-profundo)' }}>Tablero de control de acceso</h2>
       <p style={{ fontSize: 13, color: 'var(--texto-suave)', marginTop: 0 }}>
-        Estado actual del control de acceso basado en roles (RBAC) del SUIIN.
+        Estado actual del control de acceso basado en roles (RBAC) del SUIIN.{' '}
+        <a href="/rbac/api/export/accesos_usuarios.csv" style={{ fontSize: 13 }}>
+          Exportar accesos efectivos (CSV)
+        </a>
       </p>
 
       <div

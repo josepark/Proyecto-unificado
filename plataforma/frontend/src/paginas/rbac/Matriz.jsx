@@ -68,6 +68,16 @@ export default function Matriz() {
         <Link to="/rbac/matriz/comparar" style={{ fontSize: 13 }}>
           Comparar dos roles →
         </Link>
+        {puedeEditar && (
+          <>
+            <a href="/rbac/api/export/matriz.csv" style={{ fontSize: 13 }}>
+              Exportar matriz (CSV)
+            </a>
+            <Link to="/rbac/matriz/importar" style={{ fontSize: 13 }}>
+              Importar matriz (CSV)
+            </Link>
+          </>
+        )}
       </div>
       <p style={{ fontSize: 12, color: 'var(--texto-suave)', marginBottom: 12 }}>
         {roles.length} roles × {sistemas.length} sistemas.{' '}

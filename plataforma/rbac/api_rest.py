@@ -856,6 +856,61 @@ def registrar(app):
         return jsonify({"rol_id": rol_id, "sistema_id": sistema_id,
                         "anterior": anterior, "nuevo": nivel})
 
+    @app.route("/api/matriz/importar/analizar", methods=["POST"])
+    def api_matriz_importar_analizar():
+        c = db()
+        archivo = request.files.get("archivo")
+        if not archivo or not archivo.filename:
+            return jsonify({"detail": "Seleccione un archivo CSV para importar."}), 400
+        try:
+            texto = archivo.read().decode("utf-8-sig")
+        except UnicodeDecodeError:
+            return jsonify({"detail": "No se pudo leer el archivo: use codificación "
+                            "UTF-8 (el mismo formato que genera «Exportar matriz»)."}), 400
+        resultado = negocio.analizar_importacion_matriz(c, texto)
+        if resultado[0] is None:
+            return jsonify({"detail": resultado[1]}), 400
+        cambios, errores = resultado
+        return jsonify({"cambios": cambios, "errores": errores,
+                        "total_cambios": len(cambios)})
+
+    @app.route("/api/matriz/importar/confirmar", methods=["POST"])
+    def api_matriz_importar_confirmar():
+        c = db()
+        cuerpo = request.get_json(silent=True) or {}
+        cambios = cuerpo.get("cambios") or []
+        if not isinstance(cambios, list) or not cambios:
+            return jsonify({"detail": "No hay cambios para aplicar."}), 400
+        aplicados = negocio.aplicar_importacion_matriz(c, cambios, audit)
+        if not aplicados:
+            return jsonify({"detail": "No se aplicó ningún cambio."}), 400
+        return jsonify({"aplicados": aplicados})
+
+    @app.route("/api/export/matriz.csv")
+    def api_export_matriz():
+        c = db()
+        roles = c.execute("SELECT id, abreviatura FROM rol ORDER BY id").fetchall()
+        sistemas = c.execute("SELECT id, nombre FROM sistema ORDER BY id").fetchall()
+        celdas = {(m["rol_id"], m["sistema_id"]): m["nivel_codigo"]
+                  for m in c.execute("SELECT * FROM matriz_acceso")}
+        filas = [[s["nombre"]] + [celdas.get((r["id"], s["id"]), "—")
+                                  for r in roles] for s in sistemas]
+        return negocio.csv_response(
+            "SUIIN-SGSI-MCA-001_matriz.csv",
+            ["Sistema"] + [r["abreviatura"] for r in roles], filas)
+
+    @app.route("/api/export/accesos_usuarios.csv")
+    def api_export_accesos():
+        filas = db().execute(
+            "SELECT usuario, estado, rol, sistema, categoria, clasificacion, nivel, "
+            "CASE es_excepcion WHEN 1 THEN 'Sí' ELSE '' END "
+            "FROM v_accesos_usuario ORDER BY usuario, sistema").fetchall()
+        return negocio.csv_response(
+            "SUIIN-SGSI-MCA-001_accesos_efectivos.csv",
+            ["Usuario", "Estado", "Rol", "Sistema", "Categoría",
+             "Clasificación", "Nivel", "Excepción"],
+            [list(f) for f in filas])
+
     # ------------------------------------------------------------ excepciones
     @app.route("/api/excepciones")
     def api_excepciones_lista():

@@ -20,6 +20,7 @@ import Usuarios from './paginas/rbac/Usuarios';
 import UsuarioForm from './paginas/rbac/UsuarioForm';
 import Matriz from './paginas/rbac/Matriz';
 import MatrizComparar from './paginas/rbac/MatrizComparar';
+import MatrizImportar from './paginas/rbac/MatrizImportar';
 import Sistemas from './paginas/rbac/Sistemas';
 import SistemaForm from './paginas/rbac/SistemaForm';
 import Excepciones from './paginas/rbac/Excepciones';
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="usuarios/:id/editar" element={<UsuarioForm />} />
             <Route path="matriz" element={<Matriz />} />
             <Route path="matriz/comparar" element={<MatrizComparar />} />
+            <Route path="matriz/importar" element={<MatrizImportar />} />
             <Route path="sistemas" element={<Sistemas />} />
             <Route path="sistemas/nuevo" element={<SistemaForm />} />
             <Route path="sistemas/:id/editar" element={<SistemaForm />} />

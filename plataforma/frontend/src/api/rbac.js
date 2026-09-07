@@ -41,6 +41,8 @@ export const rbacApi = {
   matriz: (params) => api.get('/matriz', params),
   compararRoles: (rolA, rolB) => api.get('/matriz/comparar', { rol_a: rolA, rol_b: rolB }),
   editarCeldaMatriz: (rol_id, sistema_id, nivel) => api.put('/matriz', { rol_id, sistema_id, nivel }),
+  importarMatrizAnalizar: (formData) => api.postForm('/matriz/importar/analizar', formData),
+  importarMatrizConfirmar: (cambios) => api.post('/matriz/importar/confirmar', { cambios }),
 
   // --- Excepciones ---
   listarExcepciones: (params) => api.get('/excepciones', params),

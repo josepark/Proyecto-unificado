@@ -495,6 +495,52 @@ def test_editar_celda_nivel_invalido_400(cliente):
     assert r.status_code == 400
 
 
+def test_export_matriz_csv(cliente):
+    r = cliente.get("/api/export/matriz.csv")
+    assert r.status_code == 200
+    assert "text/csv" in r.content_type
+    assert r.headers.get("Content-Disposition", "").startswith("attachment")
+    texto = r.data.decode("utf-8-sig")
+    assert texto.startswith("Sistema;")
+    assert ";" in texto.splitlines()[0]
+
+
+def test_export_accesos_csv(cliente):
+    r = cliente.get("/api/export/accesos_usuarios.csv")
+    assert r.status_code == 200
+    assert "Usuario;" in r.data.decode("utf-8-sig")
+
+
+def test_importar_matriz_analizar_y_confirmar(cliente):
+    h = _headers(cliente)
+    export = cliente.get("/api/export/matriz.csv").data.decode("utf-8-sig")
+    lineas = export.splitlines()
+    partes = lineas[1].split(";")
+    partes[1] = "C" if partes[1] != "C" else "M"
+    lineas[1] = ";".join(partes)
+    csv_mod = "\n".join(lineas)
+
+    from io import BytesIO
+    r = cliente.post(
+        "/api/matriz/importar/analizar", headers=h,
+        data={"archivo": (BytesIO(csv_mod.encode("utf-8")), "matriz.csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["total_cambios"] >= 1
+
+    r2 = cliente.post("/api/matriz/importar/confirmar", headers=h,
+                      json={"cambios": data["cambios"]})
+    assert r2.status_code == 200
+    assert r2.get_json()["aplicados"] >= 1
+
+
+def test_importar_matriz_sin_archivo_400(cliente):
+    r = cliente.post("/api/matriz/importar/analizar", headers=_headers(cliente))
+    assert r.status_code == 400
+
+
 # ------------------------------------------------------------ excepciones
 def test_lista_excepciones(cliente):
     h = _headers(cliente)

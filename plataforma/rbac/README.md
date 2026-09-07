@@ -95,7 +95,8 @@ POL-SI-002) — cada rol activo muestra su última revisión y si está vencida
 según su periodicidad declarada, con un botón para dejar constancia
 (fecha + nota) en la bitácora · clonar un rol existente al crear uno
 nuevo, copiando su fila completa de la matriz como punto de partida ·
-importar la matriz desde CSV (`/matriz/importar`): analiza el archivo,
+importar la matriz desde CSV (`/rbac/matriz/importar` en React;
+`POST /rbac/api/matriz/importar/analizar` y `…/confirmar`): analiza el archivo,
 muestra un resumen de los cambios y advertencias antes de aplicar nada, y
 solo escribe lo que se confirme explícitamente · asignación masiva de
 excepciones (`/excepciones/masiva`): aplica la misma excepción de acceso

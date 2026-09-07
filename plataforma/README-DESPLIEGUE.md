@@ -1,15 +1,18 @@
 # Plataforma SUIIN-SGSI — Despliegue integrado
 
-Una sola interfaz que unifica dos aplicaciones que antes vivían por separado:
-el Inventario de Activos SGSI es la interfaz principal, y la Matriz RBAC
-aparece dentro de ella como **un módulo más** (una pestaña), no como una app
-distinta a la que hay que "saltar".
+Una sola interfaz web (SPA React en `/`) que unifica tres módulos del SGSI.
+Cada aplicación conserva su stack y base de datos; nginx enruta las peticiones
+y delega la autorización de RBAC en la sesión del Inventario.
 
-| Aplicación | Stack | Antes | Ahora |
-|---|---|---|---|
-| Inventario de Activos SGSI (SUIIN-SGSI-INV-001) | Django | `127.0.0.1:8000`, interfaz propia | `http://<host>/` — interfaz principal |
-| Matriz RBAC / MCA-001 (SUIIN-SGSI-MCA-001) | Flask | `127.0.0.1:5000`, sin login, app aparte | Pestaña **"Matriz RBAC"** del mismo tablero, incrustada |
-| Gestión de Riesgos y PTR (SUIIN-SGSI-RIESGOS) | Django + React | Proyecto aparte, catálogo de activos propio | `http://<host>/riesgos/` — consume el catálogo de activos del Inventario en vez de duplicarlo (ver sección 11) |
+| Aplicación | Stack | URL principal |
+|---|---|---|
+| Inventario de Activos SGSI (SUIIN-SGSI-INV-001) | Django (API) | `/inventario/…` en React; `/api/` JSON |
+| Matriz RBAC / MCA-001 (SUIIN-SGSI-MCA-001) | Flask (API JSON) | `/rbac/…` en React; `/rbac/api/` JSON |
+| Gestión de Riesgos y PTR (SUIIN-SGSI-RIESGOS) | Django + React | `/gestion-riesgos` (iframe `/riesgos/?embed=1`) |
+
+> **Nota histórica:** las secciones 1–3 más abajo describen la integración
+> original con iframe HTML de RBAC. La arquitectura actual está resumida en
+> la sección 9 (migración a React). RBAC ya no sirve plantillas Jinja2.
 
 ## 1. Cómo se logra "una sola interfaz" sin fusionar el código
 
@@ -832,6 +835,15 @@ reenviarlo explícitamente en cada módulo.
   `/rbac/inicio`, `/rbac/matriz`, etc. las sirve la SPA en `/`.
 - Se conserva `static/attack_tecnicas.json` para sincronizar el catálogo
   MITRE ATT&CK en la base de datos.
+
+### 9.10 Exportación e importación CSV de la matriz (completa)
+
+- Endpoints JSON/CSV en la API Flask:
+  `GET /rbac/api/export/matriz.csv`, `GET /rbac/api/export/accesos_usuarios.csv`,
+  `POST /rbac/api/matriz/importar/analizar`, `POST /rbac/api/matriz/importar/confirmar`.
+- Pantalla React `/rbac/matriz/importar` (mismo flujo de dos pasos que tenía
+  la plantilla HTML retirada).
+- Enlaces de exportación en Matriz e Inicio RBAC.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 
