@@ -14,12 +14,15 @@ import EntityForm from "../components/EntityForm";
 import GenerarAccionModal from "../components/GenerarAccionModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
+import { usePlataforma, rutaRiesgos } from "../context/PlataformaContext";
 
 const NIVELES = ["CRITICO", "ALTO", "MEDIO", "BAJO"];
 const SEVERIDADES_OV = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 const ESTADOS = ["PENDIENTE", "EN_PROGRESO", "CERRADO", "FALSO_POSITIVO", "ACEPTADO"];
 
 export default function Vulnerabilidades() {
+  const plataforma = usePlataforma();
+  const enlaceActivo = (id) => rutaRiesgos(plataforma.anidado, plataforma.prefijo, `activos/${id}`);
   const [busqueda, setBusqueda] = useState("");
   const [nivel, setNivel] = useState("");
   const [severidad, setSeveridad] = useState("");
@@ -241,7 +244,7 @@ export default function Vulnerabilidades() {
                       />
                     </td>
                     <td className="px-3 py-2.5">
-                      <Link to={`/activos/${v.activo}`} className="font-mono-data text-cric-green-400 hover:underline">
+                      <Link to={enlaceActivo(v.activo)} className="font-mono-data text-cric-green-400 hover:underline">
                         {v.activo_id_activo}
                       </Link>
                       <p className="text-[11px] text-base-300/70">{v.activo_nombre}</p>

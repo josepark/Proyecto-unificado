@@ -1,6 +1,6 @@
-import { Routes, Route, useOutletContext } from 'react-router-dom';
+import { Routes, Route, useOutletContext, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@riesgos/context/AuthContext';
-import { PlataformaProvider } from '@riesgos/context/PlataformaContext';
+import { PlataformaProvider, useRiesgosTo } from '@riesgos/context/PlataformaContext';
 import Layout from '@riesgos/components/Layout';
 import RutaProtegida from '@riesgos/components/RutaProtegida';
 import Dashboard from '@riesgos/pages/Dashboard';
@@ -13,6 +13,11 @@ import PlanTratamiento from '@riesgos/pages/PlanTratamiento';
 import Cumplimiento from '@riesgos/pages/Cumplimiento';
 import Catalogos from '@riesgos/pages/Catalogos';
 import '@riesgos/index-plataforma.css';
+
+function RedirigirPanelRiesgos() {
+  const to = useRiesgosTo('');
+  return <Navigate to={to} replace />;
+}
 
 /** PTR nativo en la SPA unificada — sin iframe; comparte sesión vía JWT/cookie. */
 export default function ModuloRiesgosPTR() {
@@ -35,6 +40,7 @@ export default function ModuloRiesgosPTR() {
                 <Route path="cumplimiento" element={<Cumplimiento />} />
                 <Route path="catalogos" element={<Catalogos />} />
               </Route>
+              <Route path="*" element={<RedirigirPanelRiesgos />} />
             </Route>
           </Routes>
         </AuthProvider>

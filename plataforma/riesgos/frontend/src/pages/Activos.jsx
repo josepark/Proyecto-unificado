@@ -12,10 +12,13 @@ import LoginModal from "../components/LoginModal";
 import EntityForm from "../components/EntityForm";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
+import { usePlataforma, rutaRiesgos } from "../context/PlataformaContext";
 
 const NIVELES = ["CRITICO", "ALTO", "MEDIO", "BAJO"];
 
 export default function Activos() {
+  const plataforma = usePlataforma();
+  const enlaceActivo = (id) => rutaRiesgos(plataforma.anidado, plataforma.prefijo, `activos/${id}`);
   const [busqueda, setBusqueda] = useState("");
   const [nivel, setNivel] = useState("");
   const [soloSinCobertura, setSoloSinCobertura] = useState(false);
@@ -149,7 +152,7 @@ export default function Activos() {
                 {activos.map((a) => (
                   <tr key={a.id} className="group hover:bg-base-800/40">
                     <td className="px-5 py-2.5">
-                      <Link to={`/activos/${a.id}`} className="font-mono-data text-cric-green-400 hover:underline">
+                      <Link to={enlaceActivo(a.id)} className="font-mono-data text-cric-green-400 hover:underline">
                         {a.id_activo}
                       </Link>
                     </td>

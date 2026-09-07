@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShieldAlert, ServerCog, Bug, Users, ClipboardList, Radar, LogIn, LogOut, UserCircle2, ShieldCheck, ArrowLeftCircle, ListChecks,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { usePlataforma } from "../context/PlataformaContext";
+import { usePlataforma, useRiesgosTo } from "../context/PlataformaContext";
 import LoginModal from "./LoginModal";
 
 const ENLACE_PLATAFORMA =
@@ -16,15 +16,37 @@ function esModoEmbebido(anidado) {
 }
 
 const NAV_ITEMS = [
-  { to: ".", label: "Panel general", icon: LayoutDashboard, end: true },
-  { to: "activos", label: "Activos", icon: ServerCog },
-  { to: "vulnerabilidades", label: "Vulnerabilidades", icon: Bug },
-  { to: "riesgos-contextuales", label: "Riesgos contextuales", icon: Users },
-  { to: "red-team", label: "Campañas Red Team", icon: Radar },
-  { to: "plan-tratamiento", label: "Plan de tratamiento", icon: ClipboardList },
-  { to: "cumplimiento", label: "Cumplimiento ISO 27001", icon: ShieldCheck },
-  { to: "catalogos", label: "Catálogos", icon: ListChecks },
+  { segment: "", label: "Panel general", icon: LayoutDashboard, end: true },
+  { segment: "activos", label: "Activos", icon: ServerCog },
+  { segment: "vulnerabilidades", label: "Vulnerabilidades", icon: Bug },
+  { segment: "riesgos-contextuales", label: "Riesgos contextuales", icon: Users },
+  { segment: "red-team", label: "Campañas Red Team", icon: Radar },
+  { segment: "plan-tratamiento", label: "Plan de tratamiento", icon: ClipboardList },
+  { segment: "cumplimiento", label: "Cumplimiento ISO 27001", icon: ShieldCheck },
+  { segment: "catalogos", label: "Catálogos", icon: ListChecks },
 ];
+
+/** Enlaces del menú siempre desde la raíz del módulo — evita rutas rotas tipo
+ * /gestion-riesgos/activos/vulnerabilidades al navegar desde un detalle. */
+function EnlaceNav({ segment, label, icon: Icon, end }) {
+  const to = useRiesgosTo(segment);
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors ${
+          isActive
+            ? "bg-cric-green-600/20 text-cric-green-400"
+            : "text-base-300 hover:bg-base-800 hover:text-base-100"
+        }`
+      }
+    >
+      <Icon className="h-4 w-4" strokeWidth={2} />
+      {label}
+    </NavLink>
+  );
+}
 
 export default function Layout() {
   const { user, isAuthenticated, logout, checking, plataformaAutenticada } = useAuth();
@@ -67,22 +89,8 @@ export default function Layout() {
         )}
 
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {itemsVisibles.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-cric-green-600/20 text-cric-green-400"
-                    : "text-base-300 hover:bg-base-800 hover:text-base-100"
-                }`
-              }
-            >
-              <Icon className="h-4 w-4" strokeWidth={2} />
-              {label}
-            </NavLink>
+          {itemsVisibles.map(({ segment, label, icon, end }) => (
+            <EnlaceNav key={segment || "panel"} segment={segment} label={label} icon={icon} end={end} />
           ))}
           {!isAuthenticated && (
             <p className="px-3 pt-3 text-[11px] leading-relaxed text-base-300/60">

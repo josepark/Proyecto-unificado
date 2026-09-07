@@ -17,10 +17,14 @@ export function usePlataforma() {
   return useContext(PlataformaContext);
 }
 
-/** Enlace interno del módulo: relativo cuando está anidado en la SPA unificada. */
+/** Construye rutas absolutas dentro del módulo (standalone o SPA unificada). */
+export function rutaRiesgos(anidado, prefijo, subpath = "") {
+  const limpio = String(subpath).replace(/^\//, "");
+  if (!anidado) return limpio ? `/${limpio}` : "/";
+  return limpio ? `${prefijo}/${limpio}` : prefijo;
+}
+
 export function useRiesgosTo(subpath = '') {
   const { anidado, prefijo } = usePlataforma();
-  const limpio = String(subpath).replace(/^\//, '');
-  if (!anidado) return limpio ? `/${limpio}` : '/';
-  return limpio ? `${prefijo}/${limpio}` : prefijo;
+  return rutaRiesgos(anidado, prefijo, subpath);
 }
