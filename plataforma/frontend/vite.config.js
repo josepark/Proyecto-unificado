@@ -1,22 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Despliegue integrado — Fase 2 (migración a React):
+// Despliegue integrado — Fase 4 (corte final):
 //
-// `base` queda en "/app/" mientras dura la migración: nginx sigue sirviendo
-// la interfaz actual (Django + iframe de RBAC) en "/", y este build de
-// React convive aparte en "/app/" para poder probarlo sin arriesgar lo que
-// ya funciona. El día del corte final (fin de la Fase 4), esto pasa a "/"
-// y nginx.conf se actualiza para servir el build de React como la
-// interfaz principal — un solo cambio de una línea en cada lado.
+// React es la interfaz principal en "/". nginx sirve el build estático en
+// la raíz y reenvía /api/, /login/, /rbac/, /riesgos/, etc. a cada backend.
 //
-// El proxy de desarrollo imita el mismo enrutamiento que nginx usa en
-// producción (sección 3.2 del README): /api -> Inventario (Django),
-// /rbac -> Matriz RBAC (Flask, que expone su propia API bajo /api/... —
-// a través del prefijo queda en /rbac/api/...). Así "npm run dev" habla
-// con los backends reales sin problemas de CORS, sin necesitar nginx.
+// El proxy de desarrollo imita el mismo enrutamiento que nginx en producción
+// (sección 3.2 del README): /api -> Inventario (Django), /rbac -> Matriz RBAC
+// (Flask). Así "npm run dev" habla con los backends reales sin CORS.
 export default defineConfig({
-  base: '/app/',
+  base: '/',
   plugins: [react()],
   server: {
     proxy: {

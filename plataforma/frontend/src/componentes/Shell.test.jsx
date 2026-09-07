@@ -28,7 +28,7 @@ describe('Shell — pestañas de módulo', () => {
       cargando: false,
     });
     render(
-      <MemoryRouter basename="/app" initialEntries={['/app/inventario/dashboard']}>
+      <MemoryRouter initialEntries={['/inventario/dashboard']}>
         <Shell />
       </MemoryRouter>,
     );
@@ -46,7 +46,7 @@ describe('Shell — pestañas de módulo', () => {
       cargando: false,
     });
     render(
-      <MemoryRouter basename="/app" initialEntries={['/app/inventario/dashboard']}>
+      <MemoryRouter initialEntries={['/inventario/dashboard']}>
         <Shell />
       </MemoryRouter>,
     );

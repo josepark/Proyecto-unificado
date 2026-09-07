@@ -27,13 +27,11 @@ import ExcepcionMasiva from './paginas/rbac/ExcepcionMasiva';
 import Auditoria from './paginas/rbac/Auditoria';
 import Inicio from './paginas/rbac/Inicio';
 
-// Fase 3 completa: Inventario + RBAC portados con sub-navegación propia.
-// Fase 4 (en curso): módulo PTR embebido (/gestion-riesgos), puerta RBAC
-// por rol, badge de pendientes, pruebas Vitest ampliadas. Pendiente del
-// corte final: base '/' en vite/nginx y retirar dashboard.html + iframes.
+// Fase 4 completa: React es la interfaz principal en "/". Inventario y RBAC
+// son rutas nativas; PTR sigue embebido vía iframe (/gestion-riesgos).
 export default function App() {
   return (
-    <BrowserRouter basename="/app">
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Shell />}>
           <Route index element={<Navigate to="/inventario" replace />} />

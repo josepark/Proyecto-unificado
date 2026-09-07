@@ -14,7 +14,7 @@ export default function PuertaRBAC() {
           <b>Dinamizador</b> o <b>Administrador</b>.
         </p>
         {!autenticado && (
-          <a className="btn btn-primary" href="/login/?next=/app/rbac/inicio">
+          <a className="btn btn-primary" href="/login/?next=/rbac/inicio">
             Iniciar sesión
           </a>
         )}

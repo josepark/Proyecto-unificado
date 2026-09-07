@@ -802,17 +802,23 @@ probada de punta a punta.
 propaga automáticamente a través de un `<Outlet>` intermedio — hay que
 reenviarlo explícitamente en cada módulo.
 
-### 9.6 Fase 4 (en curso)
+### 9.6 Fase 4 — paridad con tablero Django (completa)
 
-1. **Paridad con el tablero Django** — tercera pestaña de módulo
-   (`/app/gestion-riesgos`) embebe SUIIN-SGSI-RIESGOS vía iframe; puerta
-   RBAC (`PuertaRBAC.jsx`) bloquea Consultor igual que nginx; badge de
-   pendientes en la pestaña Matriz RBAC.
-2. **Pruebas Vitest** — suite ampliada (Activo, ActivoForm, Riesgos, Inicio,
-   PuertaRBAC, Shell).
-3. **Pendiente:** decidir si el login se migra a React; **corte final:**
-   `base: '/'` en `vite.config.js`, actualizar `nginx.conf` para servir React
-   en `/`, retirar `dashboard.html` y los iframes legacy de RBAC/Riesgos.
+1. Tercera pestaña de módulo (`/gestion-riesgos`) embebe SUIIN-SGSI-RIESGOS.
+2. Puerta RBAC por rol, badge de pendientes, pruebas Vitest ampliadas.
+
+### 9.7 Corte final — React como interfaz principal (completa)
+
+- `vite.config.js`: `base: '/'`.
+- `nginx.conf`: el build de React se sirve en `/`; Django queda en
+  `/api/`, `/login/`, `/logout/`, `/admin/`; redirección 301 de `/app/*` a
+  `/*` para marcadores antiguos.
+- Retirado `templates/inventario/dashboard.html`; la ruta raíz de Django
+  redirige a `/inventario/dashboard` (solo acceso directo al puerto 8000).
+- RBAC ya no se incrusta por iframe en el tablero: es React nativo bajo
+  `/rbac/…`. Flask sigue sirviendo `/rbac/api/` y las plantillas HTML
+  legacy en `/rbac/` (por compatibilidad), pero la interfaz principal ya
+  no las usa.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 

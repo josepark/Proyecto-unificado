@@ -1185,6 +1185,7 @@ class XFrameOptionsTest(TestCase):
     def test_x_frame_options_es_sameorigin_no_deny(self):
         self.assertEqual(self._x_frame_options_con_debug_false("/login/"), "SAMEORIGIN")
 
-    def test_el_dashboard_tambien_permite_enmarcarse_en_el_mismo_origen(self):
+    def test_la_raiz_redirige_a_la_spa(self):
+        """Tras el corte final, Django ya no sirve dashboard.html en /."""
         self.assertEqual(self._x_frame_options_con_debug_false("/"), "SAMEORIGIN")
 

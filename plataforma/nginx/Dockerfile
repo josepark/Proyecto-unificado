@@ -30,8 +30,6 @@ FROM nginx:1.27-alpine
 # entre versiones y no tenía forma de confirmar sin acceso a Docker.
 RUN apk add --no-cache curl
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
-# El build de Vite ya trae el prefijo /app/ horneado en cada ruta de sus
-# assets (vite.config.js: base: '/app/'), así que se copia tal cual a esa
-# misma subcarpeta dentro de la raíz web.
-COPY --from=frontend-build /frontend/dist /usr/share/nginx/html/app
+# Build de Vite con base "/" — interfaz principal en la raíz web.
+COPY --from=frontend-build /frontend/dist /usr/share/nginx/html
 COPY --from=riesgos-frontend-build /riesgos-frontend/dist /usr/share/nginx/html/riesgos

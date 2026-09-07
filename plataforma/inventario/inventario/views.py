@@ -1,7 +1,7 @@
 from itertools import chain
 
 from django.db.models import Count
-from django.shortcuts import render
+from django.shortcuts import redirect
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import JsonResponse
 from rest_framework import viewsets
@@ -111,7 +111,12 @@ def sesion_info(request):
 
 @ensure_csrf_cookie
 def dashboard(request):
-    return render(request, "inventario/dashboard.html")
+    """Redirige a la SPA unificada (nginx sirve React en /).
+
+    Se conserva la ruta por compatibilidad con acceso directo a Django
+    (p. ej. inventario:8000 en desarrollo) y con tests de cabeceras.
+    """
+    return redirect("/inventario/dashboard")
 
 
 # ---------------------------------------------------------------------------

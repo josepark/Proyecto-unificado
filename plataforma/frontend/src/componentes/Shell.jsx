@@ -14,7 +14,7 @@ export default function Shell() {
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const ubicacion = useLocation();
-  const rutaTrasLogin = `/app${ubicacion.pathname}${ubicacion.search}`;
+  const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
 
   useEffect(() => {
     function alVencer() {

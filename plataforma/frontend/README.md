@@ -1,14 +1,12 @@
-# Frontend — Soluciones SUIIN (Fase 4, en migración)
+# Frontend — Soluciones SUIIN (React, interfaz principal)
 
 SPA de React que va reemplazando, módulo por módulo, tanto el JS embebido
 del Inventario como las plantillas de RBAC + los iframes del tablero
 Django. Ver `README-DESPLIEGUE.md` (raíz del proyecto), sección 9, para el
 contexto completo de la migración.
 
-**Estado actual:** Fase 3 cerrada (todas las pantallas de Inventario y RBAC
-portadas). Fase 4 en curso: módulo PTR embebido, puerta RBAC por rol, badge
-de pendientes, pruebas Vitest ampliadas. Pendiente del corte final (`base`
-`'/'`, retirar `dashboard.html`).
+**Estado actual:** Fase 4 completa — React es la interfaz principal en `/`.
+El login sigue en Django (`/login/`); el módulo PTR se embebe en `/gestion-riesgos`.
 
 ## Desarrollo local
 
@@ -20,7 +18,7 @@ npm install
 npm run dev
 ```
 
-Abre `http://127.0.0.1:5173/app/`. El proxy de desarrollo (`vite.config.js`)
+Abre `http://127.0.0.1:5173/`. El proxy de desarrollo (`vite.config.js`)
 reenvía `/api` al Inventario y `/rbac` a RBAC, con el mismo recorte de
 prefijo que hace nginx en producción — así el mismo código funciona igual
 en desarrollo y en producción, sin ninguna URL hardcodeada por entorno.
@@ -90,12 +88,15 @@ src/
         ├── Excepciones.jsx / ExcepcionMasiva.jsx
         └── Auditoria.jsx
 
-**Tres módulos en la shell** (igual que `dashboard.html`): Inventario, Matriz
-RBAC (React nativo) y Gestión de Riesgos y PTR (iframe a `/riesgos/?embed=1` —
-sigue siendo la SPA propia de ese módulo).
+**Tres módulos en la shell:** Inventario, Matriz RBAC (React nativo) y
+Gestión de Riesgos y PTR (iframe a `/riesgos/?embed=1`).
 
-Pendiente (Fase 4): ampliar pruebas, decidir si el login se migra a React,
-y el corte final (`base: '/'`, retirar tablero Django).
+## Despliegue en `/`
+
+nginx sirve este build en la raíz del dominio. Las rutas de backend
+(`/api/`, `/login/`, `/rbac/api/`, `/riesgos/`, …) las atiende nginx por
+separado antes de caer al `index.html` de React. Marcadores antiguos bajo
+`/app/…` redirigen con 301 a la misma ruta sin prefijo.
 
 ## Cuidado al anidar rutas: el contexto no se propaga solo
 
@@ -105,14 +106,6 @@ pantallas de su sub-navegación. El contexto que `Shell` le pasa a **su**
 las rutas anidadas dentro de esos módulos — cada `<Outlet>` intermedio
 tiene que leerlo con `useOutletContext()` y reenviarlo explícitamente al
 suyo propio, o las páginas hijas verían `undefined`.
-
-## Por qué `base: '/app/'`
-
-Mientras dura la migración, nginx sigue sirviendo la interfaz actual
-(Django + iframe de RBAC) en `/`, y este build convive aparte en `/app/`
-para poder probarlo sin arriesgar lo que ya funciona. El día del corte
-final (fin de la Fase 4 del README), `base` pasa a `'/'` y `nginx.conf` se
-actualiza para que el build de React sea la interfaz principal.
 
 ## CSRF
 
