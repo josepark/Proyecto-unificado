@@ -6,9 +6,8 @@
  * front-end anterior — no es un mecanismo nuevo, solo su versión en
  * React:
  *   - Inventario (Django): cookie `csrftoken` (no HttpOnly, legible por
- *     JS) reenviada como encabezado `X-CSRFToken`. Ver
- *     templates/inventario/dashboard.html:getCookie() en el JS anterior.
- *   - Matriz RBAC (Flask): token de sesión servido por `GET /api/csrf`,
+ *     JS) reenviada como encabezado `X-CSRFToken`.
+ *   - Matriz RBAC (Flask): token de sesión servido por `GET /rbac/api/csrf`,
  *     reenviado como encabezado `X-CSRF-Token`. Ver rbac/auth.py.
  */
 

@@ -1,8 +1,7 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import ModuloRBAC from './ModuloRBAC';
 
-/** Misma puerta que nginx y dashboard.html: Matriz RBAC solo para
- * Dinamizador/Administrador. Consultor puede ver Inventario y PTR. */
+/** Puerta RBAC: solo Dinamizador/Administrador (mismo criterio que nginx). */
 export default function PuertaRBAC() {
   const { puedeEditar, autenticado } = useOutletContext();
 

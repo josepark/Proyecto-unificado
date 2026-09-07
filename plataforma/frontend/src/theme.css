@@ -1,7 +1,4 @@
-/* Soluciones SUIIN — mismas variables que templates/inventario/dashboard.html
-   y rbac/static/style.css (sección 6.2 del README: identidad visual
-   unificada). Ni un valor nuevo: esto es el mismo sistema de diseño,
-   ahora como hoja de estilos de React en vez de estar embebido en HTML. */
+/* Soluciones SUIIN — variables de identidad visual unificada (theme.css). */
 :root {
   --verde-profundo: #0d2b23;
   --verde-medio: #164a3b;
@@ -371,7 +368,7 @@ tr:hover td {
   background: #fff;
 }
 
-/* Módulos externos (RBAC legacy iframe, PTR) — mismo criterio que dashboard.html */
+/* Módulo externo (PTR embebido) */
 .modulo-externo {
   background: #fff;
   border: 1px solid var(--borde);

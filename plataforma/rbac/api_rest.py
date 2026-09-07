@@ -1,26 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""SUIIN-RBAC — API REST en JSON (fase 1 de la migración a React).
+"""SUIIN-RBAC — API REST en JSON para la SPA unificada de React.
 
-Hasta ahora RBAC era 100% renderizada en el servidor (Jinja2 + formularios
-con POST). Estas rutas exponen las mismas operaciones de negocio en JSON,
-para que un front-end de React pueda consumirlas, SIN tocar ni duplicar
-las rutas HTML existentes en rutas.py — ambas conviven mientras dura la
-migración. Se registran bajo el mismo prefijo /api/ que ya usaban
-/api/resumen y /api/sistemas (ver rutas.py), así que ya quedan protegidas
-por la misma puerta de autorización de nginx sin ningún cambio de
-infraestructura (auth_request sobre /rbac/ cubre cualquier ruta bajo ese
-prefijo, incluida /rbac/api/...).
-
-Reutiliza, sin duplicar, la lógica de validación y auditoría ya probada
-en rutas.py (_validar_datos_rol, audit(), etc.) — la API es una nueva
-forma de invocar la misma lógica de negocio, no una reimplementación.
+La interfaz HTML (Jinja2 + plantillas) fue retirada; este módulo expone
+todas las operaciones de negocio bajo /api/. nginx las publica como
+/rbac/api/… con auth_request contra el Inventario.
 """
 import sqlite3
 
 from flask import jsonify, request
 
 from db import audit, db, verificar_cadena
+import negocio
 
 
 # --------------------------------------------------------------- adaptador
@@ -55,17 +46,138 @@ def _fila_a_dict(fila):
 
 
 def registrar(app):
-    import rutas  # perezoso: evita import circular (rutas ya importa cosas de app)
+    # ------------------------------------------------------------- salud
+    @app.route("/")
+    def raiz():
+        return jsonify({"servicio": "SUIIN-RBAC", "modo": "api"})
 
     # ------------------------------------------------------------- CSRF
     @app.route("/api/csrf")
     def api_csrf():
-        """El front-end lo pide una vez (p. ej. al cargar la sesión) y
-        reenvía el valor como encabezado X-CSRF-Token en cada
-        POST/PUT/DELETE — mismo token de sesión que ya validan los
-        formularios HTML, ninguna protección nueva ni distinta."""
+        """El front-end lo pide una vez y reenvía el valor como encabezado
+        X-CSRF-Token en cada POST/PUT/DELETE."""
         from auth import csrf_token_actual
         return jsonify({"csrf_token": csrf_token_actual()})
+
+    # --------------------------------------------------- sistemas (integración Inventario)
+    @app.route("/api/sistemas")
+    def api_sistemas():
+        c = db()
+        q = request.args.get("q", "").strip()
+        categoria_f = request.args.get("categoria", "")
+        clasif_f = request.args.get("clasificacion", "")
+        incluir_inactivos = request.args.get("incluir_inactivos") == "1"
+
+        sql = """SELECT s.*, cs.nombre categoria,
+                        SUM(CASE WHEN ma.nivel_codigo<>'—' THEN 1 ELSE 0 END) n_roles
+                 FROM sistema s
+                 JOIN categoria_sistema cs ON cs.id = s.categoria_id
+                 LEFT JOIN matriz_acceso ma ON ma.sistema_id = s.id
+                 WHERE 1=1"""
+        p = []
+        if not incluir_inactivos:
+            sql += " AND s.activo = 1"
+        if q:
+            sql += " AND s.nombre LIKE ?"
+            p.append(f"%{q}%")
+        if categoria_f:
+            sql += " AND s.categoria_id = ?"
+            p.append(categoria_f)
+        if clasif_f in negocio.CLASIFICACIONES:
+            sql += " AND s.clasificacion = ?"
+            p.append(clasif_f)
+        sql += " GROUP BY s.id ORDER BY s.id"
+        sistemas = c.execute(sql, p).fetchall()
+
+        accesos = c.execute(
+            """SELECT ma.sistema_id, r.abreviatura rol, r.denominacion,
+                      ma.nivel_codigo nivel
+               FROM matriz_acceso ma
+               JOIN rol r ON r.id = ma.rol_id
+               WHERE ma.nivel_codigo <> '—' AND r.activo = 1"""
+        ).fetchall()
+        por_sistema = {}
+        for a in accesos:
+            por_sistema.setdefault(a["sistema_id"], []).append(
+                {"rol": a["rol"], "denominacion": a["denominacion"],
+                 "nivel": a["nivel"]})
+        excepciones_vigentes = dict(c.execute(
+            """SELECT sistema_id, COUNT(*) n FROM acceso_excepcion
+               WHERE fecha_fin IS NULL OR date(fecha_fin) >= date('now')
+               GROUP BY sistema_id"""
+        ).fetchall())
+        return jsonify([
+            {"id": s["id"], "nombre": s["nombre"], "categoria": s["categoria"],
+             "categoria_id": s["categoria_id"], "clasificacion": s["clasificacion"],
+             "tecnicas_attack": s["tecnicas_attack"], "activo": bool(s["activo"]),
+             "n_roles": s["n_roles"],
+             "accesos": por_sistema.get(s["id"], []),
+             "excepciones_vigentes": excepciones_vigentes.get(s["id"], 0)}
+            for s in sistemas
+        ])
+
+    # ------------------------------------------------------ resumen (integración Inventario)
+    @app.route("/api/resumen")
+    def api_resumen():
+        c = db()
+        roles_total = c.execute(
+            "SELECT COUNT(*) n FROM rol WHERE activo=1").fetchone()["n"]
+        sistemas_total = c.execute(
+            "SELECT COUNT(*) n FROM sistema WHERE activo=1").fetchone()["n"]
+        usuarios_activos = c.execute(
+            "SELECT COUNT(*) n FROM usuario WHERE estado IN ('Activo','Temporal')"
+        ).fetchone()["n"]
+
+        alertas_mfa = c.execute("SELECT COUNT(*) n FROM v_alertas_mfa").fetchone()["n"]
+        mfa_total = c.execute(
+            "SELECT COUNT(*) n FROM usuario u JOIN rol r ON r.id=u.rol_id "
+            "WHERE u.estado IN ('Activo','Temporal') AND r.mfa_requerido "
+            "LIKE 'Sí%'").fetchone()["n"]
+        mfa_ok = mfa_total - alertas_mfa
+        mfa_pct = round(100 * mfa_ok / mfa_total) if mfa_total else 100
+
+        proximos_vencimientos = c.execute(
+            """SELECT COUNT(*) n FROM (
+                 SELECT u.id FROM usuario u
+                 WHERE u.estado='Temporal' AND u.fecha_fin IS NOT NULL
+                   AND date(u.fecha_fin) BETWEEN date('now','localtime')
+                                              AND date('now','localtime',?)
+                 UNION ALL
+                 SELECT e.usuario_id FROM acceso_excepcion e
+                 WHERE e.fecha_fin IS NOT NULL
+                   AND date(e.fecha_fin) BETWEEN date('now','localtime')
+                                              AND date('now','localtime',?))""",
+            (f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days",
+             f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days")
+        ).fetchone()["n"]
+
+        excepciones_vigentes = c.execute(
+            "SELECT COUNT(*) n FROM acceso_excepcion "
+            "WHERE fecha_fin IS NULL OR date(fecha_fin) >= date('now')"
+        ).fetchone()["n"]
+        excepciones_vencidas = c.execute(
+            "SELECT COUNT(*) n FROM acceso_excepcion "
+            "WHERE fecha_fin IS NOT NULL AND date(fecha_fin) < date('now')"
+        ).fetchone()["n"]
+
+        roles_certificacion_vencida = c.execute(
+            f"SELECT COUNT(*) n FROM rol r WHERE r.activo=1 "
+            f"AND {negocio.SQL_REVISION_VENCIDA} = 1").fetchone()["n"]
+
+        pendientes_total = (proximos_vencimientos + excepciones_vencidas
+                            + roles_certificacion_vencida)
+
+        return jsonify({
+            "roles_total": roles_total,
+            "sistemas_total": sistemas_total,
+            "usuarios_activos": usuarios_activos,
+            "mfa_pct": mfa_pct, "mfa_ok": mfa_ok, "mfa_total": mfa_total,
+            "proximos_vencimientos": proximos_vencimientos,
+            "excepciones_vigentes": excepciones_vigentes,
+            "excepciones_vencidas": excepciones_vencidas,
+            "roles_certificacion_vencida": roles_certificacion_vencida,
+            "pendientes_total": pendientes_total,
+        })
 
     # -------------------------------------------------------- catálogos
     @app.route("/api/inicio")
@@ -139,7 +251,7 @@ def registrar(app):
                  AND date(e.fecha_fin) BETWEEN date('now','localtime')
                                             AND date('now','localtime',?)
                ORDER BY fecha_fin""",
-            (f"+{rutas.DIAS_ALERTA_VENCIMIENTO} days", f"+{rutas.DIAS_ALERTA_VENCIMIENTO} days"))]
+            (f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days", f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days"))]
 
         return jsonify({
             "stats": stats, "alertas_mfa": alertas_mfa, "criticos": criticos,
@@ -147,7 +259,7 @@ def registrar(app):
             "riesgo": riesgo, "max_riesgo": max_riesgo, "mfa_pct": mfa_pct,
             "mfa_ok": mfa_ok, "mfa_total": mfa_total,
             "proximos_vencimientos": proximos_vencimientos,
-            "dias_alerta": rutas.DIAS_ALERTA_VENCIMIENTO,
+            "dias_alerta": negocio.DIAS_ALERTA_VENCIMIENTO,
         })
 
     # -------------------------------------------------------- catálogos
@@ -171,9 +283,9 @@ def registrar(app):
             "grupos_rol": grupos,
             "categorias_sistema": categorias,
             "niveles_acceso": niveles,
-            "riesgos_attack": list(rutas.RIESGOS_ATTACK),
-            "clasificaciones": list(rutas.CLASIFICACIONES),
-            "estados_usuario": list(rutas.ESTADOS_USUARIO),
+            "riesgos_attack": list(negocio.RIESGOS_ATTACK),
+            "clasificaciones": list(negocio.CLASIFICACIONES),
+            "estados_usuario": list(negocio.ESTADOS_USUARIO),
             "entidades_auditoria": entidades_auditoria,
             "acciones_auditoria": acciones_auditoria,
         })
@@ -184,7 +296,7 @@ def registrar(app):
         c = db()
         incluir_inactivos = request.args.get("incluir_inactivos") == "1"
         q = request.args.get("q", "").strip()
-        sql = (f"SELECT r.*, g.nombre grupo, {rutas.SQL_REVISION_VENCIDA} revision_vencida "
+        sql = (f"SELECT r.*, g.nombre grupo, {negocio.SQL_REVISION_VENCIDA} revision_vencida "
                "FROM rol r JOIN grupo_rol g ON g.id = r.grupo_id WHERE 1=1")
         params = []
         if not incluir_inactivos:
@@ -200,7 +312,7 @@ def registrar(app):
     def api_rol_detalle(rid):
         c = db()
         rol = c.execute(
-            f"SELECT r.*, g.nombre grupo, {rutas.SQL_REVISION_VENCIDA} revision_vencida "
+            f"SELECT r.*, g.nombre grupo, {negocio.SQL_REVISION_VENCIDA} revision_vencida "
             "FROM rol r JOIN grupo_rol g ON g.id=r.grupo_id WHERE r.id=?",
             (rid,)).fetchone()
         if not rol:
@@ -225,7 +337,7 @@ def registrar(app):
     def api_rol_crear():
         c = db()
         cuerpo = _json_body()
-        datos, error = rutas._validar_datos_rol(cuerpo, c)
+        datos, error = negocio._validar_datos_rol(cuerpo, c)
         if error:
             return jsonify({"detail": error}), 400
         clonar_raw = (cuerpo.get("clonar_de") or "").strip()
@@ -251,7 +363,7 @@ def registrar(app):
         except sqlite3.IntegrityError:
             return jsonify({"detail": "Ya existe un rol con ese código o abreviatura."}), 409
         rid = cur.lastrowid
-        # Igual que rol_crear() en rutas.py: inicializar la fila del nuevo rol
+        # Igual que rol_crear() en negocio.py: inicializar la fila del nuevo rol
         # en la matriz — copiando el rol de origen si se indicó uno, o en
         # '—' (sin accesos, mínimo privilegio) en caso contrario. Sin este
         # paso, el rol quedaba sin ninguna fila en matriz_acceso al crearse
@@ -277,7 +389,7 @@ def registrar(app):
         c = db()
         if not c.execute("SELECT 1 FROM rol WHERE id=?", (rid,)).fetchone():
             return jsonify({"detail": "Rol no encontrado."}), 404
-        datos, error = rutas._validar_datos_rol(_json_body(), c)
+        datos, error = negocio._validar_datos_rol(_json_body(), c)
         if error:
             return jsonify({"detail": error}), 400
         try:
@@ -338,7 +450,7 @@ def registrar(app):
     @app.route("/api/roles/<int:rid>", methods=["DELETE"])
     def api_rol_eliminar(rid):
         """Elimina definitivamente un rol — misma salvaguarda que
-        rol_eliminar() en rutas.py: no se permite si algún usuario (incluso
+        rol_eliminar() en negocio.py: no se permite si algún usuario (incluso
         revocado) todavía lo referencia, para no destruir su trazabilidad."""
         c = db()
         r = c.execute("SELECT abreviatura, denominacion FROM rol WHERE id=?", (rid,)).fetchone()
@@ -360,7 +472,7 @@ def registrar(app):
 
     # ---------------------------------------------------------- sistemas (escritura)
     # La lectura (GET /api/sistemas, GET /api/sistemas/<id>) ya vive en
-    # rutas.py — se construyó primero para el cruce en vivo con el
+    # negocio.py — se construyó primero para el cruce en vivo con el
     # Inventario (sección 8.6/7.1 del README). Aquí solo se agrega la
     # escritura, reutilizando _validar_datos_sistema.
     @app.route("/api/sistemas/<int:sid>")
@@ -405,7 +517,7 @@ def registrar(app):
     @app.route("/api/sistemas", methods=["POST"])
     def api_sistema_crear():
         c = db()
-        datos, error = rutas._validar_datos_sistema(_json_body(), c)
+        datos, error = negocio._validar_datos_sistema(_json_body(), c)
         if error:
             return jsonify({"detail": error}), 400
         try:
@@ -428,7 +540,7 @@ def registrar(app):
         c = db()
         if not c.execute("SELECT 1 FROM sistema WHERE id=?", (sid,)).fetchone():
             return jsonify({"detail": "Sistema no encontrado."}), 404
-        datos, error = rutas._validar_datos_sistema(_json_body(), c)
+        datos, error = negocio._validar_datos_sistema(_json_body(), c)
         if error:
             return jsonify({"detail": error}), 400
         try:
@@ -481,7 +593,7 @@ def registrar(app):
     # -------------------------------------------------------------- usuarios
     def _validar_datos_usuario(f, c, uid_actual=None):
         """Misma validación que ya usaban usuario_crear/usuario_editar en
-        rutas.py (no se extrajo a una función compartida allá para no
+        negocio.py (no se extrajo a una función compartida allá para no
         arriesgar ese código ya probado; aquí se reimplementa idéntica
         para la API)."""
         nombre = f.get("nombre", "").strip()
@@ -495,11 +607,11 @@ def registrar(app):
         if not rol or (uid_actual is None and not rol["activo"]):
             return None, "Seleccione un rol activo válido."
         estado = f.get("estado", "Activo")
-        if estado not in rutas.ESTADOS_USUARIO:
+        if estado not in negocio.ESTADOS_USUARIO:
             return None, "Estado no reconocido."
         fecha_inicio = f.get("fecha_inicio") or None
         fecha_fin = f.get("fecha_fin") or None
-        if not rutas._fecha_valida(fecha_inicio) or not rutas._fecha_valida(fecha_fin):
+        if not negocio._fecha_valida(fecha_inicio) or not negocio._fecha_valida(fecha_fin):
             return None, "Las fechas deben tener el formato AAAA-MM-DD."
         if estado == "Temporal":
             if not fecha_inicio or not fecha_fin:
@@ -531,7 +643,7 @@ def registrar(app):
         if q:
             sql += " AND (u.nombre LIKE ? OR r.abreviatura LIKE ? OR r.denominacion LIKE ?)"
             p += [f"%{q}%"] * 3
-        if estado_f in rutas.ESTADOS_USUARIO:
+        if estado_f in negocio.ESTADOS_USUARIO:
             sql += " AND u.estado=?"
             p.append(estado_f)
         if rol_f:
@@ -613,7 +725,7 @@ def registrar(app):
         c = db()
         cuerpo = request.get_json(silent=True) or {}
         nuevo = cuerpo.get("estado", "")
-        if nuevo not in rutas.ESTADOS_USUARIO:
+        if nuevo not in negocio.ESTADOS_USUARIO:
             return jsonify({"detail": "Estado no reconocido."}), 400
         u = c.execute(
             "SELECT u.nombre, r.abreviatura rol FROM usuario u "
@@ -800,7 +912,7 @@ def registrar(app):
             return jsonify({"detail": "Sistema inválido."}), 400
         nivel = cuerpo.get("nivel", "")
         fecha_fin = cuerpo.get("fecha_fin") or None
-        if not rutas._fecha_valida(fecha_fin):
+        if not negocio._fecha_valida(fecha_fin):
             return jsonify({"detail": "La fecha debe tener el formato AAAA-MM-DD."}), 400
         s = c.execute("SELECT nombre FROM sistema WHERE id=?", (sistema_id,)).fetchone()
         if not s or not c.execute("SELECT 1 FROM nivel_acceso WHERE codigo=?", (nivel,)).fetchone():
@@ -849,7 +961,7 @@ def registrar(app):
             return jsonify({"detail": "Sistema inválido."}), 400
         nivel = cuerpo.get("nivel", "")
         fecha_fin = cuerpo.get("fecha_fin") or None
-        if not rutas._fecha_valida(fecha_fin):
+        if not negocio._fecha_valida(fecha_fin):
             return jsonify({"detail": "La fecha debe tener el formato AAAA-MM-DD."}), 400
 
         u = c.execute(

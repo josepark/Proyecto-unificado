@@ -4,11 +4,7 @@ import { useSesion } from '../hooks/useSesion';
 import { eventosApi } from '../api/client';
 import { rbacApi } from '../api/rbac';
 
-/** Encabezado + pestañas de módulo, persistentes en toda la app — la
- * misma "una sola interfaz" que ya lograba dashboard.html embebiendo
- * RBAC en un iframe (README sección 6.1), ahora como enrutamiento de
- * React de verdad: Inventario y Matriz RBAC son rutas hermanas del
- * mismo árbol de componentes, no dos aplicaciones cosidas. */
+/** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
   const { autenticado, usuario, puedeEditar, puedeEliminar, cargando } = useSesion();
   const [sesionVencida, setSesionVencida] = useState(false);

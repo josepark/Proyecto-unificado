@@ -818,15 +818,20 @@ reenviarlo explícitamente en cada módulo.
 
 ### 9.8 Login en React (completa)
 
-- Pantalla `/login` en la SPA (misma identidad visual que el formulario
-  Django anterior).
-- `POST /api/auth/login/` abre sesión real por cookie (no solo JWT), con
-  django-axes y rate limiting en nginx (mismo cupo que `/api/token-jwt/`).
-- `GET /api/sesion/` y `GET /api/auth/login/` emiten cookie CSRF.
-- `/logout/` sigue en Django (enlace directo desde el encabezado).
-- La ruta HTML `/login/` de Django se conserva para pruebas automatizadas
-  y acceso directo al puerto 8000; en producción nginx entrega `/login` vía
-  la SPA.
+- Pantalla `/login` en la SPA; `POST /api/auth/login/` abre sesión por cookie.
+- Rate limiting en nginx sobre `/api/auth/login/`.
+- `/logout/` sigue en Django.
+
+### 9.9 Retiro de plantillas HTML de RBAC (completa)
+
+- Eliminadas 15 plantillas Jinja2, `static/app.js`, `static/style.css` y
+  `rutas.py` (rutas HTML y formularios POST).
+- Flask queda como **API JSON** (`api_rest.py` + `negocio.py`); la UI vive
+  en React bajo `/rbac/…`.
+- nginx ya no proxea `/rbac/` a Flask — solo `/rbac/api/`; las rutas
+  `/rbac/inicio`, `/rbac/matriz`, etc. las sirve la SPA en `/`.
+- Se conserva `static/attack_tecnicas.json` para sincronizar el catálogo
+  MITRE ATT&CK en la base de datos.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 

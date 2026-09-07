@@ -11,12 +11,13 @@ MAN-POL-SI-002 · Determinación 7 CRIC-Nacional (Decisión No. 02 / 02-Ene-2025
 
 | Módulo | Responsabilidad |
 |---|---|
-| `app.py` | Fábrica de la aplicación, configuración y registro de capas |
+| `app.py` | Fábrica de la aplicación Flask (solo API JSON) |
+| `api_rest.py` | Endpoints REST bajo `/api/` (consumidos por la SPA React) |
+| `negocio.py` | Validaciones y constantes compartidas |
 | `db.py` | Conexión SQLite (WAL), **bitácora encadenada por hash**, **vencimientos automáticos** |
-| `auth.py` | Protecciones sin login: CSRF por token y encabezados de seguridad |
-| `rutas.py` | Rutas de negocio: matriz, roles, sistemas, usuarios, exportaciones |
+| `auth.py` | CSRF por token y encabezados de seguridad |
 | `schema.sql` / `seed.py` | Esquema (10 tablas + 3 vistas) y carga inicial con datos reales |
-| `tests/` | Suite `pytest` de 40 pruebas de seguridad y negocio |
+| `tests/` | Suite `pytest` (API REST + integración) |
 | `migrar_v2_1.py` | Migración acumulativa desde cualquier versión anterior |
 | `catalogo_attack.py` | Sincroniza `static/attack_tecnicas.json` con la tabla `attack_tecnica` |
 | `catalogo_attack_actualizar.py` | Regenera el catálogo MITRE ATT&CK desde el Excel oficial |
@@ -29,7 +30,7 @@ MAN-POL-SI-002 · Determinación 7 CRIC-Nacional (Decisión No. 02 / 02-Ene-2025
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python3 seed.py        # crea rbac.db con los datos del documento MCA-001
-python3 app.py         # http://localhost:5000 — acceso directo, sin login
+python3 app.py         # http://localhost:5000/api/csrf — solo API (UI en React)
 ```
 
 ## Seguridad (v2.1 — sin inicio de sesión)
