@@ -217,6 +217,20 @@ describe("AuthProvider — login()", () => {
 });
 
 describe("AuthProvider — plataforma unificada (sesión del shell)", () => {
+  it("no llama token-jwt si el shell confirma que no hay sesión", async () => {
+    endpoints.ssoJWT.mockRejectedValue(new Error("401"));
+
+    render(
+      <AuthProvider plataformaAutenticada={false} sesionCargando={false} unificado>
+        <SondaAuth />
+      </AuthProvider>,
+    );
+
+    await esperarQueTermineDeVerificar();
+    expect(endpoints.ssoJWT).not.toHaveBeenCalled();
+    expect(screen.getByTestId("autenticado")).toHaveTextContent("false");
+  });
+
   it("no borra credenciales SSO mientras la sesión del shell sigue cargando", async () => {
     localStorage.setItem("suiin_token", "jwt-sso-viejo");
     localStorage.setItem("suiin_auth_scheme", "Bearer");
@@ -224,21 +238,23 @@ describe("AuthProvider — plataforma unificada (sesión del shell)", () => {
     endpoints.ssoJWT.mockResolvedValue({ data: { token: "jwt-sso-nuevo", username: "admin", roles: [] } });
 
     const { rerender } = render(
-      <AuthProvider plataformaAutenticada={false} sesionCargando>
+      <AuthProvider plataformaAutenticada={false} sesionCargando unificado>
         <SondaAuth />
-      </AuthProvider>
+      </AuthProvider>,
     );
 
-    await esperarQueTermineDeVerificar();
-    expect(localStorage.getItem("suiin_token")).toBe("jwt-sso-nuevo");
+    await waitFor(() => expect(screen.getByTestId("checking")).toHaveTextContent("true"));
+    expect(endpoints.ssoJWT).not.toHaveBeenCalled();
+    expect(localStorage.getItem("suiin_token")).toBe("jwt-sso-viejo");
 
     rerender(
-      <AuthProvider plataformaAutenticada sesionCargando={false}>
+      <AuthProvider plataformaAutenticada sesionCargando={false} unificado>
         <SondaAuth />
-      </AuthProvider>
+      </AuthProvider>,
     );
 
-    await waitFor(() => expect(endpoints.ssoJWT).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(endpoints.ssoJWT).toHaveBeenCalled());
+    await esperarQueTermineDeVerificar();
     expect(localStorage.getItem("suiin_token")).toBe("jwt-sso-nuevo");
   });
 });

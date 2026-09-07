@@ -34,6 +34,9 @@ export default function Login() {
     try {
       await inventarioApi.login(usuario, clave);
       await recargar();
+      // Si el módulo de riesgos sigue montado (p. ej. login en modal futuro),
+      // o tras volver a /gestion-riesgos, dispara SSO sin esperar otro ciclo.
+      window.dispatchEvent(new CustomEvent('suiin-sesion-plataforma'));
       navigate(destino, { replace: true });
     } catch (err) {
       if (err.status === 429) {

@@ -27,10 +27,11 @@ const NAV_ITEMS = [
 ];
 
 export default function Layout() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, checking, plataformaAutenticada } = useAuth();
   const { anidado } = usePlataforma();
   const [loginOpen, setLoginOpen] = useState(false);
   const EMBEBIDO = esModoEmbebido(anidado);
+  const sincronizandoSesion = EMBEBIDO && plataformaAutenticada && checking && !isAuthenticated;
 
   // Mismo criterio de acceso que ya usa RBAC: sin sesión, solo se navega el
   // Panel general (modo consulta) — el resto del menú aparece recién con la
@@ -85,7 +86,9 @@ export default function Layout() {
           ))}
           {!isAuthenticated && (
             <p className="px-3 pt-3 text-[11px] leading-relaxed text-base-300/60">
-              {EMBEBIDO ? (
+              {sincronizandoSesion ? (
+                'Sincronizando sesión con el Inventario…'
+              ) : EMBEBIDO ? (
                 <>
                   Use{' '}
                   <Link

@@ -21,7 +21,7 @@ export default function ModuloRiesgosPTR() {
   return (
     <PlataformaProvider anidado>
       <div className="modulo-riesgos-nativo">
-        <AuthProvider plataformaAutenticada={!!autenticado} sesionCargando={!!cargando}>
+        <AuthProvider plataformaAutenticada={!!autenticado} sesionCargando={!!cargando} unificado>
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<Dashboard />} />

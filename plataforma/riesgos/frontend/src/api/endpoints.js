@@ -1,6 +1,11 @@
 import axios from "axios";
 import api, { inventarioBaseURL } from "./client";
 
+function leerCookie(nombre) {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${nombre}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export const endpoints = {
   // Auth
   login: (username, password) => api.post("/auth/login/", { username, password }),
@@ -16,8 +21,18 @@ export const endpoints = {
   // Mismo endpoint del Inventario, pero con usuario/clave en vez de cookie —
   // para el formulario de login manual (ver AuthContext.jsx: se intenta
   // primero, y solo si falla se cae al login propio de riesgos más abajo).
-  ssoJWTLogin: (username, password) =>
-    axios.post(`${inventarioBaseURL}/token-jwt/`, { username, password }, { withCredentials: true }),
+  ssoJWTLogin: async (username, password) => {
+    // Asegura cookie csrftoken (mismo patrón que /api/auth/login/ de la SPA).
+    await axios.get(`${inventarioBaseURL}/sesion/`, { withCredentials: true });
+    return axios.post(
+      `${inventarioBaseURL}/token-jwt/`,
+      { username, password },
+      {
+        withCredentials: true,
+        headers: { "X-CSRFToken": leerCookie("csrftoken") || "" },
+      },
+    );
+  },
 
   dashboard: () => api.get("/dashboard/resumen/"),
 

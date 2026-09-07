@@ -73,10 +73,16 @@ describe("Layout — bloque de sesión propio, embebido dentro del Inventario", 
   });
 
   it("sin sesión, NO muestra ningún botón de iniciar sesión propio", async () => {
-    useAuth.mockReturnValue({ user: null, isAuthenticated: false, logout: vi.fn() });
+    useAuth.mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      checking: false,
+      plataformaAutenticada: false,
+      logout: vi.fn(),
+    });
     await montarLayout({ embebido: true });
 
-    expect(screen.queryByText("Iniciar sesión")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Iniciar sesión/i })).not.toBeInTheDocument();
   });
 
   it("no muestra el bloque de marca 'SUIIN-SGSI' de arriba", async () => {

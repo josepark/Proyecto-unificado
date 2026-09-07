@@ -7,6 +7,7 @@ const AuthContext = createContext(null);
 // re-verifica contra el Inventario (no solo su propia validez) — ver
 // justificación completa más abajo, en el useEffect que lo usa.
 const INTERVALO_REVALIDACION_MS = 3 * 60 * 1000;
+const EVENTO_SESION_PLATAFORMA = "suiin-sesion-plataforma";
 
 function guardarCredenciales(token, esquema, origen = null) {
   localStorage.setItem("suiin_token", token);
@@ -21,19 +22,29 @@ function borrarCredenciales() {
   localStorage.removeItem("suiin_auth_origen");
 }
 
-export function AuthProvider({ children, plataformaAutenticada = false, sesionCargando = false }) {
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function AuthProvider({
+  children,
+  plataformaAutenticada = false,
+  sesionCargando = false,
+  unificado = false,
+}) {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
   const revalidando = useRef(false);
 
   const intentarSSO = useCallback(() => {
-    if (revalidando.current) return Promise.resolve(); // evita solapes si el intervalo dispara mientras otro sigue en vuelo
+    if (revalidando.current) return Promise.resolve(false);
     revalidando.current = true;
     return endpoints
       .ssoJWT()
       .then((res) => {
         guardarCredenciales(res.data.token, "Bearer", "sso");
         setUser({ username: res.data.username, is_staff: res.data.roles?.includes("Administrador") ?? false });
+        return true;
       })
       .catch(() => {
         // Solo se descartan credenciales si eran de sesión única silenciosa
@@ -47,13 +58,30 @@ export function AuthProvider({ children, plataformaAutenticada = false, sesionCa
           borrarCredenciales();
           setUser(null);
         }
+        return false;
       })
       .finally(() => {
         revalidando.current = false;
       });
   }, []);
 
+  const intentarSSOConReintento = useCallback(
+    async (intentos = 3) => {
+      for (let i = 0; i < intentos; i += 1) {
+        const ok = await intentarSSO();
+        if (ok) return true;
+        if (i < intentos - 1) await esperar(350 * (i + 1));
+      }
+      return false;
+    },
+    [intentarSSO],
+  );
+
   useEffect(() => {
+    // En la SPA unificada, autenticado puede ser false un instante mientras
+    // GET /api/sesion/ sigue en vuelo — no adivinar con token-jwt todavía.
+    if (unificado && sesionCargando) return;
+
     const token = localStorage.getItem("suiin_token");
     const esquema = localStorage.getItem("suiin_auth_scheme");
     const origen = localStorage.getItem("suiin_auth_origen");
@@ -71,29 +99,28 @@ export function AuthProvider({ children, plataformaAutenticada = false, sesionCa
       return;
     }
 
-    // Sin credenciales guardadas, o un JWT que si vino de sesión única
-    // silenciosa: en ambos casos se re-verifica contra el Inventario ahora
-    // mismo, no solo contra la validez propia del JWT ya guardado.
-    //
-    // Hallazgo real (captura del usuario, 2026-08-25): cerrar sesión en el
-    // Inventario no cerraba la de riesgos — el JWT silencioso, todavía sin
-    // vencer, seguía validando correctamente contra /api/auth/me/ (que solo
-    // mira la firma y el vencimiento del token, no si la cookie que lo
-    // originó sigue viva), así que el panel embebido seguía mostrando el
-    // menú completo con la sesión vieja después de cerrar sesión arriba.
-    intentarSSO().finally(() => setChecking(false));
-  }, [intentarSSO]);
+    // Plataforma unificada sin sesión del Inventario: no llamar GET
+    // /api/token-jwt/ (401 esperado y ruido en consola); limpiar JWT SSO obsoleto.
+    if (unificado && !plataformaAutenticada) {
+      if (origen === "sso") {
+        borrarCredenciales();
+        setUser(null);
+      }
+      setChecking(false);
+      return;
+    }
 
-  // En la SPA unificada la sesión vive en el shell (cookie Django). Cuando
-  // el usuario inicia o cierra sesión arriba, re-sincronizamos el JWT de
-  // riesgos sin recargar el módulo.
+    // Sin credenciales guardadas, o un JWT que sí vino de sesión única
+    // silenciosa: re-verificar contra el Inventario ahora mismo.
+    const sincronizar = unificado ? intentarSSOConReintento : intentarSSO;
+    sincronizar().finally(() => setChecking(false));
+  }, [intentarSSO, intentarSSOConReintento, unificado, sesionCargando, plataformaAutenticada]);
+
+  // Cuando el shell confirma sesión activa (login arriba o recarga), pedir JWT.
   useEffect(() => {
-    // Mientras el shell aún consulta GET /api/sesion/, autenticado puede ser
-    // false un instante aunque la cookie ya exista — no borrar el JWT de SSO
-    // en ese lapso ni tratarlo como cierre de sesión.
-    if (sesionCargando) return;
+    if (!unificado || sesionCargando) return;
     if (plataformaAutenticada) {
-      intentarSSO();
+      intentarSSOConReintento();
       return;
     }
     const origen = localStorage.getItem("suiin_auth_origen");
@@ -101,7 +128,16 @@ export function AuthProvider({ children, plataformaAutenticada = false, sesionCa
       borrarCredenciales();
       setUser(null);
     }
-  }, [plataformaAutenticada, sesionCargando, intentarSSO]);
+  }, [plataformaAutenticada, sesionCargando, intentarSSOConReintento, unificado]);
+
+  useEffect(() => {
+    if (!unificado) return;
+    function alActualizarSesionPlataforma() {
+      intentarSSOConReintento();
+    }
+    window.addEventListener(EVENTO_SESION_PLATAFORMA, alActualizarSesionPlataforma);
+    return () => window.removeEventListener(EVENTO_SESION_PLATAFORMA, alActualizarSesionPlataforma);
+  }, [intentarSSOConReintento, unificado]);
 
   useEffect(() => {
     // Mientras la pestaña/iframe de riesgos queda abierta sin recargar (caso
@@ -158,7 +194,16 @@ export function AuthProvider({ children, plataformaAutenticada = false, sesionCa
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, checking, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        checking,
+        isAuthenticated: !!user,
+        plataformaAutenticada: unificado ? plataformaAutenticada : false,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -169,3 +214,5 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth debe usarse dentro de <AuthProvider>");
   return ctx;
 }
+
+export { EVENTO_SESION_PLATAFORMA };
