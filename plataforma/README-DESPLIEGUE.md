@@ -627,13 +627,12 @@ consolidado (PDF)" en el Panel ejecutivo. Cubierto con 5 pruebas nuevas
 (71 pruebas del Inventario en total) y probado extremo a extremo con
 datos reales de ambas aplicaciones.
 
-## 9. Migración a React (en curso)
+## 9. Migración a React (completa)
 
-Se decidió migrar la interfaz de los dos módulos a un solo SPA de React
-(un build, un bundle), reemplazando tanto el JS embebido del Inventario
-como las plantillas Jinja2 + iframe de RBAC — la versión completa de "una
-sola interfaz", en vez de la aproximación actual. Es un cambio grande, que
-avanza por fases; esta sección se actualiza en cada fase.
+La interfaz unificada vive en `frontend/` (Vite + React 19). Django e Inventario
+siguen como API; RBAC como API JSON bajo `/rbac/api/`; Riesgos sigue embebido
+por iframe en `/gestion-riesgos`. Las subsecciones 9.1–9.10 documentan el
+historial de la migración fase a fase.
 
 ### 9.1 Por qué RBAC necesitaba trabajo primero
 
@@ -645,42 +644,8 @@ interfaz, había que construirle esa API.
 
 ### 9.2 API REST de RBAC — completa
 
-Nueva (`rbac/api_rest.py`), registrada junto a las rutas HTML existentes
-(`rutas.py`), que sigue funcionando sin cambios mientras dura la
-migración — ambas conviven. Vive bajo el mismo prefijo `/api/` que ya
-usaban `/api/resumen` y `/api/sistemas` (sección 8.3/8.6), así que ya
-queda protegida por la misma puerta de autorización de nginx sin ningún
-cambio de infraestructura.
-
-Cubre los seis recursos de negocio de RBAC, en todos los casos
-reutilizando (no duplicando) la validación y la auditoría que ya usaban
-las rutas HTML:
-
-- **CSRF** (`GET /api/csrf`) — el mismo token de sesión que ya validan
-  los formularios HTML, ahora también aceptado por encabezado
-  `X-CSRF-Token` en toda escritura JSON (`POST`/`PUT`/`DELETE`).
-- **Catálogos** (`GET /api/catalogos`) — grupos de rol, categorías de
-  sistema, niveles de acceso y demás listas para poblar formularios.
-- **Roles** — CRUD completo, certificación periódica, baja/alta lógica.
-- **Sistemas** — CRUD completo (la lectura ya existía desde la sección
-  8.6/7.1); baja lógica y eliminación definitiva (bloqueada si tiene
-  excepciones documentadas, igual que en las rutas HTML).
-- **Usuarios** — CRUD completo, cambio de estado (incluye la regla de
-  fechas obligatorias para accesos Temporales).
-- **Matriz** — lectura completa (roles × sistemas × celdas) y edición de
-  celda individual.
-- **Excepciones** — listar, crear (individual, exige motivo — control
-  5.18), eliminar.
-- **Auditoría** — lectura paginada con filtros, y verificación de
-  integridad de la cadena de hashes.
-
-**38 pruebas automatizadas nuevas** (85 pruebas RBAC en total), incluida
-la verificación de que la cadena de auditoría sigue íntegra después de
-escrituras hechas vía API.
-
-**Pendiente, no por diseño sino por alcance de esta fase:** importar/
-comparar matriz entre roles y excepciones masivas (ya existen como rutas
-HTML; se agregan a la API cuando se porte esa pantalla a React).
+(`rbac/api_rest.py` + `negocio.py`). Flask ya no sirve HTML; toda la UI RBAC
+está en React. Vive bajo `/rbac/api/` (nginx + auth_request).
 
 ### 9.3 Fase 2 — scaffold de React e integración Docker/nginx (completa)
 
@@ -844,6 +809,13 @@ reenviarlo explícitamente en cada módulo.
 - Pantalla React `/rbac/matriz/importar` (mismo flujo de dos pasos que tenía
   la plantilla HTML retirada).
 - Enlaces de exportación en Matriz e Inicio RBAC.
+
+### 9.11 Ficha de activo — cruce Inventario ↔ RBAC (completa)
+
+- `Activo.jsx` muestra las dos secciones de accesos por sistema que ya tenía
+  el tablero Django: copia local (`RolMCA`) y matriz RBAC en vivo (`accesos_rbac`).
+- Misma semántica que §8.6: `null` en RBAC muestra aviso explícito, no datos
+  engañosos.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 

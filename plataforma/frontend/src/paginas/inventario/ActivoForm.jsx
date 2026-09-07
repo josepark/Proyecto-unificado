@@ -5,8 +5,8 @@ import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, CampoTextarea, Fila } from '../../componentes/CamposFormulario';
 
-// Mismas listas que templates/inventario/dashboard.html (const OPC) — el
-// formulario de React reemplaza al JS embebido, no cambia sus reglas.
+// Listas de opciones alineadas con ActivoWriteSerializer (DRF) — mismos
+// valores válidos que el formulario individual del Inventario.
 const OPC = {
   clase: [
     ['INFRA', 'Infraestructura de red'],

@@ -12,17 +12,10 @@ import LoginModal from "./LoginModal";
 // de qué "volver".
 const ENLACE_PLATAFORMA = import.meta.env.BASE_URL !== "/" ? "/" : null;
 
-// Modo embebido (?embed=1): mismo mecanismo que ya usa RBAC
-// (rbac/templates/base.html) para que el Inventario lo incruste como una
-// pestaña más de su propia página (iframe), en vez de que sea una navegación
-// completa a otro sitio. Igual que RBAC, solo oculta lo decorativo/redundante
-// (el bloque de marca "SUIIN-SGSI" de arriba, el pie "Consejo Regional..." y
-// el enlace "Volver a Soluciones SUIIN") — la barra de navegación con las
-// páginas (Activos, Riesgos contextuales, Plan de tratamiento, etc.) se
-// mantiene siempre visible; sin esto, quien entra embebido solo vería el
-// Panel general sin forma de llegar a las demás páginas (hallazgo real).
-// Se lee una sola vez al cargar (no depende de la ruta interna que React
-// Router muestre después).
+// Modo embebido (?embed=1): oculta chrome decorativo cuando la SPA de
+// Riesgos se muestra dentro del iframe del tablero unificado. Solo oculta lo
+// decorativo/redundante (marca superior, pie y enlace «Volver a Soluciones
+// SUIIN»); la barra de navegación interna se mantiene visible.
 const EMBEBIDO = new URLSearchParams(window.location.search).get("embed") === "1";
 
 const NAV_ITEMS = [

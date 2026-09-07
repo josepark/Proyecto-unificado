@@ -28,7 +28,8 @@ function formatearValor(v) {
 function BloqueDetalleClase({ titulo, datos }) {
   if (!datos) return null;
   const entradas = Object.entries(datos).filter(
-    ([clave, valor]) => !['id', 'activo'].includes(clave) && valor !== null && valor !== '',
+    ([clave, valor]) => !['id', 'activo', 'accesos', 'accesos_rbac'].includes(clave)
+      && valor !== null && valor !== '',
   );
   if (!entradas.length) return null;
   return (
@@ -45,6 +46,57 @@ function BloqueDetalleClase({ titulo, datos }) {
         </dl>
       </div>
     </div>
+  );
+}
+
+/** Cruce local (RolMCA) vs matriz RBAC en vivo — misma lógica que la ficha
+ * del tablero Django retirado (§8.6 README-DESPLIEGUE). */
+function AccesosSistema({ sistema }) {
+  if (!sistema) return null;
+
+  const { accesos, accesos_rbac, sistema_mca_equivalente: mca } = sistema;
+
+  return (
+    <>
+      {accesos?.length > 0 && (
+        <div className="card">
+          <h2>Roles con acceso — registrado en el Inventario</h2>
+          <div className="cuerpo">
+            <div className="chip-list">
+              {accesos.map((a, i) => (
+                <span className="chip" key={i} title={String(a.rol)}>
+                  {a.rol} ({a.nivel})
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <h2>Roles con acceso — según Matriz RBAC (en vivo)</h2>
+        <div className="cuerpo">
+          {accesos_rbac === null ? (
+            <p style={{ color: '#9a1f1f', fontSize: 13, margin: 0 }}>
+              No se pudo verificar contra la Matriz RBAC (módulo no disponible, o «
+              {mca || '—'}» no coincide con ningún sistema de la matriz).
+            </p>
+          ) : accesos_rbac.length === 0 ? (
+            <p style={{ color: 'var(--texto-suave)', fontSize: 13, margin: 0 }}>
+              Sin accesos registrados en la matriz para «{mca}».
+            </p>
+          ) : (
+            <div className="chip-list">
+              {accesos_rbac.map((a, i) => (
+                <span className="chip" key={i} title={a.denominacion || a.rol}>
+                  {a.rol} ({a.nivel})
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -211,6 +263,7 @@ export default function Activo() {
 
         <BloqueDetalleClase titulo="Detalle de infraestructura" datos={a.infraestructura} />
         <BloqueDetalleClase titulo="Detalle del sistema" datos={a.sistema} />
+        <AccesosSistema sistema={a.sistema} />
         <BloqueDetalleClase titulo="Detalle del equipo" datos={a.equipo} />
 
         {a.amenazas?.length > 0 && (

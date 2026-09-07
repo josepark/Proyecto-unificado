@@ -66,3 +66,54 @@ describe('Activo — guardas de rol', () => {
     expect(screen.getByRole('button', { name: /Eliminar/i })).toBeInTheDocument();
   });
 });
+
+describe('Activo — cruce Inventario ↔ RBAC', () => {
+  it('muestra accesos locales y RBAC en vivo para sistemas', async () => {
+    global.fetch = vi.fn(async (url) => {
+      const u = String(url);
+      if (u.includes('/historial/')) return ok([]);
+      return ok({
+        ...ACTIVO_FIXTURE,
+        id_activo: 'SIS-001',
+        nombre: 'Portal académico',
+        clase: 'SIST',
+        clase_display: 'Sistema de información',
+        sistema: {
+          estado_operativo: 'Producción',
+          sistema_mca_equivalente: 'Portal',
+          accesos: [{ rol: 'DTG', nivel: 'A' }],
+          accesos_rbac: [{ rol: 'DTG', denominacion: 'Dinamizador', nivel: 'C' }],
+        },
+      });
+    });
+
+    renderConContexto({ puedeEditar: false, puedeEliminar: false });
+    await screen.findByText('SIS-001');
+    expect(screen.getByText(/registrado en el Inventario/i)).toBeInTheDocument();
+    expect(screen.getByText(/según Matriz RBAC/i)).toBeInTheDocument();
+    expect(screen.getByText('DTG (A)')).toBeInTheDocument();
+    expect(screen.getByText('DTG (C)')).toBeInTheDocument();
+  });
+
+  it('avisa cuando RBAC no responde o no hay coincidencia', async () => {
+    global.fetch = vi.fn(async (url) => {
+      const u = String(url);
+      if (u.includes('/historial/')) return ok([]);
+      return ok({
+        ...ACTIVO_FIXTURE,
+        id_activo: 'SIS-002',
+        clase: 'SIST',
+        clase_display: 'Sistema de información',
+        sistema: {
+          sistema_mca_equivalente: 'Desconocido',
+          accesos: [],
+          accesos_rbac: null,
+        },
+      });
+    });
+
+    renderConContexto({ puedeEditar: false, puedeEliminar: false });
+    await screen.findByText('SIS-002');
+    expect(screen.getByText(/No se pudo verificar contra la Matriz RBAC/i)).toBeInTheDocument();
+  });
+});
