@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
+import HojaVidaActivo from './HojaVidaActivo';
 
 const CLASE_COLOR = { INFRA: '#1f6b52', SIST: '#c9a94e', EQUI: '#28407a' };
 
@@ -346,6 +347,8 @@ export default function Activo() {
           </div>
         )}
       </div>
+
+      <HojaVidaActivo activoId={id} puedeEditar={puedeEditar} puedeEliminar={puedeEliminar} />
 
       <div className="card">
         <h2>Historial de cambios (bitácora ISO 8.15)</h2>

@@ -17,6 +17,16 @@ export const inventarioApi = {
   eliminarActivo: (id) => api.delete(`/activos/${id}/`),
   estadisticas: () => api.get('/activos/estadisticas/'),
 
+  // --- Hoja de vida ---
+  listarHojaVida: (activoId) => api.get('/hojavida/', { activo: activoId }),
+  crearEventoHojaVida: (datos) => api.post('/hojavida/', datos),
+  crearEventoHojaVidaArchivo: (formData) => api.postForm('/hojavida/', formData),
+  eliminarEventoHojaVida: (id) => api.delete(`/hojavida/${id}/`),
+
+  /** Enlaces directos a descargas binarias (sin JSON). */
+  exportarInventarioXlsx: () => '/api/exportar/inventario.xlsx',
+  etiquetasLotePdf: (ids) => `/api/etiquetas/lote.pdf?ids=${ids.join(',')}`,
+
   // --- Paneles ---
   panelEjecutivo: () => api.get('/dashboard-ejecutivo/'),
   alertas: () => api.get('/alertas/'),

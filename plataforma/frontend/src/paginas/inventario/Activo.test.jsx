@@ -23,6 +23,20 @@ beforeEach(() => {
   global.fetch = vi.fn(async (url) => {
     const u = String(url);
     if (u.includes('/historial/')) return ok([]);
+    if (u.includes('/hojavida/')) {
+      return ok([
+        {
+          id: 10,
+          fecha: '2026-02-01',
+          tipo_evento: 'MPRE',
+          tipo_evento_display: 'Mantenimiento preventivo',
+          titulo: 'Revisión trimestral',
+          descripcion: '',
+          responsable: 'Operaciones',
+          documento_url: null,
+        },
+      ]);
+    }
     return ok(ACTIVO_FIXTURE);
   });
 });
@@ -64,6 +78,12 @@ describe('Activo — guardas de rol', () => {
     await screen.findByText('RED-003');
     expect(screen.getByRole('link', { name: /Editar/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Eliminar/i })).toBeInTheDocument();
+  });
+
+  it('muestra eventos de hoja de vida del activo', async () => {
+    renderConContexto({ puedeEditar: false, puedeEliminar: false });
+    await screen.findByText('Revisión trimestral');
+    expect(screen.getByText(/Mantenimiento preventivo/i)).toBeInTheDocument();
   });
 });
 
