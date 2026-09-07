@@ -828,17 +828,42 @@ def integridad_verificar(request):
     return Response({"integra": False, "registro_alterado": dato})
 
 
+from django.contrib.auth import get_user_model
+
+
+def _usuario_desde_sesion(request):
+    """Usuario de la sesión Django — respaldo si DRF no re-hidrato request.user."""
+    if getattr(request.user, "is_authenticated", False):
+        return request.user
+    uid = request.session.get("_auth_user_id")
+    if not uid:
+        return None
+    try:
+        return get_user_model().objects.get(pk=uid)
+    except get_user_model().DoesNotExist:
+        return None
+
+
 # Ampliar sesion_info con el rol del usuario
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @ensure_csrf_cookie
 def sesion_info_v2(request):
-    rs = sorted(roles_de(request.user))
+    user = _usuario_desde_sesion(request)
+    if user is None:
+        return Response({
+            "autenticado": False,
+            "usuario": None,
+            "roles": [],
+            "puede_editar": False,
+            "puede_eliminar": False,
+        }, headers={"Cache-Control": "no-store"})
+    rs = sorted(roles_de(user))
     puede_editar = bool(set(rs) & {"Dinamizador", "Administrador"})
     puede_eliminar = "Administrador" in rs
     return Response({
-        "autenticado": request.user.is_authenticated,
-        "usuario": request.user.get_username() if request.user.is_authenticated else None,
+        "autenticado": True,
+        "usuario": user.get_username(),
         "roles": rs, "puede_editar": puede_editar, "puede_eliminar": puede_eliminar},
         headers={"Cache-Control": "no-store"})
 
@@ -913,13 +938,16 @@ def logout_view(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def auth_check_rbac(request):
-    roles = roles_de(request.user)
+    user = _usuario_desde_sesion(request)
+    if user is None:
+        return Response(status=401)
+    roles = roles_de(user)
     if roles & {ROL_DINAMIZADOR, ROL_ADMIN}:
         resp = Response(status=204)
         # nginx lee este header de la subpetición interna (auth_request_set)
         # y lo reenvía a RBAC como X-Usuario-SGSI, para que su bitácora
         # registre quién hizo cada cambio en vez de "operador local".
-        resp["X-Usuario-Autorizado"] = request.user.get_username()
+        resp["X-Usuario-Autorizado"] = user.get_username()
         return resp
     return Response(status=401)
 
@@ -928,21 +956,7 @@ def auth_check_rbac(request):
 # Sesión única con SUIIN-SGSI-RIESGOS — emisión de JWT
 # ---------------------------------------------------------------------------
 from django.contrib.auth import authenticate as _authenticate
-from django.contrib.auth import get_user_model
 from .jwt_plataforma import emitir_jwt, JWTNoConfigurado
-
-
-def _usuario_desde_sesion(request):
-    """Usuario de la sesión Django — respaldo si DRF no re-hidrato request.user."""
-    if getattr(request.user, "is_authenticated", False):
-        return request.user
-    uid = request.session.get("_auth_user_id")
-    if not uid:
-        return None
-    try:
-        return get_user_model().objects.get(pk=uid)
-    except get_user_model().DoesNotExist:
-        return None
 
 
 @api_view(["GET", "POST"])

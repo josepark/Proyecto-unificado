@@ -60,7 +60,7 @@ export default function Shell() {
           <div className="sub">Camino del SUIIN · ISO/IEC 27001:2022 — CRIC</div>
         </div>
         <div className="auth">
-          {cargando && !autenticado && !usuario ? null : autenticado || usuario ? (
+          {cargando && !autenticado ? null : autenticado ? (
             <>
               Sesión: <b>{usuario}</b>
               {cargando ? ' · …' : null} · <a href="/logout/">Salir</a>
