@@ -839,7 +839,8 @@ def sesion_info_v2(request):
     return Response({
         "autenticado": request.user.is_authenticated,
         "usuario": request.user.get_username() if request.user.is_authenticated else None,
-        "roles": rs, "puede_editar": puede_editar, "puede_eliminar": puede_eliminar})
+        "roles": rs, "puede_editar": puede_editar, "puede_eliminar": puede_eliminar},
+        headers={"Cache-Control": "no-store"})
 
 
 # --- Login/Logout propios para el tablero (permite roles no-staff) ---
@@ -927,7 +928,21 @@ def auth_check_rbac(request):
 # Sesión única con SUIIN-SGSI-RIESGOS — emisión de JWT
 # ---------------------------------------------------------------------------
 from django.contrib.auth import authenticate as _authenticate
+from django.contrib.auth import get_user_model
 from .jwt_plataforma import emitir_jwt, JWTNoConfigurado
+
+
+def _usuario_desde_sesion(request):
+    """Usuario de la sesión Django — respaldo si DRF no re-hidrato request.user."""
+    if getattr(request.user, "is_authenticated", False):
+        return request.user
+    uid = request.session.get("_auth_user_id")
+    if not uid:
+        return None
+    try:
+        return get_user_model().objects.get(pk=uid)
+    except get_user_model().DoesNotExist:
+        return None
 
 
 @api_view(["GET", "POST"])
@@ -943,7 +958,7 @@ def token_jwt(request):
     Devuelve {"token": "...", "expira": "...", "username": "...", "roles": [...]}
     o 401 si no hay sesión / las credenciales son inválidas.
     """
-    user = request.user if request.user.is_authenticated else None
+    user = _usuario_desde_sesion(request)
 
     if user is None and request.method == "POST":
         username = request.data.get("username", "")
@@ -973,4 +988,4 @@ def token_jwt(request):
         "expira": expira.isoformat(),
         "username": user.get_username(),
         "roles": sorted(roles_de(user)),
-    })
+    }, headers={"Cache-Control": "no-store"})

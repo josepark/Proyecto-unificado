@@ -1,10 +1,7 @@
-import axios from "axios";
-import api, { inventarioBaseURL } from "./client";
+import api from "./client";
+import { consultarSesionInventario, leerCookie, peticionInventario } from "./inventarioFetch";
 
-function leerCookie(nombre) {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${nombre}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
+export { consultarSesionInventario };
 
 export const endpoints = {
   // Auth
@@ -12,26 +9,16 @@ export const endpoints = {
   logout: () => api.post("/auth/logout/"),
   me: () => api.get("/auth/me/"),
 
-  // Sesión única de plataforma: le pide un JWT al Inventario usando la
-  // cookie de sesión que ya tenga (si hay una) — no pasa por el cliente
-  // `api` de arriba porque este request va al Inventario, no a riesgos, y
-  // porque necesita enviar cookies entre orígenes/rutas (withCredentials).
-  ssoJWT: () => axios.get(`${inventarioBaseURL}/token-jwt/`, { withCredentials: true }),
+  // Sesión única: fetch + same-origin (mismo mecanismo que GET /api/sesion/ del shell).
+  ssoJWT: () => peticionInventario("/token-jwt/"),
 
-  // Mismo endpoint del Inventario, pero con usuario/clave en vez de cookie —
-  // para el formulario de login manual (ver AuthContext.jsx: se intenta
-  // primero, y solo si falla se cae al login propio de riesgos más abajo).
   ssoJWTLogin: async (username, password) => {
-    // Asegura cookie csrftoken (mismo patrón que /api/auth/login/ de la SPA).
-    await axios.get(`${inventarioBaseURL}/sesion/`, { withCredentials: true });
-    return axios.post(
-      `${inventarioBaseURL}/token-jwt/`,
-      { username, password },
-      {
-        withCredentials: true,
-        headers: { "X-CSRFToken": leerCookie("csrftoken") || "" },
-      },
-    );
+    await peticionInventario("/sesion/");
+    return peticionInventario("/token-jwt/", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+      headers: { "X-CSRFToken": leerCookie("csrftoken") || "" },
+    });
   },
 
   dashboard: () => api.get("/dashboard/resumen/"),

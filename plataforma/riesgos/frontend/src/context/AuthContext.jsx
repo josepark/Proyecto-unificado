@@ -1,11 +1,8 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import endpoints from "../api/endpoints";
+import endpoints, { consultarSesionInventario } from "../api/endpoints";
 
 const AuthContext = createContext(null);
 
-// Cada tres minutos, un JWT obtenido por sesión única silenciosa se
-// re-verifica contra el Inventario (no solo su propia validez) — ver
-// justificación completa más abajo, en el useEffect que lo usa.
 const INTERVALO_REVALIDACION_MS = 3 * 60 * 1000;
 const EVENTO_SESION_PLATAFORMA = "suiin-sesion-plataforma";
 
@@ -22,6 +19,16 @@ function borrarCredenciales() {
   localStorage.removeItem("suiin_auth_origen");
 }
 
+function limpiarSiEraSSO() {
+  const esquemaActual = localStorage.getItem("suiin_auth_scheme");
+  const origenActual = localStorage.getItem("suiin_auth_origen");
+  if (!localStorage.getItem("suiin_token") || (esquemaActual === "Bearer" && origenActual === "sso")) {
+    borrarCredenciales();
+    return true;
+  }
+  return false;
+}
+
 function esperar(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -34,43 +41,49 @@ export function AuthProvider({
 }) {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
-  const revalidando = useRef(false);
+  const ssoEnVuelo = useRef(null);
 
-  const intentarSSO = useCallback(() => {
-    if (revalidando.current) return Promise.resolve(false);
-    revalidando.current = true;
-    return endpoints
-      .ssoJWT()
-      .then((res) => {
-        guardarCredenciales(res.data.token, "Bearer", "sso");
-        setUser({ username: res.data.username, is_staff: res.data.roles?.includes("Administrador") ?? false });
-        return true;
-      })
-      .catch(() => {
-        // Solo se descartan credenciales si eran de sesión única silenciosa
-        // (origen "sso") — un login manual (cuenta propia de riesgos, o
-        // credenciales del Inventario tecleadas a mano) no depende de que la
-        // cookie del Inventario siga viva en este momento, y no debe perderse
-        // solo porque este chequeo de fondo no encontró esa cookie.
-        const esquemaActual = localStorage.getItem("suiin_auth_scheme");
-        const origenActual = localStorage.getItem("suiin_auth_origen");
-        if (!localStorage.getItem("suiin_token") || (esquemaActual === "Bearer" && origenActual === "sso")) {
-          borrarCredenciales();
-          setUser(null);
+  const intentarSSO = useCallback(
+    async ({ verificarSesion = unificado } = {}) => {
+      if (ssoEnVuelo.current) return ssoEnVuelo.current;
+
+      const promesa = (async () => {
+        if (verificarSesion) {
+          const sesion = await consultarSesionInventario();
+          if (!sesion.autenticado) {
+            if (limpiarSiEraSSO()) setUser(null);
+            return false;
+          }
         }
-        return false;
-      })
-      .finally(() => {
-        revalidando.current = false;
-      });
-  }, []);
 
-  const intentarSSOConReintento = useCallback(
-    async (intentos = 3) => {
-      for (let i = 0; i < intentos; i += 1) {
+        try {
+          const data = await endpoints.ssoJWT();
+          guardarCredenciales(data.token, "Bearer", "sso");
+          setUser({
+            username: data.username,
+            is_staff: data.roles?.includes("Administrador") ?? false,
+          });
+          return true;
+        } catch {
+          if (limpiarSiEraSSO()) setUser(null);
+          return false;
+        }
+      })().finally(() => {
+        ssoEnVuelo.current = null;
+      });
+
+      ssoEnVuelo.current = promesa;
+      return promesa;
+    },
+    [unificado],
+  );
+
+  const sincronizarSSO = useCallback(
+    async (reintentos = 1) => {
+      for (let i = 0; i < reintentos; i += 1) {
         const ok = await intentarSSO();
         if (ok) return true;
-        if (i < intentos - 1) await esperar(350 * (i + 1));
+        if (i < reintentos - 1) await esperar(400);
       }
       return false;
     },
@@ -78,73 +91,57 @@ export function AuthProvider({
   );
 
   useEffect(() => {
-    // En la SPA unificada, autenticado puede ser false un instante mientras
-    // GET /api/sesion/ sigue en vuelo — no adivinar con token-jwt todavía.
     if (unificado && sesionCargando) return;
 
-    const token = localStorage.getItem("suiin_token");
-    const esquema = localStorage.getItem("suiin_auth_scheme");
-    const origen = localStorage.getItem("suiin_auth_origen");
+    let cancelado = false;
 
-    if (token && !(esquema === "Bearer" && origen === "sso")) {
-      // Cuenta propia de riesgos, o sesión única obtenida a mano con
-      // credenciales del Inventario (login() más abajo) — ninguna de las dos
-      // depende de la cookie del Inventario en este instante, se valida solo
-      // la validez propia del token.
-      endpoints
-        .me()
-        .then((res) => setUser(res.data))
-        .catch(() => borrarCredenciales())
-        .finally(() => setChecking(false));
-      return;
-    }
+    async function bootstrap() {
+      const token = localStorage.getItem("suiin_token");
+      const esquema = localStorage.getItem("suiin_auth_scheme");
+      const origen = localStorage.getItem("suiin_auth_origen");
 
-    // Plataforma unificada sin sesión del Inventario: no llamar GET
-    // /api/token-jwt/ (401 esperado y ruido en consola); limpiar JWT SSO obsoleto.
-    if (unificado && !plataformaAutenticada) {
-      if (origen === "sso") {
-        borrarCredenciales();
-        setUser(null);
+      if (token && !(esquema === "Bearer" && origen === "sso")) {
+        try {
+          const res = await endpoints.me();
+          if (!cancelado) setUser(res.data);
+        } catch {
+          if (!cancelado) borrarCredenciales();
+        } finally {
+          if (!cancelado) setChecking(false);
+        }
+        return;
       }
-      setChecking(false);
-      return;
+
+      if (unificado && !plataformaAutenticada) {
+        if (origen === "sso") {
+          borrarCredenciales();
+          setUser(null);
+        }
+        if (!cancelado) setChecking(false);
+        return;
+      }
+
+      const reintentos = unificado && plataformaAutenticada ? 2 : 1;
+      await sincronizarSSO(reintentos);
+      if (!cancelado) setChecking(false);
     }
 
-    // Sin credenciales guardadas, o un JWT que sí vino de sesión única
-    // silenciosa: re-verificar contra el Inventario ahora mismo.
-    const sincronizar = unificado ? intentarSSOConReintento : intentarSSO;
-    sincronizar().finally(() => setChecking(false));
-  }, [intentarSSO, intentarSSOConReintento, unificado, sesionCargando, plataformaAutenticada]);
-
-  // Cuando el shell confirma sesión activa (login arriba o recarga), pedir JWT.
-  useEffect(() => {
-    if (!unificado || sesionCargando) return;
-    if (plataformaAutenticada) {
-      intentarSSOConReintento();
-      return;
-    }
-    const origen = localStorage.getItem("suiin_auth_origen");
-    if (origen === "sso") {
-      borrarCredenciales();
-      setUser(null);
-    }
-  }, [plataformaAutenticada, sesionCargando, intentarSSOConReintento, unificado]);
+    bootstrap();
+    return () => {
+      cancelado = true;
+    };
+  }, [sincronizarSSO, unificado, sesionCargando, plataformaAutenticada]);
 
   useEffect(() => {
     if (!unificado) return;
     function alActualizarSesionPlataforma() {
-      intentarSSOConReintento();
+      sincronizarSSO(2);
     }
     window.addEventListener(EVENTO_SESION_PLATAFORMA, alActualizarSesionPlataforma);
     return () => window.removeEventListener(EVENTO_SESION_PLATAFORMA, alActualizarSesionPlataforma);
-  }, [intentarSSOConReintento, unificado]);
+  }, [sincronizarSSO, unificado]);
 
   useEffect(() => {
-    // Mientras la pestaña/iframe de riesgos queda abierta sin recargar (caso
-    // normal en el panel embebido: el Inventario no destruye el iframe al
-    // cambiar de pestaña, solo lo oculta — ver Layout.jsx), el chequeo de
-    // montaje de arriba no vuelve a correr solo. Este intervalo cubre cerrar
-    // sesión en el Inventario en OTRA pestaña mientras esta sigue abierta.
     const id = setInterval(() => {
       const esquema = localStorage.getItem("suiin_auth_scheme");
       const origen = localStorage.getItem("suiin_auth_origen");
@@ -154,25 +151,13 @@ export function AuthProvider({
   }, [intentarSSO]);
 
   const login = useCallback(async (username, password) => {
-    // Se intenta primero como cuenta del Inventario (mismo usuario y clave que
-    // /login/ de la plataforma) — es el caso normal en el despliegue
-    // unificado, y evita que quien ya tiene cuenta ahí necesite crear otra
-    // aparte solo para riesgos. Si el Inventario no está disponible (riesgos
-    // corriendo de forma independiente) o esas credenciales no existen ahí,
-    // se cae al login propio de riesgos sin que la persona tenga que elegir
-    // cuál usar — simplemente funciona con cualquiera de las dos cuentas.
     try {
-      const res = await endpoints.ssoJWTLogin(username, password);
-      // origen null (no "sso"): esto fue una entrada manual de credenciales,
-      // no el chequeo silencioso — no debe perderse solo porque más tarde no
-      // haya cookie del Inventario en este navegador (ver intentarSSO).
-      guardarCredenciales(res.data.token, "Bearer");
-      setUser({ username: res.data.username, is_staff: res.data.roles?.includes("Administrador") ?? false });
+      const data = await endpoints.ssoJWTLogin(username, password);
+      guardarCredenciales(data.token, "Bearer");
+      setUser({ username: data.username, is_staff: data.roles?.includes("Administrador") ?? false });
       return;
     } catch {
-      // Sigue abajo con el login propio de riesgos — sin mostrar este error
-      // todavía, para no confundir con un problema que en realidad no aplica
-      // si la persona sí tiene cuenta propia de riesgos.
+      // Sigue con login propio de riesgos.
     }
 
     const res = await endpoints.login(username, password);
@@ -183,12 +168,8 @@ export function AuthProvider({
   const logout = useCallback(() => {
     const esquema = localStorage.getItem("suiin_auth_scheme");
     if (esquema === "Token") {
-      endpoints.logout().catch(() => {}); // invalida el token propio en el servidor
+      endpoints.logout().catch(() => {});
     }
-    // Un JWT de sesión única no se "cierra" del lado de riesgos — expira solo
-    // y, mientras tanto, cerrar sesión acá simplemente deja de usarlo; para
-    // cerrar la sesión de verdad hay que hacerlo en el Inventario (lo cual,
-    // desde este cambio, este mismo panel detecta solo en un rato).
     borrarCredenciales();
     setUser(null);
   }, []);
