@@ -1,16 +1,10 @@
 import axios from "axios";
+import { resolverBaseInventario, resolverBaseRiesgos } from "./urls";
 
-// En desarrollo, Vite corre en :5173 y Django en :8000 (ver README).
-// En producción, sirva el frontend detrás del mismo dominio/proxy que /api/
-// o defina VITE_API_BASE_URL en un archivo .env.
-const baseURL =
-  import.meta.env.VITE_API_BASE_URL
-  || (import.meta.env.VITE_PLATAFORMA_UNIFICADA ? "/riesgos/api" : "http://localhost:8000/api");
+const baseURL = resolverBaseRiesgos();
 export { baseURL as apiBaseURL };
 
-export const inventarioBaseURL =
-  import.meta.env.VITE_INVENTARIO_BASE_URL
-  || (import.meta.env.VITE_PLATAFORMA_UNIFICADA ? "/api" : "http://localhost:8000/api");
+export const inventarioBaseURL = resolverBaseInventario();
 
 export const api = axios.create({
   baseURL,

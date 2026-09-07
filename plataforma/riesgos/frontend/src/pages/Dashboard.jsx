@@ -19,7 +19,12 @@ export default function Dashboard() {
   const { data: alertas } = useApiData(() => endpoints.alertasResumen());
 
   if (loading) return <PageShell><LoadingState label="Calculando panel de riesgos…" /></PageShell>;
-  if (error || !data) return <PageShell><ErrorState /></PageShell>;
+  if (error || !data) {
+    const detalle =
+      error?.response?.data?.detail
+      || (error?.message && !error.message.includes("Network Error") ? error.message : null);
+    return <PageShell><ErrorState detail={detalle} /></PageShell>;
+  }
 
   const { kpis, heatmap_probabilidad_impacto, campanas_red_team, activos_criticos_top } = data;
   const avancePtr = kpis.acciones_total > 0

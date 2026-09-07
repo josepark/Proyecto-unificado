@@ -77,7 +77,7 @@ describe('Activo — guardas de rol', () => {
     renderConContexto({ puedeEditar: true, puedeEliminar: true });
     await screen.findByText('RED-003');
     expect(screen.getByRole('link', { name: /Editar/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Eliminar/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '🗑 Eliminar' })).toBeInTheDocument();
   });
 
   it('muestra eventos de hoja de vida del activo', async () => {
