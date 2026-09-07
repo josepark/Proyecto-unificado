@@ -24,14 +24,14 @@ export default function App() {
                 no solo oculto del menú, para que tampoco se llegue por URL
                 directa. */}
             <Route element={<RutaProtegida />}>
-              <Route path="/activos" element={<Activos />} />
-              <Route path="/vulnerabilidades" element={<Vulnerabilidades />} />
-              <Route path="/activos/:id" element={<ActivoDetalle />} />
-              <Route path="/riesgos-contextuales" element={<RiesgosContextuales />} />
-              <Route path="/red-team" element={<RedTeam />} />
-              <Route path="/plan-tratamiento" element={<PlanTratamiento />} />
-              <Route path="/cumplimiento" element={<Cumplimiento />} />
-              <Route path="/catalogos" element={<Catalogos />} />
+              <Route path="activos" element={<Activos />} />
+              <Route path="vulnerabilidades" element={<Vulnerabilidades />} />
+              <Route path="activos/:id" element={<ActivoDetalle />} />
+              <Route path="riesgos-contextuales" element={<RiesgosContextuales />} />
+              <Route path="red-team" element={<RedTeam />} />
+              <Route path="plan-tratamiento" element={<PlanTratamiento />} />
+              <Route path="cumplimiento" element={<Cumplimiento />} />
+              <Route path="catalogos" element={<Catalogos />} />
             </Route>
           </Route>
         </Routes>

@@ -4,34 +4,33 @@ import {
   LayoutDashboard, ShieldAlert, ServerCog, Bug, Users, ClipboardList, Radar, LogIn, LogOut, UserCircle2, ShieldCheck, ArrowLeftCircle, ListChecks,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { usePlataforma } from "../context/PlataformaContext";
 import LoginModal from "./LoginModal";
 
-// Solo hay "vuelta al Inventario" cuando esto corre dentro de la Plataforma
-// SUIIN unificada (build con VITE_BASE_PATH=/riesgos/ — ver nginx/Dockerfile
-// de la plataforma). En modo independiente (base "/"), este módulo no tiene
-// de qué "volver".
-const ENLACE_PLATAFORMA = import.meta.env.BASE_URL !== "/" ? "/" : null;
+const ENLACE_PLATAFORMA =
+  import.meta.env.BASE_URL !== "/" && !import.meta.env.VITE_PLATAFORMA_UNIFICADA ? "/" : null;
 
-// Modo embebido (?embed=1): oculta chrome decorativo cuando la SPA de
-// Riesgos se muestra dentro del iframe del tablero unificado. Solo oculta lo
-// decorativo/redundante (marca superior, pie y enlace «Volver a Soluciones
-// SUIIN»); la barra de navegación interna se mantiene visible.
-const EMBEBIDO = new URLSearchParams(window.location.search).get("embed") === "1";
+function esModoEmbebido(anidado) {
+  if (anidado) return true;
+  return new URLSearchParams(window.location.search).get("embed") === "1";
+}
 
 const NAV_ITEMS = [
-  { to: "/", label: "Panel general", icon: LayoutDashboard, end: true },
-  { to: "/activos", label: "Activos", icon: ServerCog },
-  { to: "/vulnerabilidades", label: "Vulnerabilidades", icon: Bug },
-  { to: "/riesgos-contextuales", label: "Riesgos contextuales", icon: Users },
-  { to: "/red-team", label: "Campañas Red Team", icon: Radar },
-  { to: "/plan-tratamiento", label: "Plan de tratamiento", icon: ClipboardList },
-  { to: "/cumplimiento", label: "Cumplimiento ISO 27001", icon: ShieldCheck },
-  { to: "/catalogos", label: "Catálogos", icon: ListChecks },
+  { to: ".", label: "Panel general", icon: LayoutDashboard, end: true },
+  { to: "activos", label: "Activos", icon: ServerCog },
+  { to: "vulnerabilidades", label: "Vulnerabilidades", icon: Bug },
+  { to: "riesgos-contextuales", label: "Riesgos contextuales", icon: Users },
+  { to: "red-team", label: "Campañas Red Team", icon: Radar },
+  { to: "plan-tratamiento", label: "Plan de tratamiento", icon: ClipboardList },
+  { to: "cumplimiento", label: "Cumplimiento ISO 27001", icon: ShieldCheck },
+  { to: "catalogos", label: "Catálogos", icon: ListChecks },
 ];
 
 export default function Layout() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { anidado } = usePlataforma();
   const [loginOpen, setLoginOpen] = useState(false);
+  const EMBEBIDO = esModoEmbebido(anidado);
 
   // Mismo criterio de acceso que ya usa RBAC: sin sesión, solo se navega el
   // Panel general (modo consulta) — el resto del menú aparece recién con la
@@ -39,7 +38,7 @@ export default function Layout() {
   // real: el backend (EscrituraSegunRolDePlataforma) sigue siendo quien
   // decide qué se puede escribir, esto solo cambia qué es cómodo de
   // descubrir desde el menú antes de iniciar sesión.
-  const itemsVisibles = isAuthenticated ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.to === "/");
+  const itemsVisibles = isAuthenticated ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.end);
 
   return (
     <div className="flex min-h-screen">

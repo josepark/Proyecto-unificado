@@ -6,6 +6,7 @@ import { apiBaseURL } from "../api/client";
 import { useApiData } from "../lib/useApiData";
 import { useAuthGuard } from "../lib/useAuthGuard";
 import { vulnerabilidadFields, riesgoActivoFields } from "../lib/entitySchemas";
+import { useRiesgosTo } from "../context/PlataformaContext";
 import PageHeader from "../components/PageHeader";
 import NivelBadge from "../components/NivelBadge";
 import Modal from "../components/Modal";
@@ -19,6 +20,7 @@ import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates
 
 export default function ActivoDetalle() {
   const { id } = useParams();
+  const rutaActivos = useRiesgosTo("activos");
   const { guard, loginOpen, setLoginOpen } = useAuthGuard();
   const [origenAccion, setOrigenAccion] = useState(null);
 
@@ -37,7 +39,7 @@ export default function ActivoDetalle() {
 
   return (
     <PageShell>
-      <Link to="/activos" className="mb-4 flex items-center gap-1.5 text-[12px] text-base-300 hover:text-cric-green-400">
+      <Link to={rutaActivos} className="mb-4 flex items-center gap-1.5 text-[12px] text-base-300 hover:text-cric-green-400">
         <ArrowLeft className="h-3.5 w-3.5" /> Volver a Activos
       </Link>
 

@@ -58,7 +58,7 @@ export default function App() {
             <Route path="bitacora" element={<Bitacora />} />
           </Route>
 
-          <Route path="gestion-riesgos" element={<ModuloRiesgosPTR />} />
+          <Route path="gestion-riesgos/*" element={<ModuloRiesgosPTR />} />
 
           <Route path="rbac" element={<PuertaRBAC />}>
             <Route index element={<Navigate to="inicio" replace />} />

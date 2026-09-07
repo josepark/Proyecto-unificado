@@ -91,7 +91,7 @@ src/
         └── Auditoria.jsx
 
 **Tres módulos en la shell:** Inventario, Matriz RBAC (React nativo) y
-Gestión de Riesgos y PTR (iframe a `/riesgos/?embed=1`).
+Gestión de Riesgos y PTR (módulo nativo bajo `/gestion-riesgos/`; acceso legacy `/riesgos/`).
 
 ## Despliegue en `/`
 

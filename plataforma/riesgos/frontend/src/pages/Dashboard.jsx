@@ -3,6 +3,7 @@ import {
   ServerCog, ShieldAlert, Bug, ClipboardCheck, Radar, ArrowUpRight, AlertTriangle,
 } from "lucide-react";
 import endpoints from "../api/endpoints";
+import { useRiesgosTo } from "../context/PlataformaContext";
 import { useApiData } from "../lib/useApiData";
 import PageHeader from "../components/PageHeader";
 import KpiCard from "../components/KpiCard";
@@ -11,6 +12,9 @@ import NivelBadge from "../components/NivelBadge";
 import { LoadingState, ErrorState } from "../components/StatusStates";
 
 export default function Dashboard() {
+  const rutaRedTeam = useRiesgosTo("red-team");
+  const rutaActivos = useRiesgosTo("activos");
+  const rutaPlan = useRiesgosTo("plan-tratamiento");
   const { data, loading, error } = useApiData(() => endpoints.dashboard());
   const { data: alertas } = useApiData(() => endpoints.alertasResumen());
 
@@ -31,7 +35,7 @@ export default function Dashboard() {
       />
 
       {alertas && (alertas.total_vencidas > 0 || alertas.total_por_vencer > 0) && (
-        <AlertaVencimientos alertas={alertas} />
+        <AlertaVencimientos alertas={alertas} rutaPlan={rutaPlan} />
       )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -53,7 +57,7 @@ export default function Dashboard() {
         <div className="rounded-2xl border border-base-700/60 bg-base-900/60 p-5 lg:col-span-3">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-display text-sm font-semibold text-base-100">Campañas Red Team</h3>
-            <Link to="/red-team" className="flex items-center gap-1 text-[11px] text-cric-green-400 hover:underline">
+            <Link to={rutaRedTeam} className="flex items-center gap-1 text-[11px] text-cric-green-400 hover:underline">
               Ver detalle <ArrowUpRight className="h-3 w-3" />
             </Link>
           </div>
@@ -83,7 +87,7 @@ export default function Dashboard() {
       <div className="mt-5 rounded-2xl border border-base-700/60 bg-base-900/60 p-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-sm font-semibold text-base-100">Activos en riesgo crítico</h3>
-          <Link to="/activos" className="flex items-center gap-1 text-[11px] text-cric-green-400 hover:underline">
+          <Link to={rutaActivos} className="flex items-center gap-1 text-[11px] text-cric-green-400 hover:underline">
             Ver todos los activos <ArrowUpRight className="h-3 w-3" />
           </Link>
         </div>
@@ -124,7 +128,7 @@ export default function Dashboard() {
   );
 }
 
-function AlertaVencimientos({ alertas }) {
+function AlertaVencimientos({ alertas, rutaPlan }) {
   const items = [
     ...alertas.acciones_vencidas.map((a) => ({ ...a, tipo: "accion", vencida: true })),
     ...alertas.riesgos_activo_vencidos.map((r) => ({ ...r, tipo: "riesgo", vencida: true })),
@@ -146,7 +150,7 @@ function AlertaVencimientos({ alertas }) {
             ({alertas.total_vencidas} vencido{alertas.total_vencidas !== 1 ? "s" : ""}, {alertas.total_por_vencer} por vencer)
           </span>
         </h3>
-        <Link to="/plan-tratamiento" className="flex items-center gap-1 text-[11px] text-cric-green-400 hover:underline">
+        <Link to={rutaPlan} className="flex items-center gap-1 text-[11px] text-cric-green-400 hover:underline">
           Ir al plan de tratamiento <ArrowUpRight className="h-3 w-3" />
         </Link>
       </div>

@@ -8,7 +8,7 @@ y delega la autorización de RBAC en la sesión del Inventario.
 |---|---|---|
 | Inventario de Activos SGSI (SUIIN-SGSI-INV-001) | Django (API) | `/inventario/…` en React; `/api/` JSON |
 | Matriz RBAC / MCA-001 (SUIIN-SGSI-MCA-001) | Flask (API JSON) | `/rbac/…` en React; `/rbac/api/` JSON |
-| Gestión de Riesgos y PTR (SUIIN-SGSI-RIESGOS) | Django + React | `/gestion-riesgos` (iframe `/riesgos/?embed=1`) |
+| Gestión de Riesgos y PTR (SUIIN-SGSI-RIESGOS) | Django + React | `/gestion-riesgos/` nativo en la SPA; API `/riesgos/api/`; acceso directo legacy `/riesgos/` |
 
 > **Nota histórica:** las secciones 1–3 más abajo describen la integración
 > original con iframe HTML de RBAC. La arquitectura actual está resumida en
@@ -816,6 +816,14 @@ reenviarlo explícitamente en cada módulo.
   el tablero Django: copia local (`RolMCA`) y matriz RBAC en vivo (`accesos_rbac`).
 - Misma semántica que §8.6: `null` en RBAC muestra aviso explícito, no datos
   engañosos.
+
+### 9.12 Gestión de Riesgos nativa en React (completa)
+
+- La pestaña `/gestion-riesgos` monta el módulo SUIIN-SGSI-RIESGOS **sin
+  iframe**: componentes importados vía alias `@riesgos` en el build unificado.
+- Estilos Tailwind acotados a `.modulo-riesgos-nativo` (no pisan el shell).
+- `/riesgos/` sigue disponible como SPA independiente (acceso directo legacy).
+- Sesión única vía JWT del Inventario (`/api/token-jwt/`) sin cambios.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 

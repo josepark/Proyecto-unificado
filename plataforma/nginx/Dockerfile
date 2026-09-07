@@ -6,6 +6,10 @@ WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+COPY riesgos/frontend/src ../riesgos/frontend/src
+ENV VITE_PLATAFORMA_UNIFICADA=1
+ENV VITE_API_BASE_URL=/riesgos/api
+ENV VITE_INVENTARIO_BASE_URL=/api
 RUN npm run build
 
 # SUIIN-SGSI-RIESGOS (gestión de riesgos y plan de tratamiento) — mismo patrón
