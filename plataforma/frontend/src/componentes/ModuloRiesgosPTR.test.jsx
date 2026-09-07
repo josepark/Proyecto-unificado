@@ -1,13 +1,21 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ModuloRiesgosPTR from './ModuloRiesgosPTR';
+
+function ShellConSesion({ autenticado = true, cargando = false }) {
+  return <Outlet context={{ autenticado, cargando, puedeEditar: autenticado, puedeEliminar: false }} />;
+}
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (url) => {
     const u = String(url);
     if (u.includes('/token-jwt/')) {
-      return { ok: false, status: 401, json: async () => ({ detail: 'no session' }) };
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ token: 'jwt-test', username: 'admin', roles: ['Administrador'] }),
+      };
     }
     if (u.includes('/dashboard/resumen/')) {
       return {
@@ -50,7 +58,9 @@ describe('ModuloRiesgosPTR', () => {
     render(
       <MemoryRouter initialEntries={['/gestion-riesgos']}>
         <Routes>
-          <Route path="/gestion-riesgos/*" element={<ModuloRiesgosPTR />} />
+          <Route element={<ShellConSesion />}>
+            <Route path="/gestion-riesgos/*" element={<ModuloRiesgosPTR />} />
+          </Route>
         </Routes>
       </MemoryRouter>,
     );

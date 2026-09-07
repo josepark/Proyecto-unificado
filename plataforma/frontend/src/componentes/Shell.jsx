@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useSesion } from '../hooks/useSesion';
 import { eventosApi } from '../api/client';
 import { rbacApi } from '../api/rbac';
+
+function moduloDeRuta(pathname) {
+  if (pathname.startsWith('/rbac')) return 'rbac';
+  if (pathname.startsWith('/gestion-riesgos')) return 'riesgos';
+  if (pathname.startsWith('/inventario')) return 'inventario';
+  return 'otro';
+}
 
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
@@ -11,6 +18,7 @@ export default function Shell() {
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const ubicacion = useLocation();
   const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
+  const moduloActivo = useMemo(() => moduloDeRuta(ubicacion.pathname), [ubicacion.pathname]);
 
   useEffect(() => {
     function alVencer() {
@@ -20,13 +28,12 @@ export default function Shell() {
     return () => eventosApi.removeEventListener('sesion-vencida', alVencer);
   }, []);
 
-  // Re-sincroniza roles y autenticación con el servidor al cambiar de módulo
-  // o pantalla — evita que el encabezado muestre "admin" con estado obsoleto
-  // mientras las APIs ya devuelven 401.
+  // Re-sincroniza roles al cambiar de pestaña de módulo (Inventario / RBAC /
+  // Riesgos) — evita encabezado obsoleto mientras las APIs ya devuelven 401.
   useEffect(() => {
     recargar();
     setSesionVencida(false);
-  }, [ubicacion.pathname, recargar]);
+  }, [moduloActivo, recargar]);
 
   useEffect(() => {
     if (!puedeEditar) {
@@ -66,7 +73,7 @@ export default function Shell() {
 
       {sesionVencida && (
         <div className="aviso-sesion">
-          Tu sesión venció o no tenés permisos para esta sección.{' '}
+          Tu sesión venció.{' '}
           <Link to={`/login?next=${encodeURIComponent(rutaTrasLogin)}`}>Iniciar sesión de nuevo</Link>
           <button className="cerrar" onClick={() => setSesionVencida(false)} aria-label="Cerrar aviso">
             ×

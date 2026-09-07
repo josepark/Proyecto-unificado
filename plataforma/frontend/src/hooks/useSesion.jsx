@@ -52,6 +52,14 @@ export function SesionProvider({ children }) {
     return () => eventosApi.removeEventListener('sesion-actualizada', sincronizar);
   }, []);
 
+  useEffect(() => {
+    function alRecuperarFoco() {
+      if (document.visibilityState === 'visible') recargar();
+    }
+    document.addEventListener('visibilitychange', alRecuperarFoco);
+    return () => document.removeEventListener('visibilitychange', alRecuperarFoco);
+  }, [recargar]);
+
   return (
     <SesionContext.Provider value={{ ...sesion, cargando, recargar }}>{children}</SesionContext.Provider>
   );
