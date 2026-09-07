@@ -903,16 +903,12 @@ def logout_view(request):
 # ---------------------------------------------------------------------------
 # Despliegue integrado — puerta de autorización para SUIIN-RBAC
 # ---------------------------------------------------------------------------
-# SUIIN-RBAC (Flask, servido por nginx bajo /rbac/) no tiene inicio de sesión
-# propio por diseño: su propio README advierte que no debe exponerse a la red
-# sin restringir el acceso. Al integrarlo en un solo despliegue detrás de un
-# único gateway, este endpoint permite que nginx delegue esa restricción en
-# la sesión y los roles ya existentes del inventario (auth_request), en vez
-# de tocar el código de RBAC o duplicar un sistema de login.
+# SUIIN-RBAC (Flask, API JSON bajo /rbac/api/) no tiene inicio de sesión
+# propio por diseño. nginx delega la autorización en la sesión del
+# Inventario (auth_request) antes de reenviar a Flask.
 #
-# Devuelve 204 si la sesión activa tiene rol Dinamizador o Administrador
-# (los roles con permiso de escritura), y 401 en caso contrario. nginx
-# traduce el 401 en una redirección a /login/?next=/rbac/.
+# Devuelve 204 si la sesión activa tiene rol Dinamizador o Administrador;
+# 401 en caso contrario (nginx redirige a /login/?next=… según la ruta).
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def auth_check_rbac(request):

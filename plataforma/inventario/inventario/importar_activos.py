@@ -2,8 +2,8 @@
 Importación masiva de activos desde Excel — antes, registrar un lote
 grande de equipos nuevos (tras una compra, por ejemplo) significaba
 cargarlos uno por uno desde el formulario. Sigue el mismo patrón de dos
-pasos que ya usaba RBAC para importar la matriz (rbac/rutas.py:
-matriz_importar / matriz_importar_confirmar): primero se analiza el
+pasos que ya usaba RBAC para importar la matriz (rbac/negocio.py):
+primero se analiza el
 archivo sin guardar nada, se muestra fila por fila qué se va a crear y
 qué tiene errores, y solo se escribe en la base de datos cuando el
 usuario confirma explícitamente.
