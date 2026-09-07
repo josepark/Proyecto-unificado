@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, ShieldAlert, ServerCog, Bug, Users, ClipboardList, Radar, LogIn, LogOut, UserCircle2, ShieldCheck, ArrowLeftCircle, ListChecks,
 } from "lucide-react";
@@ -40,9 +40,19 @@ export default function Layout() {
   // descubrir desde el menú antes de iniciar sesión.
   const itemsVisibles = isAuthenticated ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.end);
 
+  const asideClass = EMBEBIDO
+    ? "flex w-52 shrink-0 flex-col border-r border-base-700/60 bg-base-900/95"
+    : "fixed inset-y-0 left-0 z-20 flex w-64 flex-col border-r border-base-700/60 bg-base-900/80 backdrop-blur-md";
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-20 flex w-64 flex-col border-r border-base-700/60 bg-base-900/80 backdrop-blur-md">
+    <div className={EMBEBIDO ? "flex min-h-[68vh]" : "flex min-h-screen"}>
+      <aside className={asideClass}>
+        {EMBEBIDO && (
+          <div className="border-b border-base-700/60 px-4 py-3">
+            <p className="font-display text-[12px] font-semibold text-base-100">Gestión de Riesgos</p>
+            <p className="text-[10px] text-base-300">Plan de Tratamiento (PTR)</p>
+          </div>
+        )}
         {!EMBEBIDO && (
           <div className="flex items-center gap-2.5 border-b border-base-700/60 px-5 py-5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cric-green-600">
@@ -75,7 +85,20 @@ export default function Layout() {
           ))}
           {!isAuthenticated && (
             <p className="px-3 pt-3 text-[11px] leading-relaxed text-base-300/60">
-              Inicie sesión para ver Activos, Vulnerabilidades y el resto de la gestión.
+              {EMBEBIDO ? (
+                <>
+                  Use{' '}
+                  <Link
+                    to={`/login?next=${encodeURIComponent('/gestion-riesgos')}`}
+                    className="text-cric-green-400 hover:underline"
+                  >
+                    Iniciar sesión
+                  </Link>{' '}
+                  en la barra superior para ver Activos, Vulnerabilidades y el resto de la gestión.
+                </>
+              ) : (
+                'Inicie sesión para ver Activos, Vulnerabilidades y el resto de la gestión.'
+              )}
             </p>
           )}
         </nav>
@@ -131,7 +154,7 @@ export default function Layout() {
         )}
       </aside>
 
-      <div className="flex-1 pl-64">
+      <div className={EMBEBIDO ? "min-w-0 flex-1 overflow-x-auto" : "flex-1 pl-64"}>
         <Outlet />
       </div>
 

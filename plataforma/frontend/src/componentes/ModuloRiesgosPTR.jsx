@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useOutletContext } from 'react-router-dom';
 import { AuthProvider } from '@riesgos/context/AuthContext';
 import { PlataformaProvider } from '@riesgos/context/PlataformaContext';
 import Layout from '@riesgos/components/Layout';
@@ -16,10 +16,12 @@ import '@riesgos/index-plataforma.css';
 
 /** PTR nativo en la SPA unificada — sin iframe; comparte sesión vía JWT/cookie. */
 export default function ModuloRiesgosPTR() {
+  const { autenticado } = useOutletContext() ?? {};
+
   return (
     <PlataformaProvider anidado>
       <div className="modulo-riesgos-nativo">
-        <AuthProvider>
+        <AuthProvider plataformaAutenticada={!!autenticado}>
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<Dashboard />} />

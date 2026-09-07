@@ -21,7 +21,7 @@ function borrarCredenciales() {
   localStorage.removeItem("suiin_auth_origen");
 }
 
-export function AuthProvider({ children }) {
+export function AuthProvider({ children, plataformaAutenticada = false }) {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
   const revalidando = useRef(false);
@@ -83,6 +83,21 @@ export function AuthProvider({ children }) {
     // menú completo con la sesión vieja después de cerrar sesión arriba.
     intentarSSO().finally(() => setChecking(false));
   }, [intentarSSO]);
+
+  // En la SPA unificada la sesión vive en el shell (cookie Django). Cuando
+  // el usuario inicia o cierra sesión arriba, re-sincronizamos el JWT de
+  // riesgos sin recargar el módulo.
+  useEffect(() => {
+    if (plataformaAutenticada) {
+      intentarSSO();
+      return;
+    }
+    const origen = localStorage.getItem("suiin_auth_origen");
+    if (origen === "sso") {
+      borrarCredenciales();
+      setUser(null);
+    }
+  }, [plataformaAutenticada, intentarSSO]);
 
   useEffect(() => {
     // Mientras la pestaña/iframe de riesgos queda abierta sin recargar (caso
