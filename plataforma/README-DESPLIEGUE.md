@@ -8,7 +8,7 @@ y delega la autorización de RBAC en la sesión del Inventario.
 |---|---|---|
 | Inventario de Activos SGSI (SUIIN-SGSI-INV-001) | Django (API) | `/inventario/…` en React; `/api/` JSON |
 | Matriz RBAC / MCA-001 (SUIIN-SGSI-MCA-001) | Flask (API JSON) | `/rbac/…` en React; `/rbac/api/` JSON |
-| Gestión de Riesgos y PTR (SUIIN-SGSI-RIESGOS) | Django + React | `/gestion-riesgos/` nativo en la SPA; API `/riesgos/api/`; acceso directo legacy `/riesgos/` |
+| Gestión de Riesgos y PTR (SUIIN-SGSI-RIESGOS) | Django + React | `/gestion-riesgos/` en la SPA unificada; API `/riesgos/api/` |
 
 > **Nota histórica:** las secciones 1–3 más abajo describen la integración
 > original con iframe HTML de RBAC. La arquitectura actual está resumida en
@@ -630,9 +630,9 @@ datos reales de ambas aplicaciones.
 ## 9. Migración a React (completa)
 
 La interfaz unificada vive en `frontend/` (Vite + React 19). Django e Inventario
-siguen como API; RBAC como API JSON bajo `/rbac/api/`; Riesgos sigue embebido
-por iframe en `/gestion-riesgos`. Las subsecciones 9.1–9.10 documentan el
-historial de la migración fase a fase.
+siguen como API; RBAC como API JSON bajo `/rbac/api/`; Riesgos monta sus
+pantallas de forma nativa bajo `/gestion-riesgos/` (sin iframe). Las
+subsecciones 9.1–9.13 documentan el historial de la migración fase a fase.
 
 ### 9.1 Por qué RBAC necesitaba trabajo primero
 
@@ -822,8 +822,18 @@ reenviarlo explícitamente en cada módulo.
 - La pestaña `/gestion-riesgos` monta el módulo SUIIN-SGSI-RIESGOS **sin
   iframe**: componentes importados vía alias `@riesgos` en el build unificado.
 - Estilos Tailwind acotados a `.modulo-riesgos-nativo` (no pisan el shell).
-- `/riesgos/` sigue disponible como SPA independiente (acceso directo legacy).
 - Sesión única vía JWT del Inventario (`/api/token-jwt/`) sin cambios.
+
+### 9.13 Retiro del build legacy `/riesgos/` (completa)
+
+- El módulo de Riesgos ya vive solo en la SPA unificada (`/gestion-riesgos/`).
+- Se eliminó la segunda compilación de frontend en `nginx/Dockerfile` (la que
+  copiaba un build aparte a `/usr/share/nginx/html/riesgos/`).
+- Las rutas `/riesgos/` y `/riesgos/…` (excepto `/riesgos/api/`, `/admin/` y
+  `/media/`) redirigen con 301 a `/gestion-riesgos/…`.
+- El código fuente en `riesgos/frontend/src/` se conserva: el build unificado
+  lo importa vía alias `@riesgos`. Desarrollo aislado del módulo sigue con
+  `npm run dev` dentro de `riesgos/frontend/`.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 
@@ -900,9 +910,8 @@ código (`riesgos/backend/riesgos/sincronizacion.py`).
 
 ### 11.4 Enrutamiento
 
-Igual que RBAC, Riesgos se sirve bajo su propio prefijo:
-
-- `/riesgos/` — frontend (React, build estático, mismo patrón que `/app/`).
+- `/gestion-riesgos/` — frontend nativo en la SPA unificada (React Router).
+- `/riesgos/` — redirección 301 a `/gestion-riesgos/` (marcador legacy).
 - `/riesgos/api/` — API REST (Django REST Framework).
 - `/riesgos/admin/` — panel de administración de Django.
 - `/riesgos/media/` — adjuntos de evidencia subidos por los usuarios.
@@ -919,7 +928,7 @@ que el Inventario esté disponible en el momento de cada llamada:
    `JWT_SHARED_SECRET` — variable de entorno **compartida** entre el
    Inventario y Riesgos (a propósito, a diferencia de `DJANGO_SECRET_KEY`/
    `RIESGOS_SECRET_KEY`, que sí deben ser distintas — ver `.env.example`).
-2. Al cargar `/riesgos/`, el frontend intenta ese endpoint en silencio
+2. Al entrar a `/gestion-riesgos/`, el frontend intenta ese endpoint en silencio
    (`AuthContext.jsx`) usando la cookie de sesión que ya tenga el navegador.
    Si el Inventario responde con un token, Riesgos queda autenticado sin
    pedir login — si no hay sesión activa (o el Inventario no está

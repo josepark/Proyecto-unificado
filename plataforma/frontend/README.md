@@ -62,7 +62,7 @@ src/
 │   ├── ModuloInventario.jsx    Sub-navegación del Inventario
 │   ├── ModuloRBAC.jsx           Sub-navegación de RBAC (Roles/Usuarios/Matriz/…)
 │   ├── PuertaRBAC.jsx           Guardia de rol antes de ModuloRBAC
-│   └── ModuloRiesgosPTR.jsx     Iframe del módulo SUIIN-SGSI-RIESGOS (/riesgos/)
+│   └── ModuloRiesgosPTR.jsx     Módulo nativo SUIIN-SGSI-RIESGOS (/gestion-riesgos/)
 ├── api/
 │   ├── client.js           Fábrica de cliente HTTP con manejo de CSRF y evento de sesión vencida
 │   ├── inventario.js        Cliente del Inventario (Django DRF)
@@ -91,12 +91,12 @@ src/
         └── Auditoria.jsx
 
 **Tres módulos en la shell:** Inventario, Matriz RBAC (React nativo) y
-Gestión de Riesgos y PTR (módulo nativo bajo `/gestion-riesgos/`; acceso legacy `/riesgos/`).
+Gestión de Riesgos y PTR (React nativo bajo `/gestion-riesgos/`).
 
 ## Despliegue en `/`
 
 nginx sirve este build en la raíz del dominio. Las rutas de backend
-(`/api/`, `/login/`, `/rbac/api/`, `/riesgos/`, …) las atiende nginx por
+(`/api/`, `/login/`, `/rbac/api/`, `/riesgos/api/`, …) las atiende nginx por
 separado antes de caer al `index.html` de React. Marcadores antiguos bajo
 `/app/…` redirigen con 301 a la misma ruta sin prefijo.
 
