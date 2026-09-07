@@ -50,8 +50,16 @@ export async function consultarSesionInventario() {
 }
 
 async function notificar401(url) {
-  const esPlataforma = url.includes('/rbac/api') || url.includes('/api/');
-  if (!esPlataforma) return;
+  // RBAC solo expone /rbac/api/ protegida por auth_request de nginx — un 401
+  // ahí significa "sin rol Dinamizador/Administrador" o un fallo puntual de la
+  // subpetición, NO que la sesión Django del Inventario haya muerto. Antes, al
+  // navegar dentro de /gestion-riesgos/ se disparaba GET /rbac/api/resumen
+  // (badge del tab) y, si fallaba, se consultaba /api/sesion/ en carrera con
+  // recargar() del shell — a veces marcaba autenticado:false y cerraba la sesión
+  // en toda la SPA aunque el login siguiera válido (hallazgo real del usuario).
+  if (url.includes('/rbac/api')) return;
+
+  if (!url.includes('/api/')) return;
 
   const sesion = await consultarSesionInventario();
   eventosApi.dispatchEvent(new CustomEvent('sesion-actualizada', { detail: sesion }));

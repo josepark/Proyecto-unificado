@@ -10,30 +10,18 @@ describe('client — manejo de 401', () => {
     vi.unstubAllGlobals();
   });
 
-  it('no emite sesion-vencida en 401 de RBAC si la sesión del Inventario sigue activa', async () => {
+  it('ignora 401 de RBAC — no toca el estado global de sesión', async () => {
     const vencida = vi.fn();
     const actualizada = vi.fn();
     eventosApi.addEventListener('sesion-vencida', vencida);
     eventosApi.addEventListener('sesion-actualizada', actualizada);
 
-    vi.mocked(fetch)
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        json: async () => ({ detail: 'No autorizado' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          autenticado: true,
-          usuario: 'admin',
-          roles: ['Consultor'],
-          puede_editar: false,
-          puede_eliminar: false,
-        }),
-      });
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      json: async () => ({ detail: 'No autorizado' }),
+    });
 
     const rbac = crearCliente({
       base: '/rbac/api',
@@ -42,13 +30,13 @@ describe('client — manejo de 401', () => {
 
     await expect(rbac.get('/inicio')).rejects.toMatchObject({ status: 401 });
     expect(vencida).not.toHaveBeenCalled();
-    expect(actualizada).toHaveBeenCalledTimes(1);
+    expect(actualizada).not.toHaveBeenCalled();
 
     eventosApi.removeEventListener('sesion-vencida', vencida);
     eventosApi.removeEventListener('sesion-actualizada', actualizada);
   });
 
-  it('emite sesion-vencida en 401 de RBAC cuando la sesión del Inventario ya no existe', async () => {
+  it('emite sesion-vencida en 401 del Inventario cuando la sesión ya no existe', async () => {
     const vencida = vi.fn();
 
     eventosApi.addEventListener('sesion-vencida', vencida);
@@ -58,7 +46,7 @@ describe('client — manejo de 401', () => {
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
-        json: async () => ({ detail: 'No autorizado' }),
+        json: async () => ({ detail: 'No autenticado' }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -66,12 +54,12 @@ describe('client — manejo de 401', () => {
         json: async () => ({ autenticado: false, usuario: null, roles: [], puede_editar: false, puede_eliminar: false }),
       });
 
-    const rbac = crearCliente({
-      base: '/rbac/api',
-      csrf: { tipo: 'token', endpoint: '/csrf', campo: 'csrf_token', header: 'X-CSRF-Token' },
+    const inventario = crearCliente({
+      base: '/api',
+      csrf: { tipo: 'cookie', cookie: 'csrftoken', header: 'X-CSRFToken' },
     });
 
-    await expect(rbac.get('/inicio')).rejects.toMatchObject({ status: 401 });
+    await expect(inventario.get('/activos/')).rejects.toMatchObject({ status: 401 });
     expect(vencida).toHaveBeenCalledTimes(1);
 
     eventosApi.removeEventListener('sesion-vencida', vencida);

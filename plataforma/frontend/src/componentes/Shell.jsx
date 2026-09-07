@@ -36,8 +36,8 @@ export default function Shell() {
   }, [moduloActivo, recargar]);
 
   useEffect(() => {
-    if (!puedeEditar) {
-      setPendientesRbac(0);
+    if (!puedeEditar || !autenticado || cargando) {
+      if (!puedeEditar) setPendientesRbac(0);
       return;
     }
     let vivo = true;
@@ -48,7 +48,7 @@ export default function Shell() {
     return () => {
       vivo = false;
     };
-  }, [puedeEditar, ubicacion.pathname]);
+  }, [puedeEditar, autenticado, cargando, moduloActivo]);
 
   return (
     <>

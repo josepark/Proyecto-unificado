@@ -33,7 +33,10 @@ export function SesionProvider({ children }) {
     return inventarioApi
       .sesion()
       .then((s) => setSesion(mapearSesion(s)))
-      .catch(() => setSesion(VACIA))
+      // Un fallo de red o un 503 momentáneo no debe borrar una sesión que
+      // todavía es válida en el navegador — eso provocaba "funciona una vez y
+      // luego pide login" al cambiar de pestaña de módulo.
+      .catch(() => {})
       .finally(() => setCargando(false));
   }, []);
 

@@ -2,35 +2,33 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { usePlataforma } from "../context/PlataformaContext";
 
 vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
-// LoginModal tiene su propia lógica de formulario/envío — se simula acá para
-// que estas pruebas se queden enfocadas en RutaProtegida, no en el modal.
+vi.mock("../context/PlataformaContext", () => ({
+  usePlataforma: vi.fn(),
+}));
+
 vi.mock("./LoginModal", () => ({
   default: ({ open }) => (open ? <div data-testid="login-modal-abierto" /> : null),
 }));
 
 async function montarConRuta({ ruta = "/activos", embebido = false } = {}) {
-  vi.resetModules();
-  const url = embebido ? `${ruta}?embed=1` : ruta;
-  window.history.pushState({}, "", url);
+  usePlataforma.mockReturnValue({ anidado: embebido, prefijo: "/gestion-riesgos" });
 
-  // RutaProtegida calcula EMBEBIDO desde window.location.search al cargar el
-  // módulo — con vi.resetModules() se fuerza una re-evaluación fresca de esa
-  // constante en cada prueba, en vez de quedar pegada al primer valor leído.
   const { default: RutaProtegida } = await import("./RutaProtegida");
 
   return render(
-    <MemoryRouter initialEntries={[url]}>
+    <MemoryRouter initialEntries={[ruta]}>
       <Routes>
         <Route element={<RutaProtegida />}>
           <Route path={ruta} element={<div data-testid="contenido-protegido">Contenido real de la página</div>} />
         </Route>
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -44,7 +42,7 @@ afterEach(() => {
 
 describe("RutaProtegida — con sesión", () => {
   it("deja pasar y muestra el contenido real de la página (Outlet)", async () => {
-    useAuth.mockReturnValue({ isAuthenticated: true });
+    useAuth.mockReturnValue({ isAuthenticated: true, checking: false, plataformaAutenticada: true });
 
     await montarConRuta();
 
@@ -53,9 +51,24 @@ describe("RutaProtegida — con sesión", () => {
   });
 });
 
+describe("RutaProtegida — plataforma unificada sincronizando SSO", () => {
+  it("muestra aviso de sincronización mientras el JWT de riesgos llega", async () => {
+    useAuth.mockReturnValue({
+      isAuthenticated: false,
+      checking: true,
+      plataformaAutenticada: true,
+    });
+
+    await montarConRuta({ embebido: true });
+
+    expect(screen.getByText(/Sincronizando sesión/)).toBeInTheDocument();
+    expect(screen.queryByText("Esta sección requiere sesión")).not.toBeInTheDocument();
+  });
+});
+
 describe("RutaProtegida — sin sesión, acceso directo (no embebido)", () => {
   it("bloquea el contenido y muestra el aviso, no el Outlet", async () => {
-    useAuth.mockReturnValue({ isAuthenticated: false });
+    useAuth.mockReturnValue({ isAuthenticated: false, checking: false, plataformaAutenticada: false });
 
     await montarConRuta({ embebido: false });
 
@@ -64,7 +77,7 @@ describe("RutaProtegida — sin sesión, acceso directo (no embebido)", () => {
   });
 
   it("ofrece un botón propio de Iniciar sesión", async () => {
-    useAuth.mockReturnValue({ isAuthenticated: false });
+    useAuth.mockReturnValue({ isAuthenticated: false, checking: false, plataformaAutenticada: false });
 
     await montarConRuta({ embebido: false });
 
@@ -73,7 +86,7 @@ describe("RutaProtegida — sin sesión, acceso directo (no embebido)", () => {
 
   it("abre el modal de login al hacer clic", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
-    useAuth.mockReturnValue({ isAuthenticated: false });
+    useAuth.mockReturnValue({ isAuthenticated: false, checking: false, plataformaAutenticada: false });
 
     await montarConRuta({ embebido: false });
 
@@ -83,25 +96,15 @@ describe("RutaProtegida — sin sesión, acceso directo (no embebido)", () => {
   });
 });
 
-describe("RutaProtegida — sin sesión, modo embebido (dentro del Inventario)", () => {
-  it("bloquea el contenido igual, pero SIN botón de Iniciar sesión propio", async () => {
-    // Mismo motivo que en Layout.jsx: dentro del Inventario es la misma
-    // sesión (JWT único) — un botón de login aparte aquí da a entender que
-    // este módulo pide credenciales propias, que fue justo lo que se corrigió.
-    useAuth.mockReturnValue({ isAuthenticated: false });
+describe("RutaProtegida — sin sesión, modo embebido (plataforma unificada)", () => {
+  it("bloquea el contenido y enlaza al login del shell, sin modal propio", async () => {
+    useAuth.mockReturnValue({ isAuthenticated: false, checking: false, plataformaAutenticada: false });
 
     await montarConRuta({ embebido: true });
 
     expect(screen.queryByTestId("contenido-protegido")).not.toBeInTheDocument();
     expect(screen.getByText("Esta sección requiere sesión")).toBeInTheDocument();
-    expect(screen.queryByText("Iniciar sesión")).not.toBeInTheDocument();
-  });
-
-  it("sugiere revisar la sesión desde el Inventario en vez de ofrecer un login propio", async () => {
-    useAuth.mockReturnValue({ isAuthenticated: false });
-
-    await montarConRuta({ embebido: true });
-
-    expect(screen.getByText(/todavía no se ha sincronizado/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Iniciar sesión/i })).toHaveAttribute("href", "/login?next=%2Factivos");
+    expect(screen.queryByRole("button", { name: /Iniciar sesión/i })).not.toBeInTheDocument();
   });
 });

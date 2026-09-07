@@ -1,12 +1,14 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import { Lock, LogIn } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { usePlataforma } from "../context/PlataformaContext";
 import LoginModal from "./LoginModal";
 
-// Mismo cálculo que Layout.jsx (no se comparte como prop para no acoplar
-// ambos componentes innecesariamente — es una lectura de la URL, no estado).
-const EMBEBIDO = new URLSearchParams(window.location.search).get("embed") === "1";
+function esModoEmbebido(anidado) {
+  if (anidado) return true;
+  return new URLSearchParams(window.location.search).get("embed") === "1";
+}
 
 /**
  * Envuelve las rutas que deben quedar bloqueadas sin sesión — mismo criterio
@@ -14,15 +16,23 @@ const EMBEBIDO = new URLSearchParams(window.location.search).get("embed") === "1
  * requiere una sesión con rol Dinamizador o Administrador"). El Panel general
  * (Dashboard) queda FUERA de este envoltorio a propósito: es la única página
  * navegable en modo consulta sin iniciar sesión.
- *
- * Esto es solo la capa de navegación/UX — el backend
- * (EscrituraSegunRolDePlataforma) sigue siendo la autoridad real sobre qué se
- * puede leer o escribir; esta pantalla evita que alguien sin sesión llegue
- * por URL directa a una página que el menú ya no le muestra.
  */
 export default function RutaProtegida() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, checking, plataformaAutenticada } = useAuth();
+  const { anidado } = usePlataforma();
+  const ubicacion = useLocation();
   const [loginOpen, setLoginOpen] = useState(false);
+  const embebido = esModoEmbebido(anidado);
+  const sincronizando = embebido && plataformaAutenticada && (checking || !isAuthenticated);
+  const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
+
+  if (sincronizando) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col items-center px-8 py-24 text-center">
+        <p className="text-[13px] text-base-300">Sincronizando sesión con el Inventario…</p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -31,15 +41,16 @@ export default function RutaProtegida() {
           <Lock className="h-5 w-5 text-base-300" />
         </div>
         <h2 className="mt-4 text-base font-semibold text-base-100">Esta sección requiere sesión</h2>
-        {EMBEBIDO ? (
-          // Misma razón que en Layout.jsx: dentro del Inventario es la misma
-          // sesión (JWT único) — si todavía no se sincronizó, un botón de
-          // "Iniciar sesión" aparte aquí daría la impresión equivocada de que
-          // este módulo pide credenciales propias.
+        {embebido ? (
           <p className="mt-2 text-[13px] leading-relaxed text-base-300">
-            La sesión del Inventario todavía no se ha sincronizado con este panel.
-            Si acaba de iniciar sesión, recargue la página; si el problema sigue,
-            revise la sesión desde el Inventario.
+            Use{' '}
+            <Link
+              to={`/login?next=${encodeURIComponent(rutaTrasLogin)}`}
+              className="text-cric-green-400 hover:underline"
+            >
+              Iniciar sesión
+            </Link>{' '}
+            en la barra superior para ver Activos, Vulnerabilidades y el resto de la gestión.
           </p>
         ) : (
           <>
