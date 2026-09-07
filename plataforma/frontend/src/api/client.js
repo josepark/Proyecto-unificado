@@ -32,12 +32,33 @@ export function formatearErrorApi(error) {
 }
 
 /** Cualquier página puede escuchar 'sesion-vencida' (Shell.jsx lo hace)
- * para mostrar un aviso único en toda la app, en vez de que cada
- * pantalla maneje por su cuenta un 401 que en realidad significa lo
- * mismo en cualquier parte: hay que volver a iniciar sesión. Los dos
- * clientes (Inventario y RBAC) comparten este mismo emisor porque los
- * dos pasan por peticion() más abajo. */
+ * para mostrar un aviso único en toda la app. Los 401 de /rbac/api/ vienen
+ * de la puerta nginx (auth_request) y pueden significar falta de rol RBAC
+ * aunque la sesión del Inventario siga activa — por eso, antes de avisar,
+ * se re-consulta GET /api/sesion/ y se emite 'sesion-actualizada' para que
+ * el encabezado y PuertaRBAC se sincronicen con el servidor. */
 export const eventosApi = new EventTarget();
+
+export async function consultarSesionInventario() {
+  try {
+    const respuesta = await fetch('/api/sesion/', { credentials: 'same-origin' });
+    if (!respuesta.ok) return { autenticado: false };
+    return respuesta.json();
+  } catch {
+    return { autenticado: false };
+  }
+}
+
+async function notificar401(url) {
+  const esPlataforma = url.includes('/rbac/api') || url.includes('/api/');
+  if (!esPlataforma) return;
+
+  const sesion = await consultarSesionInventario();
+  eventosApi.dispatchEvent(new CustomEvent('sesion-actualizada', { detail: sesion }));
+  if (!sesion.autenticado) {
+    eventosApi.dispatchEvent(new CustomEvent('sesion-vencida', { detail: { url } }));
+  }
+}
 
 async function peticion(url, opciones = {}) {
   const respuesta = await fetch(url, {
@@ -46,7 +67,7 @@ async function peticion(url, opciones = {}) {
     headers: { ...(opciones.headers || {}) },
   });
   if (respuesta.status === 401) {
-    eventosApi.dispatchEvent(new CustomEvent('sesion-vencida', { detail: { url } }));
+    await notificar401(url);
   }
   if (!respuesta.ok) {
     let cuerpo;

@@ -21,7 +21,7 @@ function borrarCredenciales() {
   localStorage.removeItem("suiin_auth_origen");
 }
 
-export function AuthProvider({ children, plataformaAutenticada = false }) {
+export function AuthProvider({ children, plataformaAutenticada = false, sesionCargando = false }) {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
   const revalidando = useRef(false);
@@ -88,6 +88,10 @@ export function AuthProvider({ children, plataformaAutenticada = false }) {
   // el usuario inicia o cierra sesión arriba, re-sincronizamos el JWT de
   // riesgos sin recargar el módulo.
   useEffect(() => {
+    // Mientras el shell aún consulta GET /api/sesion/, autenticado puede ser
+    // false un instante aunque la cookie ya exista — no borrar el JWT de SSO
+    // en ese lapso ni tratarlo como cierre de sesión.
+    if (sesionCargando) return;
     if (plataformaAutenticada) {
       intentarSSO();
       return;
@@ -97,7 +101,7 @@ export function AuthProvider({ children, plataformaAutenticada = false }) {
       borrarCredenciales();
       setUser(null);
     }
-  }, [plataformaAutenticada, intentarSSO]);
+  }, [plataformaAutenticada, sesionCargando, intentarSSO]);
 
   useEffect(() => {
     // Mientras la pestaña/iframe de riesgos queda abierta sin recargar (caso

@@ -16,12 +16,12 @@ import '@riesgos/index-plataforma.css';
 
 /** PTR nativo en la SPA unificada — sin iframe; comparte sesión vía JWT/cookie. */
 export default function ModuloRiesgosPTR() {
-  const { autenticado } = useOutletContext() ?? {};
+  const { autenticado, cargando } = useOutletContext() ?? {};
 
   return (
     <PlataformaProvider anidado>
       <div className="modulo-riesgos-nativo">
-        <AuthProvider plataformaAutenticada={!!autenticado}>
+        <AuthProvider plataformaAutenticada={!!autenticado} sesionCargando={!!cargando}>
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<Dashboard />} />

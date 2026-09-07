@@ -216,6 +216,33 @@ describe("AuthProvider — login()", () => {
   });
 });
 
+describe("AuthProvider — plataforma unificada (sesión del shell)", () => {
+  it("no borra credenciales SSO mientras la sesión del shell sigue cargando", async () => {
+    localStorage.setItem("suiin_token", "jwt-sso-viejo");
+    localStorage.setItem("suiin_auth_scheme", "Bearer");
+    localStorage.setItem("suiin_auth_origen", "sso");
+    endpoints.ssoJWT.mockResolvedValue({ data: { token: "jwt-sso-nuevo", username: "admin", roles: [] } });
+
+    const { rerender } = render(
+      <AuthProvider plataformaAutenticada={false} sesionCargando>
+        <SondaAuth />
+      </AuthProvider>
+    );
+
+    await esperarQueTermineDeVerificar();
+    expect(localStorage.getItem("suiin_token")).toBe("jwt-sso-nuevo");
+
+    rerender(
+      <AuthProvider plataformaAutenticada sesionCargando={false}>
+        <SondaAuth />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(endpoints.ssoJWT).toHaveBeenCalledTimes(2));
+    expect(localStorage.getItem("suiin_token")).toBe("jwt-sso-nuevo");
+  });
+});
+
 describe("AuthProvider — logout()", () => {
   it("borra las credenciales guardadas y deja de estar autenticado", async () => {
     localStorage.setItem("suiin_token", "tok-propio");

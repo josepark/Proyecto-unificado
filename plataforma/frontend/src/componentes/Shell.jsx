@@ -6,7 +6,7 @@ import { rbacApi } from '../api/rbac';
 
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
-  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando } = useSesion();
+  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, recargar } = useSesion();
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const ubicacion = useLocation();
@@ -20,11 +20,13 @@ export default function Shell() {
     return () => eventosApi.removeEventListener('sesion-vencida', alVencer);
   }, []);
 
-  // Si la persona ya volvió a iniciar sesión y navega a otra pantalla,
-  // el aviso no debe seguir pegado — se limpia solo al cambiar de ruta.
+  // Re-sincroniza roles y autenticación con el servidor al cambiar de módulo
+  // o pantalla — evita que el encabezado muestre "admin" con estado obsoleto
+  // mientras las APIs ya devuelven 401.
   useEffect(() => {
+    recargar();
     setSesionVencida(false);
-  }, [ubicacion.pathname]);
+  }, [ubicacion.pathname, recargar]);
 
   useEffect(() => {
     if (!puedeEditar) {
@@ -91,7 +93,7 @@ export default function Shell() {
            sección 6.3). El servidor sigue siendo quien realmente lo
            impide; esto solo evita que alguien sin el rol vea un módulo
            que de todas formas le va a rechazar cada llamada. */}
-        <Outlet context={{ autenticado, puedeEditar, puedeEliminar }} />
+        <Outlet context={{ autenticado, puedeEditar, puedeEliminar, cargando }} />
       </div>
     </>
   );

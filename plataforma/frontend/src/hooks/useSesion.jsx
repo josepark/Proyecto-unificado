@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { inventarioApi } from '../api/inventario';
+import { eventosApi } from '../api/client';
 
 const VACIA = {
   autenticado: false,
@@ -11,6 +12,16 @@ const VACIA = {
 
 const SesionContext = createContext(null);
 
+function mapearSesion(s) {
+  return {
+    autenticado: s.autenticado,
+    usuario: s.usuario,
+    roles: s.roles || [],
+    puedeEditar: s.puede_editar,
+    puedeEliminar: s.puede_eliminar,
+  };
+}
+
 /** Sesión actual (rol, permisos) — misma fuente que el tablero anterior
  * (GET /api/sesion/). Expone recargar() para refrescar tras el login React. */
 export function SesionProvider({ children }) {
@@ -21,15 +32,7 @@ export function SesionProvider({ children }) {
     setCargando(true);
     return inventarioApi
       .sesion()
-      .then((s) =>
-        setSesion({
-          autenticado: s.autenticado,
-          usuario: s.usuario,
-          roles: s.roles,
-          puedeEditar: s.puede_editar,
-          puedeEliminar: s.puede_eliminar,
-        }),
-      )
+      .then((s) => setSesion(mapearSesion(s)))
       .catch(() => setSesion(VACIA))
       .finally(() => setCargando(false));
   }, []);
@@ -37,6 +40,17 @@ export function SesionProvider({ children }) {
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  useEffect(() => {
+    function sincronizar(evento) {
+      const s = evento.detail;
+      if (!s || typeof s.autenticado !== 'boolean') return;
+      setSesion(mapearSesion(s));
+      setCargando(false);
+    }
+    eventosApi.addEventListener('sesion-actualizada', sincronizar);
+    return () => eventosApi.removeEventListener('sesion-actualizada', sincronizar);
+  }, []);
 
   return (
     <SesionContext.Provider value={{ ...sesion, cargando, recargar }}>{children}</SesionContext.Provider>
