@@ -13,7 +13,7 @@ function moduloDeRuta(pathname) {
 
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
-  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, recargar } = useSesion();
+  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando } = useSesion();
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const ubicacion = useLocation();
@@ -28,12 +28,11 @@ export default function Shell() {
     return () => eventosApi.removeEventListener('sesion-vencida', alVencer);
   }, []);
 
-  // Re-sincroniza roles al cambiar de pestaña de módulo (Inventario / RBAC /
-  // Riesgos) — evita encabezado obsoleto mientras las APIs ya devuelven 401.
+  // Al cambiar de módulo solo se oculta el aviso de sesión vencida — NO se
+  // vuelve a llamar GET /api/sesion/ (provocaba falsos cierres al ir a RBAC).
   useEffect(() => {
-    recargar();
     setSesionVencida(false);
-  }, [moduloActivo, recargar]);
+  }, [moduloActivo]);
 
   useEffect(() => {
     if (!puedeEditar || !autenticado || cargando) {
@@ -61,9 +60,10 @@ export default function Shell() {
           <div className="sub">Camino del SUIIN · ISO/IEC 27001:2022 — CRIC</div>
         </div>
         <div className="auth">
-          {cargando ? null : autenticado ? (
+          {cargando && !autenticado && !usuario ? null : autenticado || usuario ? (
             <>
-              Sesión: <b>{usuario}</b> · <a href="/logout/">Salir</a>
+              Sesión: <b>{usuario}</b>
+              {cargando ? ' · …' : null} · <a href="/logout/">Salir</a>
             </>
           ) : (
             <Link to={`/login?next=${encodeURIComponent(rutaTrasLogin)}`}>Iniciar sesión</Link>

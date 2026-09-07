@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { inventarioApi } from '../api/inventario';
-import { eventosApi } from '../api/client';
+import { eventosApi, consultarSesionInventario } from '../api/client';
 
 const VACIA = {
   autenticado: false,
@@ -22,22 +22,35 @@ function mapearSesion(s) {
   };
 }
 
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Lee GET /api/sesion/ con un reintento si la primera respuesta dice "no autenticado"
+ * — evita cerrar sesión por lecturas puntuales al cambiar de módulo (SQLite/nginx). */
+async function leerSesionConfirmada() {
+  let s = await inventarioApi.sesion();
+  if (!s.autenticado) {
+    await esperar(250);
+    s = await inventarioApi.sesion();
+  }
+  return s;
+}
+
 /** Sesión actual (rol, permisos) — misma fuente que el tablero anterior
  * (GET /api/sesion/). Expone recargar() para refrescar tras el login React. */
 export function SesionProvider({ children }) {
   const [sesion, setSesion] = useState(VACIA);
   const [cargando, setCargando] = useState(true);
 
-  const recargar = useCallback(() => {
-    setCargando(true);
-    return inventarioApi
-      .sesion()
+  const recargar = useCallback(({ silencioso = false } = {}) => {
+    if (!silencioso) setCargando(true);
+    return leerSesionConfirmada()
       .then((s) => setSesion(mapearSesion(s)))
-      // Un fallo de red o un 503 momentáneo no debe borrar una sesión que
-      // todavía es válida en el navegador — eso provocaba "funciona una vez y
-      // luego pide login" al cambiar de pestaña de módulo.
       .catch(() => {})
-      .finally(() => setCargando(false));
+      .finally(() => {
+        if (!silencioso) setCargando(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -45,10 +58,20 @@ export function SesionProvider({ children }) {
   }, [recargar]);
 
   useEffect(() => {
-    function sincronizar(evento) {
+    async function sincronizar(evento) {
       const s = evento.detail;
       if (!s || typeof s.autenticado !== 'boolean') return;
-      setSesion(mapearSesion(s));
+      if (!s.autenticado) {
+        const confirm = await consultarSesionInventario();
+        if (!confirm.autenticado) {
+          const reconfirm = await leerSesionConfirmada();
+          setSesion(mapearSesion(reconfirm));
+        } else {
+          setSesion(mapearSesion(confirm));
+        }
+      } else {
+        setSesion(mapearSesion(s));
+      }
       setCargando(false);
     }
     eventosApi.addEventListener('sesion-actualizada', sincronizar);
@@ -57,7 +80,7 @@ export function SesionProvider({ children }) {
 
   useEffect(() => {
     function alRecuperarFoco() {
-      if (document.visibilityState === 'visible') recargar();
+      if (document.visibilityState === 'visible') recargar({ silencioso: true });
     }
     document.addEventListener('visibilitychange', alRecuperarFoco);
     return () => document.removeEventListener('visibilitychange', alRecuperarFoco);

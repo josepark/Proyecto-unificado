@@ -7,7 +7,16 @@ vi.mock('../api/inventario', () => ({
   inventarioApi: { sesion: vi.fn() },
 }));
 
+vi.mock('../api/client', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    consultarSesionInventario: vi.fn(),
+  };
+});
+
 import { inventarioApi } from '../api/inventario';
+import { consultarSesionInventario } from '../api/client';
 
 function Sonda() {
   const { autenticado, usuario, puedeEditar, cargando } = useSesion();
@@ -21,15 +30,18 @@ function Sonda() {
   );
 }
 
+const SESION_ADMIN = {
+  autenticado: true,
+  usuario: 'admin',
+  roles: ['Administrador'],
+  puede_editar: true,
+  puede_eliminar: true,
+};
+
 describe('SesionProvider', () => {
   beforeEach(() => {
-    vi.mocked(inventarioApi.sesion).mockResolvedValue({
-      autenticado: true,
-      usuario: 'admin',
-      roles: ['Administrador'],
-      puede_editar: true,
-      puede_eliminar: true,
-    });
+    vi.mocked(inventarioApi.sesion).mockResolvedValue(SESION_ADMIN);
+    vi.mocked(consultarSesionInventario).mockResolvedValue(SESION_ADMIN);
   });
 
   afterEach(() => {
@@ -47,14 +59,28 @@ describe('SesionProvider', () => {
     expect(inventarioApi.sesion).toHaveBeenCalled();
   });
 
-  it('aplica sesion-actualizada sin otra petición de red', async () => {
+  it('confirma cierre de sesión antes de aplicar sesion-actualizada con autenticado false', async () => {
     render(
       <SesionProvider>
         <Sonda />
       </SesionProvider>,
     );
     await waitFor(() => expect(screen.getByTestId('cargando')).toHaveTextContent('false'));
-    const llamadas = vi.mocked(inventarioApi.sesion).mock.calls.length;
+
+    vi.mocked(consultarSesionInventario).mockResolvedValue({
+      autenticado: false,
+      usuario: null,
+      roles: [],
+      puede_editar: false,
+      puede_eliminar: false,
+    });
+    vi.mocked(inventarioApi.sesion).mockResolvedValue({
+      autenticado: false,
+      usuario: null,
+      roles: [],
+      puede_editar: false,
+      puede_eliminar: false,
+    });
 
     eventosApi.dispatchEvent(
       new CustomEvent('sesion-actualizada', {
@@ -69,7 +95,20 @@ describe('SesionProvider', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('autenticado')).toHaveTextContent('false'));
-    expect(screen.getByTestId('editar')).toHaveTextContent('false');
-    expect(vi.mocked(inventarioApi.sesion).mock.calls.length).toBe(llamadas);
+    expect(consultarSesionInventario).toHaveBeenCalled();
+  });
+
+  it('ignora un autenticado false puntual si la re-lectura confirma sesión activa', async () => {
+    vi.mocked(inventarioApi.sesion)
+      .mockResolvedValueOnce(SESION_ADMIN)
+      .mockResolvedValueOnce({ ...SESION_ADMIN, autenticado: false, usuario: null, puede_editar: false })
+      .mockResolvedValueOnce(SESION_ADMIN);
+
+    render(
+      <SesionProvider>
+        <Sonda />
+      </SesionProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('autenticado')).toHaveTextContent('true'));
   });
 });

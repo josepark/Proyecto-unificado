@@ -121,6 +121,22 @@ export function AuthProvider({
         return;
       }
 
+      // Restaurar usuario desde JWT SSO guardado mientras se revalida — evita
+      // pantalla de "requiere sesión" al volver de RBAC/Inventario al módulo.
+      if (token && esquema === "Bearer" && origen === "sso" && unificado && plataformaAutenticada) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+          if (payload.username) {
+            setUser({
+              username: payload.username,
+              is_staff: payload.roles?.includes("Administrador") ?? false,
+            });
+          }
+        } catch {
+          // sigue abajo con sincronizarSSO
+        }
+      }
+
       const reintentos = unificado && plataformaAutenticada ? 2 : 1;
       await sincronizarSSO(reintentos);
       if (!cancelado) setChecking(false);
