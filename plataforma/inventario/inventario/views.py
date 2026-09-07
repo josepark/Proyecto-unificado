@@ -831,6 +831,7 @@ def integridad_verificar(request):
 # Ampliar sesion_info con el rol del usuario
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@ensure_csrf_cookie
 def sesion_info_v2(request):
     rs = sorted(roles_de(request.user))
     puede_editar = bool(set(rs) & {"Dinamizador", "Administrador"})
@@ -842,8 +843,56 @@ def sesion_info_v2(request):
 
 
 # --- Login/Logout propios para el tablero (permite roles no-staff) ---
+from django.contrib.auth import authenticate as _auth_login_user
+from django.contrib.auth import login as _auth_login
 from django.contrib.auth import logout as _logout
 from django.shortcuts import redirect
+
+
+def _respuesta_sesion(user):
+    rs = sorted(roles_de(user))
+    return {
+        "autenticado": True,
+        "usuario": user.get_username(),
+        "roles": rs,
+        "puede_editar": bool(set(rs) & {ROL_DINAMIZADOR, ROL_ADMIN}),
+        "puede_eliminar": ROL_ADMIN in rs,
+    }
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+@ensure_csrf_cookie
+def api_login(request):
+    """Login JSON para la SPA de React — misma sesión por cookie que /login/.
+
+    GET prepara la cookie CSRF (mismo patrón que LoginView en HTML).
+    POST valida credenciales con django-axes y abre sesión real
+    (django.contrib.auth.login), no solo un JWT.
+    """
+    if request.method == "GET":
+        return Response({"listo": True})
+
+    username = (request.data.get("username") or "").strip()
+    password = request.data.get("password") or ""
+    if not username or not password:
+        return Response({"detail": "Usuario y contraseña son obligatorios."}, status=400)
+
+    from axes.handlers.proxy import AxesProxyHandler
+
+    credenciales = {"username": username}
+    if AxesProxyHandler.is_locked(request, credenciales):
+        return Response(
+            {"detail": "Acceso bloqueado temporalmente por demasiados intentos fallidos."},
+            status=429,
+        )
+
+    user = _auth_login_user(request, username=username, password=password)
+    if user is None:
+        return Response({"detail": "Usuario o contraseña incorrectos."}, status=401)
+
+    _auth_login(request, user)
+    return Response(_respuesta_sesion(user))
 
 
 def logout_view(request):

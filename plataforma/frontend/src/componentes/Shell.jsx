@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useSesion } from '../hooks/useSesion';
 import { eventosApi } from '../api/client';
 import { rbacApi } from '../api/rbac';
@@ -61,7 +61,7 @@ export default function Shell() {
               Sesión: <b>{usuario}</b> · <a href="/logout/">Salir</a>
             </>
           ) : (
-            <a href="/login/">Iniciar sesión</a>
+            <Link to={`/login?next=${encodeURIComponent(rutaTrasLogin)}`}>Iniciar sesión</Link>
           )}
         </div>
       </header>
@@ -69,7 +69,7 @@ export default function Shell() {
       {sesionVencida && (
         <div className="aviso-sesion">
           Tu sesión venció o no tenés permisos para esta sección.{' '}
-          <a href={`/login/?next=${encodeURIComponent(rutaTrasLogin)}`}>Iniciar sesión de nuevo</a>
+          <Link to={`/login?next=${encodeURIComponent(rutaTrasLogin)}`}>Iniciar sesión de nuevo</Link>
           <button className="cerrar" onClick={() => setSesionVencida(false)} aria-label="Cerrar aviso">
             ×
           </button>

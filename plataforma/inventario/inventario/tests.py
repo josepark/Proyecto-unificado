@@ -366,6 +366,53 @@ class EndurecimientoLoginTest(TestCase):
         self.assertEqual(r.status_code, 302)  # login exitoso, redirect normal
 
 
+class ApiLoginTest(TestCase):
+    """Login JSON para la SPA (/api/auth/login/) — misma protección django-axes."""
+
+    URL = "/api/auth/login/"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.usuario = User.objects.create_user("api_login_test", password="claveCorrecta123")
+
+    def setUp(self):
+        from axes.models import AccessAttempt
+        AccessAttempt.objects.all().delete()
+
+    def test_credenciales_validas_abre_sesion(self):
+        r = self.client.post(
+            self.URL,
+            {"username": "api_login_test", "password": "claveCorrecta123"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["autenticado"])
+        self.assertEqual(r.json()["usuario"], "api_login_test")
+
+    def test_credenciales_invalidas_devuelve_401(self):
+        r = self.client.post(
+            self.URL,
+            {"username": "api_login_test", "password": "mala"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 401)
+
+    def test_supera_el_limite_bloquea_incluso_con_clave_correcta(self):
+        from django.conf import settings
+        for _ in range(settings.AXES_FAILURE_LIMIT):
+            self.client.post(
+                self.URL,
+                {"username": "api_login_test", "password": "claveMALA"},
+                content_type="application/json",
+            )
+        r = self.client.post(
+            self.URL,
+            {"username": "api_login_test", "password": "claveCorrecta123"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 429)
+
+
 class _ActivoFalso:
     """Doble liviano de Activo para probar deteccion_diagramas.py sin
     necesidad de tocar la base de datos."""

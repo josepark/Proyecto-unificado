@@ -26,13 +26,16 @@ import Excepciones from './paginas/rbac/Excepciones';
 import ExcepcionMasiva from './paginas/rbac/ExcepcionMasiva';
 import Auditoria from './paginas/rbac/Auditoria';
 import Inicio from './paginas/rbac/Inicio';
+import Login from './paginas/Login';
 
-// Fase 4 completa: React es la interfaz principal en "/". Inventario y RBAC
-// son rutas nativas; PTR sigue embebido vía iframe (/gestion-riesgos).
+// Fase 4 completa: React es la interfaz principal en "/". Login propio en
+// /login (POST /api/auth/login/); logout sigue en Django (/logout/).
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
+
         <Route path="/" element={<Shell />}>
           <Route index element={<Navigate to="/inventario" replace />} />
 

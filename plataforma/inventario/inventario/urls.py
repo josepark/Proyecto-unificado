@@ -16,6 +16,7 @@ urlpatterns = [
     path("login/", auth_views.LoginView.as_view(template_name="registration/login.html"), name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("api/bitacora/", views.bitacora_global, name="bitacora"),
+    path("api/auth/login/", views.api_login, name="api_login"),
     path("api/sesion/", views.sesion_info_v2, name="sesion"),
     path("api/auth-rbac/", views.auth_check_rbac, name="auth_check_rbac"),
     path("api/token-jwt/", views.token_jwt, name="token_jwt"),

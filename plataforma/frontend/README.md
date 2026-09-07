@@ -5,8 +5,8 @@ del Inventario como las plantillas de RBAC + los iframes del tablero
 Django. Ver `README-DESPLIEGUE.md` (raíz del proyecto), sección 9, para el
 contexto completo de la migración.
 
-**Estado actual:** Fase 4 completa — React es la interfaz principal en `/`.
-El login sigue en Django (`/login/`); el módulo PTR se embebe en `/gestion-riesgos`.
+**Estado actual:** migración React completa — interfaz en `/`, login en
+`/login` (API `POST /api/auth/login/`), logout en `/logout/`.
 
 ## Desarrollo local
 
@@ -18,10 +18,11 @@ npm install
 npm run dev
 ```
 
-Abre `http://127.0.0.1:5173/`. El proxy de desarrollo (`vite.config.js`)
-reenvía `/api` al Inventario y `/rbac` a RBAC, con el mismo recorte de
-prefijo que hace nginx en producción — así el mismo código funciona igual
-en desarrollo y en producción, sin ninguna URL hardcodeada por entorno.
+Abre `http://127.0.0.1:5173/` (login en `/login`). El proxy de desarrollo
+(`vite.config.js`) reenvía `/api` al Inventario y `/rbac` a RBAC, con el
+mismo recorte de prefijo que hace nginx en producción — así el mismo código
+funciona igual en desarrollo y en producción, sin ninguna URL hardcodeada
+por entorno.
 
 ## Pruebas
 
@@ -68,6 +69,7 @@ src/
 │   └── rbac.js               Cliente de la Matriz RBAC (Flask, Fase 1 del README)
 ├── hooks/
 │   ├── useSesion.js         Usuario/rol actual
+│   ├── useSesion.jsx         Usuario/rol actual + SesionProvider
 │   └── useApi.js             Carga de datos genérica (estados de carga/error)
 └── paginas/
     ├── inventario/

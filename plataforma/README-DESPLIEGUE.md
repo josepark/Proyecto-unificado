@@ -811,14 +811,22 @@ reenviarlo explícitamente en cada módulo.
 
 - `vite.config.js`: `base: '/'`.
 - `nginx.conf`: el build de React se sirve en `/`; Django queda en
-  `/api/`, `/login/`, `/logout/`, `/admin/`; redirección 301 de `/app/*` a
-  `/*` para marcadores antiguos.
+  `/api/`, `/logout/`, `/admin/`; redirección 301 de `/app/*` a `/*`.
 - Retirado `templates/inventario/dashboard.html`; la ruta raíz de Django
   redirige a `/inventario/dashboard` (solo acceso directo al puerto 8000).
-- RBAC ya no se incrusta por iframe en el tablero: es React nativo bajo
-  `/rbac/…`. Flask sigue sirviendo `/rbac/api/` y las plantillas HTML
-  legacy en `/rbac/` (por compatibilidad), pero la interfaz principal ya
-  no las usa.
+- RBAC nativo en React bajo `/rbac/…` (sin iframe en el tablero).
+
+### 9.8 Login en React (completa)
+
+- Pantalla `/login` en la SPA (misma identidad visual que el formulario
+  Django anterior).
+- `POST /api/auth/login/` abre sesión real por cookie (no solo JWT), con
+  django-axes y rate limiting en nginx (mismo cupo que `/api/token-jwt/`).
+- `GET /api/sesion/` y `GET /api/auth/login/` emiten cookie CSRF.
+- `/logout/` sigue en Django (enlace directo desde el encabezado).
+- La ruta HTML `/login/` de Django se conserva para pruebas automatizadas
+  y acceso directo al puerto 8000; en producción nginx entrega `/login` vía
+  la SPA.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 

@@ -1,4 +1,4 @@
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import ModuloRBAC from './ModuloRBAC';
 
 /** Misma puerta que nginx y dashboard.html: Matriz RBAC solo para
@@ -14,9 +14,9 @@ export default function PuertaRBAC() {
           <b>Dinamizador</b> o <b>Administrador</b>.
         </p>
         {!autenticado && (
-          <a className="btn btn-primary" href="/login/?next=/rbac/inicio">
+          <Link className="btn btn-primary" to="/login?next=/rbac/inicio">
             Iniciar sesión
-          </a>
+          </Link>
         )}
       </div>
     );

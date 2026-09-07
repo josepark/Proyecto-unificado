@@ -45,4 +45,30 @@ export const inventarioApi = {
 
   // --- Sesión ---
   sesion: () => api.get('/sesion/'),
+
+  /** Login JSON — no usa peticion() para no disparar 'sesion-vencida' en 401. */
+  login: async (username, password) => {
+    await fetch('/api/auth/login/', { credentials: 'same-origin' });
+    const match = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/);
+    const csrf = match ? decodeURIComponent(match[1]) : '';
+    const respuesta = await fetch('/api/auth/login/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      body: JSON.stringify({ username, password }),
+    });
+    let cuerpo = null;
+    try {
+      cuerpo = await respuesta.json();
+    } catch {
+      cuerpo = null;
+    }
+    if (!respuesta.ok) {
+      const error = new Error(cuerpo?.detail || respuesta.statusText);
+      error.status = respuesta.status;
+      error.data = cuerpo;
+      throw error;
+    }
+    return cuerpo;
+  },
 };

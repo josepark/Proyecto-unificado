@@ -26,7 +26,7 @@ describe('PuertaRBAC', () => {
     renderConContexto({ puedeEditar: false, autenticado: false });
     expect(screen.getByRole('link', { name: /Iniciar sesión/i })).toHaveAttribute(
       'href',
-      '/login/?next=/rbac/inicio',
+      '/login?next=/rbac/inicio',
     );
   });
 });
