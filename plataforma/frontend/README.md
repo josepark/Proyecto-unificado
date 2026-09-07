@@ -1,9 +1,14 @@
 # Frontend — Soluciones SUIIN (Fase 4, en migración)
 
 SPA de React que va reemplazando, módulo por módulo, tanto el JS embebido
-del Inventario como las plantillas de RBAC + el iframe. Ver
-`README-DESPLIEGUE.md` (raíz del proyecto), sección 9, para el contexto
-completo de la migración.
+del Inventario como las plantillas de RBAC + los iframes del tablero
+Django. Ver `README-DESPLIEGUE.md` (raíz del proyecto), sección 9, para el
+contexto completo de la migración.
+
+**Estado actual:** Fase 3 cerrada (todas las pantallas de Inventario y RBAC
+portadas). Fase 4 en curso: módulo PTR embebido, puerta RBAC por rol, badge
+de pendientes, pruebas Vitest ampliadas. Pendiente del corte final (`base`
+`'/'`, retirar `dashboard.html`).
 
 ## Desarrollo local
 
@@ -55,8 +60,10 @@ src/
 ├── App.jsx                Rutas de los dos módulos (anidadas, una sub-navegación por módulo)
 ├── componentes/
 │   ├── Shell.jsx              Encabezado + pestañas de módulo + aviso de sesión vencida
-│   ├── ModuloInventario.jsx    Sub-navegación del Inventario (Dashboard/Panel ejecutivo/Alertas)
-│   └── ModuloRBAC.jsx           Sub-navegación de RBAC (Roles/Usuarios/Matriz)
+│   ├── ModuloInventario.jsx    Sub-navegación del Inventario
+│   ├── ModuloRBAC.jsx           Sub-navegación de RBAC (Roles/Usuarios/Matriz/…)
+│   ├── PuertaRBAC.jsx           Guardia de rol antes de ModuloRBAC
+│   └── ModuloRiesgosPTR.jsx     Iframe del módulo SUIIN-SGSI-RIESGOS (/riesgos/)
 ├── api/
 │   ├── client.js           Fábrica de cliente HTTP con manejo de CSRF y evento de sesión vencida
 │   ├── inventario.js        Cliente del Inventario (Django DRF)
@@ -68,16 +75,27 @@ src/
     ├── inventario/
     │   ├── Dashboard.jsx        KPIs + tabla de activos
     │   ├── PanelEjecutivo.jsx    Madurez del SGSI + KPIs de RBAC consolidados
-    │   └── Alertas.jsx            Grupos de alertas por severidad
+    │   ├── Alertas.jsx            Grupos de alertas por severidad
+    │   ├── Riesgos.jsx            Motor de riesgos del Inventario (no confundir con PTR)
+    │   ├── CentroDatos.jsx          Datacenters y diagramas
+    │   ├── Bitacora.jsx             Historial de cambios
+    │   ├── Activo.jsx / ActivoForm.jsx / ImportarActivos.jsx
+    │   └── DatacenterForm.jsx / DiagramaForm.jsx
     └── rbac/
-        ├── Roles.jsx              Lista + certificación
-        ├── Usuarios.jsx            Lista, filtros, suspender
-        └── Matriz.jsx              Grilla rol × sistema, edición de celda
-```
+        ├── Inicio.jsx             Tablero de control de acceso
+        ├── Roles.jsx / RolForm.jsx
+        ├── Usuarios.jsx / UsuarioForm.jsx
+        ├── Matriz.jsx / MatrizComparar.jsx
+        ├── Sistemas.jsx / SistemaForm.jsx
+        ├── Excepciones.jsx / ExcepcionMasiva.jsx
+        └── Auditoria.jsx
 
-Pendiente de portar: Riesgos, Centro de datos y Bitácora (Inventario);
-Sistemas, Excepciones y Auditoría (RBAC) — ver README-DESPLIEGUE.md
-sección 9.6.
+**Tres módulos en la shell** (igual que `dashboard.html`): Inventario, Matriz
+RBAC (React nativo) y Gestión de Riesgos y PTR (iframe a `/riesgos/?embed=1` —
+sigue siendo la SPA propia de ese módulo).
+
+Pendiente (Fase 4): ampliar pruebas, decidir si el login se migra a React,
+y el corte final (`base: '/'`, retirar tablero Django).
 
 ## Cuidado al anidar rutas: el contexto no se propaga solo
 

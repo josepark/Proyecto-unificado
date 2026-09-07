@@ -780,48 +780,39 @@ respuesta es JSON.
 bugs de enrutamiento solo aparecen en el camino autenticado, porque son
 justamente las peticiones que antes no llegaban tan lejos.*
 
-### 9.5 Fase 3/4 (en curso) — cuatro pantallas más portadas
+### 9.5 Fase 3 — pantallas portadas (completa)
 
-**Inventario**: `Alertas` (grupos por severidad, incluida la correlación de
-riesgo cruzado de la sección 7.3) y `Panel ejecutivo` (madurez del SGSI +
-KPIs de RBAC consolidados). **RBAC**: `Usuarios` (lista, filtros por
-estado/rol, suspender) y `Matriz` (grilla rol × sistema, edición de celda
-con clic).
+**Inventario**: Dashboard, Panel ejecutivo, Alertas, Riesgos (motor del
+Inventario), Centro de datos (datacenters + diagramas), Bitácora, ficha de
+activo, formularios de creación/edición e importación masiva.
 
-Cada módulo ganó su propia sub-navegación (`ModuloInventario.jsx`,
-`ModuloRBAC.jsx`) con enrutamiento anidado de React Router — el mismo
-patrón de "módulo con navegación propia" que ya tenía el tablero
-original, ahora con rutas reales (`/app/inventario/alertas`,
-`/app/rbac/matriz`...) en vez de pestañas de JavaScript.
+**RBAC**: Inicio (tablero), Roles, Usuarios, Matriz (edición de celda +
+comparar), Sistemas, Excepciones (individual y masiva), Auditoría, y todos
+los formularios de creación/edición.
 
-**Verificado con navegador real y sesión autenticada de verdad** (no solo
-sin sesión): las 6 pantallas (2 de la fase anterior + estas 4) cargan sin
-ningún error de consola, con datos reales. Se probó explícitamente la
-edición de una celda de la Matriz de punta a punta — clic, cambio de
-nivel, confirmación por una llamada a la API aparte de que el valor
-cambió de verdad en la base — y se revirtió con la propia API (no con
-SQL directo, para no repetir el incidente de la sesión anterior). Cadena
-de auditoría confirmada íntegra después.
+Cada módulo tiene sub-navegación propia (`ModuloInventario.jsx`,
+`ModuloRBAC.jsx`) con rutas reales (`/app/inventario/alertas`,
+`/app/rbac/matriz`…).
 
-**Bug real encontrado esta vez, evitado antes de llegar a producción:**
-al anidar las rutas de cada módulo, el contexto de sesión (`puedeEditar`)
-que pasa `Shell` no se propaga automáticamente a través de un `<Outlet>`
-intermedio en React Router — hay que leerlo con `useOutletContext()` y
-reenviarlo explícitamente al `<Outlet>` propio de cada módulo. Se detectó
-al revisar el código, no en producción.
+**Verificado con navegador real y sesión autenticada**: las pantallas cargan
+sin errores de consola, con datos reales. Edición de celda de la Matriz
+probada de punta a punta.
 
-**Pendiente de portar:** Riesgos, Centro de datos y Bitácora
-(Inventario); Sistemas, Excepciones y Auditoría (RBAC).
+**Bug evitado en Fase 3:** el contexto de sesión (`puedeEditar`) no se
+propaga automáticamente a través de un `<Outlet>` intermedio — hay que
+reenviarlo explícitamente en cada módulo.
 
-### 9.6 Próximas fases
+### 9.6 Fase 4 (en curso)
 
-3. Terminar de portar Riesgos, Centro de datos y Bitácora (Inventario);
-   Sistemas, Excepciones y Auditoría (RBAC).
-4. Formularios de creación/edición completos donde todavía faltan
-   (Roles y Sistemas ya tienen API completa; falta la interfaz).
-5. Pruebas de componentes (Vitest/Testing Library) donde tenga sentido.
-6. Corte final: `base` de `'/app/'` a `'/'`, retirar el JS embebido del
-   Inventario y las plantillas Jinja2 + iframe de RBAC.
+1. **Paridad con el tablero Django** — tercera pestaña de módulo
+   (`/app/gestion-riesgos`) embebe SUIIN-SGSI-RIESGOS vía iframe; puerta
+   RBAC (`PuertaRBAC.jsx`) bloquea Consultor igual que nginx; badge de
+   pendientes en la pestaña Matriz RBAC.
+2. **Pruebas Vitest** — suite ampliada (Activo, ActivoForm, Riesgos, Inicio,
+   PuertaRBAC, Shell).
+3. **Pendiente:** decidir si el login se migra a React; **corte final:**
+   `base: '/'` en `vite.config.js`, actualizar `nginx.conf` para servir React
+   en `/`, retirar `dashboard.html` y los iframes legacy de RBAC/Riesgos.
 
 ## 10. Próximos pasos sugeridos (no implementados aún)
 

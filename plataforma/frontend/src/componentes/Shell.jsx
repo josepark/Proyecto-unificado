@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useSesion } from '../hooks/useSesion';
 import { eventosApi } from '../api/client';
+import { rbacApi } from '../api/rbac';
 
 /** Encabezado + pestañas de módulo, persistentes en toda la app — la
  * misma "una sola interfaz" que ya lograba dashboard.html embebiendo
@@ -11,7 +12,9 @@ import { eventosApi } from '../api/client';
 export default function Shell() {
   const { autenticado, usuario, puedeEditar, puedeEliminar, cargando } = useSesion();
   const [sesionVencida, setSesionVencida] = useState(false);
+  const [pendientesRbac, setPendientesRbac] = useState(0);
   const ubicacion = useLocation();
+  const rutaTrasLogin = `/app${ubicacion.pathname}${ubicacion.search}`;
 
   useEffect(() => {
     function alVencer() {
@@ -26,6 +29,21 @@ export default function Shell() {
   useEffect(() => {
     setSesionVencida(false);
   }, [ubicacion.pathname]);
+
+  useEffect(() => {
+    if (!puedeEditar) {
+      setPendientesRbac(0);
+      return;
+    }
+    let vivo = true;
+    rbacApi
+      .resumen()
+      .then((r) => vivo && setPendientesRbac(r.pendientes_total || 0))
+      .catch(() => vivo && setPendientesRbac(0));
+    return () => {
+      vivo = false;
+    };
+  }, [puedeEditar, ubicacion.pathname]);
 
   return (
     <>
@@ -51,7 +69,7 @@ export default function Shell() {
       {sesionVencida && (
         <div className="aviso-sesion">
           Tu sesión venció o no tenés permisos para esta sección.{' '}
-          <a href={`/login/?next=${encodeURIComponent(ubicacion.pathname)}`}>Iniciar sesión de nuevo</a>
+          <a href={`/login/?next=${encodeURIComponent(rutaTrasLogin)}`}>Iniciar sesión de nuevo</a>
           <button className="cerrar" onClick={() => setSesionVencida(false)} aria-label="Cerrar aviso">
             ×
           </button>
@@ -65,6 +83,10 @@ export default function Shell() {
           </NavLink>
           <NavLink to="/rbac" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Matriz RBAC
+            {pendientesRbac > 0 ? <span className="badge-modulo">{pendientesRbac}</span> : null}
+          </NavLink>
+          <NavLink to="/gestion-riesgos" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
+            Gestión de Riesgos y PTR
           </NavLink>
         </nav>
 

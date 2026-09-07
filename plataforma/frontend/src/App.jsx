@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Shell from './componentes/Shell';
 import ModuloInventario from './componentes/ModuloInventario';
-import ModuloRBAC from './componentes/ModuloRBAC';
+import PuertaRBAC from './componentes/PuertaRBAC';
+import ModuloRiesgosPTR from './componentes/ModuloRiesgosPTR';
 import Dashboard from './paginas/inventario/Dashboard';
 import Activo from './paginas/inventario/Activo';
 import ActivoForm from './paginas/inventario/ActivoForm';
@@ -26,13 +27,10 @@ import ExcepcionMasiva from './paginas/rbac/ExcepcionMasiva';
 import Auditoria from './paginas/rbac/Auditoria';
 import Inicio from './paginas/rbac/Inicio';
 
-// Fase 3 completa (README sección 9.5): cada módulo tiene su propia
-// sub-navegación (ModuloInventario/ModuloRBAC), igual que ya hacía el
-// tablero original. Ficha de detalle de activo, formularios de
-// Activo/Rol/Usuario/Sistema/Datacenter/Diagrama, Excepciones (individual
-// y masiva), Auditoría, Riesgos, Centro de datos y Bitácora ya portados
-// (Fase 1/2/3). Pendiente (Fase 4): tablero "Inicio" propio de RBAC,
-// pruebas de frontend (Vitest), y decidir si el login se migra a React.
+// Fase 3 completa: Inventario + RBAC portados con sub-navegación propia.
+// Fase 4 (en curso): módulo PTR embebido (/gestion-riesgos), puerta RBAC
+// por rol, badge de pendientes, pruebas Vitest ampliadas. Pendiente del
+// corte final: base '/' en vite/nginx y retirar dashboard.html + iframes.
 export default function App() {
   return (
     <BrowserRouter basename="/app">
@@ -58,7 +56,9 @@ export default function App() {
             <Route path="bitacora" element={<Bitacora />} />
           </Route>
 
-          <Route path="rbac" element={<ModuloRBAC />}>
+          <Route path="gestion-riesgos" element={<ModuloRiesgosPTR />} />
+
+          <Route path="rbac" element={<PuertaRBAC />}>
             <Route index element={<Navigate to="inicio" replace />} />
             <Route path="inicio" element={<Inicio />} />
             <Route path="roles" element={<Roles />} />
