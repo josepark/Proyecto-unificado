@@ -835,6 +835,13 @@ reenviarlo explícitamente en cada módulo.
   lo importa vía alias `@riesgos`. Desarrollo aislado del módulo sigue con
   `npm run dev` dentro de `riesgos/frontend/`.
 
+### 9.14 Paridad exportación, hoja de vida y etiquetas en lote (completa)
+
+- Dashboard: enlace `GET /api/exportar/inventario.xlsx` y selección múltiple con
+  `GET /api/etiquetas/lote.pdf?ids=…`.
+- Ficha de activo: CRUD de eventos de hoja de vida vía `/api/hojavida/` (alta con
+  adjunto opcional; baja solo Administrador).
+
 ## 10. Próximos pasos sugeridos (no implementados aún)
 
 - Migrar el Inventario a PostgreSQL (ya recomendado en su README original;
