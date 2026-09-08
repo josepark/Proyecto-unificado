@@ -1,6 +1,7 @@
 import json
 import os
 from django.conf import settings
+from django.contrib.sessions.backends.db import SessionStore
 
 from django.contrib.auth.models import Group, User
 from django.test import TestCase, override_settings
@@ -79,6 +80,29 @@ class AuthCheckRBACTest(TestCase):
         r = self.client.get(self.URL)
         self.assertEqual(r.status_code, 204)
         self.assertEqual(r.headers.get("X-Usuario-Autorizado"), "dinamizador_test")
+
+    def test_sesion_y_auth_rbac_coinciden_sin_request_user_hidratado(self):
+        """GET /api/sesion/ y /api/auth-rbac/ deben usar la misma lectura de sesión."""
+        sesion = self.client.session
+        sesion["_auth_user_id"] = str(self.dinamizador.pk)
+        sesion.save()
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = sesion.session_key
+
+        sesion_api = self.client.get("/api/sesion/")
+        auth_api = self.client.get(self.URL)
+        self.assertTrue(sesion_api.json()["puede_editar"])
+        self.assertEqual(auth_api.status_code, 204)
+
+    def test_autoriza_si_request_session_vacia_pero_cookie_valida(self):
+        """request.session puede no tener _auth_user_id aunque la cookie siga válida."""
+        sesion = SessionStore()
+        sesion["_auth_user_id"] = str(self.administrador.pk)
+        sesion.save()
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = sesion.session_key
+
+        r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(r.headers.get("X-Usuario-Autorizado"), "admin_test")
 
 
 class PanelEjecutivoUnificadoTest(TestCase):

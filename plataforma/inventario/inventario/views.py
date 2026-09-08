@@ -829,34 +829,46 @@ def integridad_verificar(request):
 
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user, get_user_model
 from django.contrib.sessions.backends.db import SessionStore
+
+
+def _uid_desde_sesion(sesion):
+    return sesion.get("_auth_user_id")
 
 
 def _usuario_desde_sesion(request):
     """Usuario de la sesión Django — respaldo si DRF no re-hidrato request.user."""
-    user = getattr(request, "user", None)
-    if user is not None and getattr(user, "is_authenticated", False):
+    user = get_user(request)
+    if getattr(user, "is_authenticated", False):
         return user
 
-    sesion = request.session
-    if not sesion.session_key:
-        clave = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
-        if not clave:
-            return None
-        sesion = SessionStore(session_key=clave)
-        try:
-            sesion.load()
-        except Exception:
-            return None
+    uid = None
+    if request.session.session_key:
+        uid = _uid_desde_sesion(request.session)
 
-    uid = sesion.get("_auth_user_id")
+    if not uid:
+        clave = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
+        if clave:
+            sesion = SessionStore(session_key=clave)
+            try:
+                sesion.load()
+                uid = _uid_desde_sesion(sesion)
+            except Exception:
+                uid = None
+
     if not uid:
         return None
     try:
         return get_user_model().objects.get(pk=uid)
     except get_user_model().DoesNotExist:
         return None
+
+
+def _permisos_plataforma(user):
+    rs = sorted(roles_de(user))
+    puede_editar = bool(set(rs) & {ROL_DINAMIZADOR, ROL_ADMIN})
+    return rs, puede_editar, ROL_ADMIN in rs
 
 
 # Ampliar sesion_info con el rol del usuario
@@ -873,9 +885,7 @@ def sesion_info_v2(request):
             "puede_editar": False,
             "puede_eliminar": False,
         }, headers={"Cache-Control": "no-store"})
-    rs = sorted(roles_de(user))
-    puede_editar = bool(set(rs) & {"Dinamizador", "Administrador"})
-    puede_eliminar = "Administrador" in rs
+    rs, puede_editar, puede_eliminar = _permisos_plataforma(user)
     return Response({
         "autenticado": True,
         "usuario": user.get_username(),
@@ -891,13 +901,13 @@ from django.shortcuts import redirect
 
 
 def _respuesta_sesion(user):
-    rs = sorted(roles_de(user))
+    rs, puede_editar, puede_eliminar = _permisos_plataforma(user)
     return {
         "autenticado": True,
         "usuario": user.get_username(),
         "roles": rs,
-        "puede_editar": bool(set(rs) & {ROL_DINAMIZADOR, ROL_ADMIN}),
-        "puede_eliminar": ROL_ADMIN in rs,
+        "puede_editar": puede_editar,
+        "puede_eliminar": puede_eliminar,
     }
 
 
@@ -952,19 +962,20 @@ def logout_view(request):
 # 401 en caso contrario (nginx redirige a /login/?next=… según la ruta).
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@ensure_csrf_cookie
 def auth_check_rbac(request):
     user = _usuario_desde_sesion(request)
     if user is None:
-        return Response(status=401)
-    roles = roles_de(user)
-    if roles & {ROL_DINAMIZADOR, ROL_ADMIN}:
-        resp = Response(status=204)
+        return Response(status=401, headers={"Cache-Control": "no-store"})
+    _, puede_editar, _ = _permisos_plataforma(user)
+    if puede_editar:
+        resp = Response(status=204, headers={"Cache-Control": "no-store"})
         # nginx lee este header de la subpetición interna (auth_request_set)
         # y lo reenvía a RBAC como X-Usuario-SGSI, para que su bitácora
         # registre quién hizo cada cambio en vez de "operador local".
         resp["X-Usuario-Autorizado"] = user.get_username()
         return resp
-    return Response(status=401)
+    return Response(status=401, headers={"Cache-Control": "no-store"})
 
 
 # ---------------------------------------------------------------------------

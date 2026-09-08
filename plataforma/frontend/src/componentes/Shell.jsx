@@ -13,7 +13,7 @@ function moduloDeRuta(pathname) {
 
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
-  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando } = useSesion();
+  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, recargar } = useSesion();
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const ubicacion = useLocation();
@@ -28,11 +28,13 @@ export default function Shell() {
     return () => eventosApi.removeEventListener('sesion-vencida', alVencer);
   }, []);
 
-  // Al cambiar de módulo solo se oculta el aviso de sesión vencida — NO se
-  // vuelve a llamar GET /api/sesion/ (provocaba falsos cierres al ir a RBAC).
+  // Al cambiar de módulo se oculta el aviso de sesión vencida. Solo al entrar
+  // a RBAC se revalida la sesión en silencio (con reintento en useSesion) para
+  // que el encabezado y nginx auth_request vean la misma cookie de sesión.
   useEffect(() => {
     setSesionVencida(false);
-  }, [moduloActivo]);
+    if (moduloActivo === 'rbac') recargar({ silencioso: true });
+  }, [moduloActivo, recargar]);
 
   useEffect(() => {
     if (!puedeEditar || !autenticado || cargando) {
