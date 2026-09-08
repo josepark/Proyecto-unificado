@@ -5,6 +5,7 @@ const AuthContext = createContext(null);
 
 const INTERVALO_REVALIDACION_MS = 3 * 60 * 1000;
 const EVENTO_SESION_PLATAFORMA = "suiin-sesion-plataforma";
+const ROLES_ESCRITURA = new Set(["Dinamizador", "Administrador"]);
 
 function guardarCredenciales(token, esquema, origen = null) {
   localStorage.setItem("suiin_token", token);
@@ -29,8 +30,11 @@ function limpiarSiEraSSO() {
   return false;
 }
 
-function esperar(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function aplicarPerfil(data, setUser, setRoles, setPuedeEditar) {
+  const userRoles = data.roles || [];
+  setUser({ username: data.username, is_staff: data.is_staff ?? userRoles.includes("Administrador") });
+  setRoles(userRoles);
+  setPuedeEditar(data.puede_editar ?? (!userRoles.length || userRoles.some((r) => ROLES_ESCRITURA.has(r))));
 }
 
 export function AuthProvider({
@@ -40,6 +44,8 @@ export function AuthProvider({
   unificado = false,
 }) {
   const [user, setUser] = useState(null);
+  const [roles, setRoles] = useState([]);
+  const [puedeEditar, setPuedeEditar] = useState(true);
   const [checking, setChecking] = useState(true);
   const ssoEnVuelo = useRef(null);
 
@@ -59,10 +65,7 @@ export function AuthProvider({
         try {
           const data = await endpoints.ssoJWT();
           guardarCredenciales(data.token, "Bearer", "sso");
-          setUser({
-            username: data.username,
-            is_staff: data.roles?.includes("Administrador") ?? false,
-          });
+          aplicarPerfil(data, setUser, setRoles, setPuedeEditar);
           return true;
         } catch {
           if (limpiarSiEraSSO()) setUser(null);
@@ -103,9 +106,13 @@ export function AuthProvider({
       if (token && !(esquema === "Bearer" && origen === "sso")) {
         try {
           const res = await endpoints.me();
-          if (!cancelado) setUser(res.data);
+          if (!cancelado) aplicarPerfil(res.data, setUser, setRoles, setPuedeEditar);
         } catch {
-          if (!cancelado) borrarCredenciales();
+          if (!cancelado) {
+            borrarCredenciales();
+            setRoles([]);
+            setPuedeEditar(true);
+          }
         } finally {
           if (!cancelado) setChecking(false);
         }
@@ -127,10 +134,12 @@ export function AuthProvider({
         try {
           const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
           if (payload.username) {
-            setUser({
-              username: payload.username,
-              is_staff: payload.roles?.includes("Administrador") ?? false,
-            });
+            aplicarPerfil(
+              { username: payload.username, roles: payload.roles || [], is_staff: payload.roles?.includes("Administrador") },
+              setUser,
+              setRoles,
+              setPuedeEditar,
+            );
           }
         } catch {
           // sigue abajo con sincronizarSSO
@@ -170,7 +179,7 @@ export function AuthProvider({
     try {
       const data = await endpoints.ssoJWTLogin(username, password);
       guardarCredenciales(data.token, "Bearer");
-      setUser({ username: data.username, is_staff: data.roles?.includes("Administrador") ?? false });
+      aplicarPerfil(data, setUser, setRoles, setPuedeEditar);
       return;
     } catch {
       // Sigue con login propio de riesgos.
@@ -178,7 +187,7 @@ export function AuthProvider({
 
     const res = await endpoints.login(username, password);
     guardarCredenciales(res.data.token, "Token");
-    setUser({ username: res.data.username, is_staff: res.data.is_staff });
+    aplicarPerfil({ ...res.data, roles: [], puede_editar: true }, setUser, setRoles, setPuedeEditar);
   }, []);
 
   const logout = useCallback(() => {
@@ -188,12 +197,16 @@ export function AuthProvider({
     }
     borrarCredenciales();
     setUser(null);
+    setRoles([]);
+    setPuedeEditar(true);
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        roles,
+        puedeEditar,
         checking,
         isAuthenticated: !!user,
         plataformaAutenticada: unificado ? plataformaAutenticada : false,

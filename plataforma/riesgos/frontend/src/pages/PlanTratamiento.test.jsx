@@ -9,6 +9,7 @@ vi.mock("../api/endpoints", () => ({
     planTratamiento: vi.fn(),
     campanasRedTeam: vi.fn(),
     controlesIso: vi.fn(),
+    historial: vi.fn(() => Promise.resolve({ data: [] })),
   },
 }));
 
@@ -16,9 +17,21 @@ vi.mock("../lib/useAuthGuard", () => ({
   useAuthGuard: () => ({ guard: (fn) => fn, loginOpen: false, setLoginOpen: vi.fn() }),
 }));
 
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => ({ puedeEditar: true, roles: ["Administrador"], isAuthenticated: true }),
+}));
+
 vi.mock("../components/LoginModal", () => ({
   default: () => null,
 }));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  };
+});
 
 import endpoints from "../api/endpoints";
 

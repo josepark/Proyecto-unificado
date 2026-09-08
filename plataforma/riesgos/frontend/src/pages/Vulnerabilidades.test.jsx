@@ -13,6 +13,7 @@ vi.mock("../api/endpoints", () => ({
     crearVulnerabilidad: vi.fn(),
     eliminarVulnerabilidad: vi.fn(),
     bulkActualizarVulnerabilidades: vi.fn(),
+    historial: vi.fn(() => Promise.resolve({ data: [] })),
   },
 }));
 
@@ -42,6 +43,15 @@ vi.mock("../components/GenerarAccionModal", () => ({
 }));
 vi.mock("../components/LoginModal", () => ({
   default: ({ open }) => (open ? <div data-testid="login-modal" /> : null),
+}));
+vi.mock("../components/HistorialPanel", () => ({
+  default: () => null,
+}));
+vi.mock("../components/EnlacesAccionesPtr", () => ({
+  default: () => null,
+}));
+vi.mock("../components/Paginador", () => ({
+  default: () => null,
 }));
 
 const VULN_A = {

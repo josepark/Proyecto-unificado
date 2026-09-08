@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import endpoints from "../api/endpoints";
 import { useApiData } from "../lib/useApiData";
 import Modal from "./Modal";
@@ -12,6 +13,17 @@ export default function GenerarAccionModal({ open, onClose, origen, onCreated })
   );
   const planes = planesData?.results ?? planesData ?? [];
   const planOptions = planes.map((p) => ({ value: p.id, label: p.referencia }));
+
+  const planPreseleccionado = useMemo(() => {
+    if (!planes.length) return "";
+    if (planes.length === 1) return planes[0].id;
+    const activos = origen?.objeto?.activo ?? origen?.objeto?.activo_id;
+    if (activos) {
+      const planMismaCampana = planes.find((p) => p.campana_red_team === origen?.objeto?.campana_red_team);
+      if (planMismaCampana) return planMismaCampana.id;
+    }
+    return planes[0].id;
+  }, [planes, origen]);
 
   const { data: controlesData } = useApiData(
     () => (open ? endpoints.controlesIso({ page_size: 100 }) : Promise.resolve({ data: null })),
@@ -45,6 +57,7 @@ export default function GenerarAccionModal({ open, onClose, origen, onCreated })
   };
   const c = CAMPOS_POR_TIPO[tipo];
   const valoresIniciales = {
+    plan: planPreseleccionado,
     descripcion_riesgo: c.descripcion_riesgo,
     probabilidad: origen.objeto.probabilidad || "",
     impacto: origen.objeto.impacto || "",

@@ -13,12 +13,17 @@ import LoginModal from "../components/LoginModal";
 import EntityForm from "../components/EntityForm";
 import GenerarAccionModal from "../components/GenerarAccionModal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import HistorialPanel from "../components/HistorialPanel";
+import EnlacesAccionesPtr from "../components/EnlacesAccionesPtr";
+import Paginador from "../components/Paginador";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
 import { usePlataforma, rutaRiesgos } from "../context/PlataformaContext";
 
 const NIVELES = ["CRITICO", "ALTO", "MEDIO", "BAJO"];
 const SEVERIDADES_OV = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 const ESTADOS = ["PENDIENTE", "EN_PROGRESO", "CERRADO", "FALSO_POSITIVO", "ACEPTADO"];
+
+const PAGE_SIZE = 50;
 
 export default function Vulnerabilidades() {
   const plataforma = usePlataforma();
@@ -36,6 +41,7 @@ export default function Vulnerabilidades() {
   const [origenAccion, setOrigenAccion] = useState(null);
   const [seleccionados, setSeleccionados] = useState(new Set());
   const [aplicandoLote, setAplicandoLote] = useState(false);
+  const [page, setPage] = useState(1);
 
   const params = {
     search: busqueda || undefined,
@@ -43,12 +49,13 @@ export default function Vulnerabilidades() {
     severidad_ov: severidad || undefined,
     estado: estado || undefined,
     ordering: "-score",
-    page_size: 300,
+    page,
+    page_size: PAGE_SIZE,
   };
 
   const { data, loading, error, reload } = useApiData(
     () => endpoints.vulnerabilidades(params),
-    [busqueda, nivel, severidad, estado]
+    [busqueda, nivel, severidad, estado, page]
   );
   const { data: activosData } = useApiData(() => endpoints.activos({ page_size: 200 }));
 
@@ -140,25 +147,25 @@ export default function Vulnerabilidades() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-300" />
           <input
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => { setBusqueda(e.target.value); setPage(1); }}
             placeholder="Buscar por nombre, CVE, o activo…"
             className="w-full rounded-lg border border-base-700/60 bg-base-900/60 py-2 pl-9 pr-3 text-sm text-base-100 placeholder:text-base-300/60 outline-none focus:border-cric-green-500"
           />
         </div>
 
-        <select value={nivel} onChange={(e) => setNivel(e.target.value)}
+        <select value={nivel} onChange={(e) => { setNivel(e.target.value); setPage(1); }}
           className="rounded-lg border border-base-700/60 bg-base-900/60 px-3 py-2 text-sm text-base-100 outline-none focus:border-cric-green-500">
           <option value="">Todos los niveles</option>
           {NIVELES.map((n) => <option key={n} value={n}>{n}</option>)}
         </select>
 
-        <select value={severidad} onChange={(e) => setSeveridad(e.target.value)}
+        <select value={severidad} onChange={(e) => { setSeveridad(e.target.value); setPage(1); }}
           className="rounded-lg border border-base-700/60 bg-base-900/60 px-3 py-2 text-sm text-base-100 outline-none focus:border-cric-green-500">
           <option value="">Toda severidad OV</option>
           {SEVERIDADES_OV.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
 
-        <select value={estado} onChange={(e) => setEstado(e.target.value)}
+        <select value={estado} onChange={(e) => { setEstado(e.target.value); setPage(1); }}
           className="rounded-lg border border-base-700/60 bg-base-900/60 px-3 py-2 text-sm text-base-100 outline-none focus:border-cric-green-500">
           <option value="">Todo estado</option>
           {ESTADOS.map((e) => <option key={e} value={e}>{e.replace("_", " ")}</option>)}
@@ -278,6 +285,8 @@ export default function Vulnerabilidades() {
         )}
       </div>
 
+      <Paginador data={data} page={page} onPageChange={setPage} pageSize={PAGE_SIZE} />
+
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -291,6 +300,12 @@ export default function Vulnerabilidades() {
           onCancel={() => setFormOpen(false)}
           submitLabel={editando ? "Guardar cambios" : "Crear vulnerabilidad"}
         />
+        {editando && (
+          <div className="mt-4 space-y-3 border-t border-base-700/60 pt-4">
+            <EnlacesAccionesPtr acciones={editando.acciones_ptr} />
+            <HistorialPanel recurso="vulnerabilidades" id={editando.id} collapsedByDefault={false} />
+          </div>
+        )}
       </Modal>
 
       <GenerarAccionModal

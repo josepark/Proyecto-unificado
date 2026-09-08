@@ -9,6 +9,8 @@ import ActivoDetalle from "./pages/ActivoDetalle";
 import RiesgosContextuales from "./pages/RiesgosContextuales";
 import RedTeam from "./pages/RedTeam";
 import PlanTratamiento from "./pages/PlanTratamiento";
+import RiesgosActivo from "./pages/RiesgosActivo";
+import ImportarExcel from "./pages/ImportarExcel";
 import Cumplimiento from "./pages/Cumplimiento";
 import Catalogos from "./pages/Catalogos";
 
@@ -29,7 +31,9 @@ export default function App() {
               <Route path="activos/:id" element={<ActivoDetalle />} />
               <Route path="riesgos-contextuales" element={<RiesgosContextuales />} />
               <Route path="red-team" element={<RedTeam />} />
+              <Route path="riesgos-activo" element={<RiesgosActivo />} />
               <Route path="plan-tratamiento" element={<PlanTratamiento />} />
+              <Route path="importar" element={<ImportarExcel />} />
               <Route path="cumplimiento" element={<Cumplimiento />} />
               <Route path="catalogos" element={<Catalogos />} />
             </Route>

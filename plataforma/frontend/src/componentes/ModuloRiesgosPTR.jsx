@@ -10,6 +10,8 @@ import ActivoDetalle from '@riesgos/pages/ActivoDetalle';
 import RiesgosContextuales from '@riesgos/pages/RiesgosContextuales';
 import RedTeam from '@riesgos/pages/RedTeam';
 import PlanTratamiento from '@riesgos/pages/PlanTratamiento';
+import RiesgosActivo from '@riesgos/pages/RiesgosActivo';
+import ImportarExcel from '@riesgos/pages/ImportarExcel';
 import Cumplimiento from '@riesgos/pages/Cumplimiento';
 import Catalogos from '@riesgos/pages/Catalogos';
 import '@riesgos/index-plataforma.css';
@@ -36,7 +38,9 @@ export default function ModuloRiesgosPTR() {
                 <Route path="activos/:id" element={<ActivoDetalle />} />
                 <Route path="riesgos-contextuales" element={<RiesgosContextuales />} />
                 <Route path="red-team" element={<RedTeam />} />
+                <Route path="riesgos-activo" element={<RiesgosActivo />} />
                 <Route path="plan-tratamiento" element={<PlanTratamiento />} />
+                <Route path="importar" element={<ImportarExcel />} />
                 <Route path="cumplimiento" element={<Cumplimiento />} />
                 <Route path="catalogos" element={<Catalogos />} />
               </Route>

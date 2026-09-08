@@ -104,11 +104,24 @@ class VulnerabilidadSerializer(serializers.ModelSerializer):
     severidad_ov_display = serializers.CharField(source="get_severidad_ov_display", read_only=True)
     nivel_riesgo_display = serializers.CharField(source="get_nivel_riesgo_display", read_only=True)
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
+    acciones_ptr = serializers.SerializerMethodField()
 
     class Meta:
         model = Vulnerabilidad
         fields = "__all__"
         read_only_fields = ["score", "nivel_riesgo"]
+
+    def get_acciones_ptr(self, obj):
+        return [
+            {
+                "id": a.id,
+                "id_riesgo": a.id_riesgo,
+                "plan_id": a.plan_id,
+                "plan_referencia": a.plan.referencia,
+                "estado": a.estado,
+            }
+            for a in obj.acciones_generadas.select_related("plan").all()
+        ]
 
 
 class CampanaRedTeamSerializer(serializers.ModelSerializer):
@@ -167,11 +180,24 @@ class RiesgoActivoSerializer(serializers.ModelSerializer):
     dias_para_vencer = serializers.IntegerField(read_only=True)
     esta_vencido = serializers.BooleanField(read_only=True)
     por_vencer = serializers.BooleanField(read_only=True)
+    acciones_ptr = serializers.SerializerMethodField()
 
     class Meta:
         model = RiesgoActivo
         fields = "__all__"
         read_only_fields = ["score", "nivel_riesgo"]
+
+    def get_acciones_ptr(self, obj):
+        return [
+            {
+                "id": a.id,
+                "id_riesgo": a.id_riesgo,
+                "plan_id": a.plan_id,
+                "plan_referencia": a.plan.referencia,
+                "estado": a.estado,
+            }
+            for a in obj.acciones_generadas.select_related("plan").all()
+        ]
 
 
 class RiesgoContextualSerializer(serializers.ModelSerializer):
@@ -184,11 +210,24 @@ class RiesgoContextualSerializer(serializers.ModelSerializer):
     dias_para_vencer = serializers.IntegerField(read_only=True)
     esta_vencido = serializers.BooleanField(read_only=True)
     por_vencer = serializers.BooleanField(read_only=True)
+    acciones_ptr = serializers.SerializerMethodField()
 
     class Meta:
         model = RiesgoContextual
         fields = "__all__"
         read_only_fields = ["score", "nivel_riesgo"]
+
+    def get_acciones_ptr(self, obj):
+        return [
+            {
+                "id": a.id,
+                "id_riesgo": a.id_riesgo,
+                "plan_id": a.plan_id,
+                "plan_referencia": a.plan.referencia,
+                "estado": a.estado,
+            }
+            for a in obj.acciones_generadas.select_related("plan").all()
+        ]
 
     def get_activos_relacionados_resumen(self, obj):
         return [a.id_activo for a in obj.activos_relacionados.all()]
@@ -203,8 +242,12 @@ class AccionTratamientoSerializer(serializers.ModelSerializer):
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     opcion_tratamiento_display = serializers.CharField(source="get_opcion_tratamiento_display", read_only=True)
     origen_vulnerabilidad_nombre = serializers.CharField(source="origen_vulnerabilidad.nombre_vulnerabilidad", read_only=True, default=None)
+    origen_vulnerabilidad_id = serializers.IntegerField(source="origen_vulnerabilidad.id", read_only=True, default=None)
+    origen_vulnerabilidad_activo_id = serializers.IntegerField(source="origen_vulnerabilidad.activo_id", read_only=True, default=None)
     origen_riesgo_activo_id = serializers.CharField(source="origen_riesgo_activo.id_riesgo", read_only=True, default=None)
     origen_riesgo_contextual_id = serializers.CharField(source="origen_riesgo_contextual.id_riesgo_contextual", read_only=True, default=None)
+    origen_riesgo_activo_activo_id = serializers.IntegerField(source="origen_riesgo_activo.activo_id", read_only=True, default=None)
+    plan_referencia = serializers.CharField(source="plan.referencia", read_only=True)
     controles_iso_vinculados_resumen = serializers.SerializerMethodField()
     dias_para_vencer = serializers.IntegerField(read_only=True)
     esta_vencida = serializers.BooleanField(read_only=True)
@@ -223,12 +266,14 @@ class PlanTratamientoRiesgosListSerializer(serializers.ModelSerializer):
     campana_red_team_nombre = serializers.CharField(source="campana_red_team.nombre", read_only=True)
     porcentaje_avance_global = serializers.IntegerField(read_only=True)
     total_acciones = serializers.SerializerMethodField()
+    estado_plan_display = serializers.CharField(source="get_estado_plan_display", read_only=True)
 
     class Meta:
         model = PlanTratamientoRiesgos
         fields = [
             "id", "referencia", "titulo", "campana_red_team", "campana_red_team_nombre",
-            "clasificacion_documento", "fecha_emision", "porcentaje_avance_global", "total_acciones",
+            "clasificacion_documento", "fecha_emision", "estado_plan", "estado_plan_display",
+            "porcentaje_avance_global", "total_acciones",
         ]
 
     def get_total_acciones(self, obj):

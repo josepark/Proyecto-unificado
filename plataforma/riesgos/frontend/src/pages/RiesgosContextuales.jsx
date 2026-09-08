@@ -12,9 +12,12 @@ import EntityForm from "../components/EntityForm";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EvidenciaUploader from "../components/EvidenciaUploader";
 import GenerarAccionModal from "../components/GenerarAccionModal";
+import HistorialPanel from "../components/HistorialPanel";
+import EnlacesAccionesPtr from "../components/EnlacesAccionesPtr";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
 
 export default function RiesgosContextuales() {
+  const highlightId = new URLSearchParams(window.location.search).get("highlight");
   const { data, loading, error, reload } = useApiData(() => endpoints.riesgosContextuales({ ordering: "-score", page_size: 100 }));
   const { data: activosData } = useApiData(() => endpoints.activos({ page_size: 200, ordering: "id_activo" }));
   const riesgos = data?.results ?? data ?? [];
@@ -85,6 +88,7 @@ export default function RiesgosContextuales() {
             <RiesgoContextualCard
               key={r.id}
               riesgo={r}
+              resaltado={highlightId && String(r.id) === highlightId}
               onEditar={guard(() => { setEditando(r); setFormOpen(true); })}
               onEliminar={guard(() => setBorrando(r))}
               onGenerarAccion={guard(() => setOrigenAccion({ tipo: "riesgo_contextual", objeto: r }))}
@@ -118,12 +122,15 @@ export default function RiesgosContextuales() {
   );
 }
 
-function RiesgoContextualCard({ riesgo, onEditar, onEliminar, onGenerarAccion }) {
-  const [abierto, setAbierto] = useState(false);
+function RiesgoContextualCard({ riesgo, resaltado, onEditar, onEliminar, onGenerarAccion }) {
+  const [abierto, setAbierto] = useState(!!resaltado);
 
   return (
-    <div className={`overflow-hidden rounded-2xl border ${
-      riesgo.esta_vencido ? "border-[#e0475a]/50 bg-[#e0475a]/5" : "border-base-700/60 bg-base-900/60"
+    <div
+      id={`riesgo-contextual-${riesgo.id}`}
+      className={`overflow-hidden rounded-2xl border ${
+      resaltado ? "border-cric-green-500/50 ring-1 ring-cric-green-500/30"
+        : riesgo.esta_vencido ? "border-[#e0475a]/50 bg-[#e0475a]/5" : "border-base-700/60 bg-base-900/60"
     }`}>
       {(riesgo.esta_vencido || riesgo.por_vencer) && (
         <div className={`flex items-center gap-1.5 px-5 pt-3 text-[11px] font-medium ${
@@ -193,6 +200,8 @@ function RiesgoContextualCard({ riesgo, onEditar, onEliminar, onGenerarAccion })
             </div>
           )}
           <EvidenciaUploader modelo="riesgocontextual" objectId={riesgo.id} />
+          <EnlacesAccionesPtr acciones={riesgo.acciones_ptr} />
+          <HistorialPanel recurso="riesgos-contextuales" id={riesgo.id} />
         </div>
       )}
     </div>

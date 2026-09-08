@@ -114,6 +114,12 @@ export const OPCION_TRATAMIENTO_OPTIONS = [
   { value: "ELIMINAR", label: "Eliminar" },
 ];
 
+export const ESTADO_PLAN_OPTIONS = [
+  { value: "ACTIVO", label: "Activo" },
+  { value: "ARCHIVADO", label: "Archivado" },
+  { value: "CERRADO", label: "Cerrado" },
+];
+
 export function planTratamientoFields({ campanasOptions }) {
   return [
     { name: "campana_red_team_id", label: "Campaña Red Team", type: "select", options: campanasOptions, required: true, fkId: true },
@@ -124,6 +130,7 @@ export function planTratamientoFields({ campanasOptions }) {
     { name: "periodo_campana_inicio", label: "Período — inicio", type: "date" },
     { name: "periodo_campana_fin", label: "Período — fin", type: "date" },
     { name: "herramientas", label: "Herramientas", full: true, placeholder: "MITRE CALDERA · OpenVAS · OWASP ZAP · Nuclei · NMAP" },
+    { name: "estado_plan", label: "Estado del plan", type: "select", options: ESTADO_PLAN_OPTIONS },
   ];
 }
 

@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { CalendarClock, Wrench, Target, Plus, Pencil, Trash2, Link2, AlertTriangle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { CalendarClock, Wrench, Target, Plus, Pencil, Trash2, AlertTriangle, FileDown, Archive } from "lucide-react";
 import endpoints from "../api/endpoints";
 import { useApiData } from "../lib/useApiData";
 import { useAuthGuard } from "../lib/useAuthGuard";
+import { useAuth } from "../context/AuthContext";
 import { accionTratamientoFields, planTratamientoFields } from "../lib/entitySchemas";
 import PageHeader from "../components/PageHeader";
 import NivelBadge from "../components/NivelBadge";
@@ -12,15 +14,26 @@ import EntityForm from "../components/EntityForm";
 import ConfirmDialog from "../components/ConfirmDialog";
 import HistorialPanel from "../components/HistorialPanel";
 import EvidenciaUploader from "../components/EvidenciaUploader";
+import OrigenAccionLink from "../components/OrigenAccionLink";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
 import { ESTADO_LABELS, ESTADO_COLORS, FASE_LABELS } from "../lib/risk";
 
 export default function PlanTratamiento() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { guard, loginOpen, setLoginOpen } = useAuthGuard();
-  const { data: planes, loading: loadingPlanes, reload: reloadPlanes } = useApiData(() => endpoints.planesTratamiento());
+  const { puedeEditar } = useAuth();
+  const [incluirArchivados, setIncluirArchivados] = useState(false);
+  const { data: planes, loading: loadingPlanes, reload: reloadPlanes } = useApiData(
+    () => endpoints.planesTratamiento({ page_size: 100, incluir_archivados: incluirArchivados ? "true" : undefined })
+  );
   const listaPlanes = planes?.results ?? planes ?? [];
   const [planId, setPlanId] = useState(null);
   const idActivo = planId ?? listaPlanes[0]?.id;
+
+  useEffect(() => {
+    const planParam = searchParams.get("plan");
+    if (planParam) setPlanId(Number(planParam));
+  }, [searchParams]);
 
   const { data: plan, loading, error, reload } = useApiData(
     () => (idActivo ? endpoints.planTratamiento(idActivo) : Promise.resolve({ data: null })),
@@ -33,17 +46,50 @@ export default function PlanTratamiento() {
     .map((c) => ({ value: c.id, label: `${c.codigo} — ${c.nombre}` }));
 
   const [nuevoPlanOpen, setNuevoPlanOpen] = useState(false);
+  const [editarPlanOpen, setEditarPlanOpen] = useState(false);
   const [formAccionOpen, setFormAccionOpen] = useState(false);
   const [editandoAccion, setEditandoAccion] = useState(null);
   const [faseNuevaAccion, setFaseNuevaAccion] = useState("FASE_1");
   const [borrando, setBorrando] = useState(null);
   const [eliminando, setEliminando] = useState(false);
+  const accionHighlight = searchParams.get("accion");
+  const accionRefs = useRef({});
+
+  useEffect(() => {
+    if (!accionHighlight || !plan?.acciones?.length) return;
+    const el = accionRefs.current[accionHighlight];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [accionHighlight, plan]);
 
   async function crearPlan(values) {
     const res = await endpoints.crearPlanTratamiento(values);
     setNuevoPlanOpen(false);
     await reloadPlanes();
     setPlanId(res.data.id);
+    setSearchParams({ plan: String(res.data.id) });
+  }
+
+  async function guardarPlan(values) {
+    await endpoints.actualizarPlanTratamiento(idActivo, values);
+    setEditarPlanOpen(false);
+    reload();
+    reloadPlanes();
+  }
+
+  async function archivarPlan(estado) {
+    await endpoints.actualizarPlanTratamiento(idActivo, { estado_plan: estado });
+    reload();
+    reloadPlanes();
+  }
+
+  async function descargarPdf() {
+    const res = await endpoints.informePlanTratamientoPdf(idActivo);
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `informe_ptr_${plan.referencia.replace(/\s+/g, "_")}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function guardarAccion(values) {
@@ -66,6 +112,11 @@ export default function PlanTratamiento() {
     }
   }
 
+  function cambiarPlan(id) {
+    setPlanId(id);
+    setSearchParams(id ? { plan: String(id) } : {});
+  }
+
   if (loadingPlanes || (idActivo && loading)) return <PageShell><LoadingState /></PageShell>;
 
   if (!listaPlanes.length) {
@@ -74,9 +125,9 @@ export default function PlanTratamiento() {
         <PageHeader
           eyebrow="PTR"
           title="Plan de tratamiento de riesgos"
-          actions={<NuevoPTRButton guard={guard} onClick={() => setNuevoPlanOpen(true)} />}
+          actions={puedeEditar && <NuevoPTRButton guard={guard} onClick={() => setNuevoPlanOpen(true)} />}
         />
-        <EmptyState label="Aún no hay ningún Plan de Tratamiento de Riesgos. Cree el primero, o impórtelo desde Excel (ver README)." />
+        <EmptyState label="Aún no hay ningún Plan de Tratamiento de Riesgos. Cree el primero o impórtelo desde Excel." />
         <ModalNuevoPlan open={nuevoPlanOpen} onClose={() => setNuevoPlanOpen(false)} campanasOptions={campanasOptions} onSubmit={crearPlan} />
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       </PageShell>
@@ -90,19 +141,54 @@ export default function PlanTratamiento() {
         title={plan?.titulo || "Plan de tratamiento de riesgos"}
         description={plan && `${plan.referencia} · ${plan.campana_red_team?.nombre} (${plan.campana_red_team?.host_ip}) · Emitido ${plan.fecha_emision} · Herramientas: ${plan.herramientas}`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 text-[11px] text-base-300">
+              <input
+                type="checkbox"
+                checked={incluirArchivados}
+                onChange={(e) => setIncluirArchivados(e.target.checked)}
+                className="h-3.5 w-3.5 rounded accent-cric-green-500"
+              />
+              Incluir archivados
+            </label>
             {listaPlanes.length > 1 && (
               <select
                 value={idActivo || ""}
-                onChange={(e) => setPlanId(Number(e.target.value))}
+                onChange={(e) => cambiarPlan(Number(e.target.value))}
                 className="rounded-lg border border-base-700/60 bg-base-900/60 px-3 py-2 text-sm text-base-100"
               >
                 {listaPlanes.map((p) => (
-                  <option key={p.id} value={p.id}>{p.referencia}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.referencia}{p.estado_plan !== "ACTIVO" ? ` (${p.estado_plan_display || p.estado_plan})` : ""}
+                  </option>
                 ))}
               </select>
             )}
-            <NuevoPTRButton guard={guard} onClick={() => setNuevoPlanOpen(true)} />
+            <button
+              onClick={descargarPdf}
+              className="flex items-center gap-1.5 rounded-lg border border-base-700/60 px-3 py-2 text-[12px] text-base-300 hover:text-cric-green-400"
+            >
+              <FileDown className="h-3.5 w-3.5" /> PDF
+            </button>
+            {puedeEditar && (
+              <>
+                <button
+                  onClick={guard(() => setEditarPlanOpen(true))}
+                  className="flex items-center gap-1.5 rounded-lg border border-base-700/60 px-3 py-2 text-[12px] text-base-300 hover:text-cric-green-400"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Editar plan
+                </button>
+                {plan?.estado_plan === "ACTIVO" && (
+                  <button
+                    onClick={guard(() => archivarPlan("ARCHIVADO"))}
+                    className="flex items-center gap-1.5 rounded-lg border border-base-700/60 px-3 py-2 text-[12px] text-base-300 hover:text-cric-gold-400"
+                  >
+                    <Archive className="h-3.5 w-3.5" /> Archivar
+                  </button>
+                )}
+                <NuevoPTRButton guard={guard} onClick={() => setNuevoPlanOpen(true)} />
+              </>
+            )}
           </div>
         }
       />
@@ -113,7 +199,11 @@ export default function PlanTratamiento() {
         <ErrorState />
       ) : (
         <>
-          <ProgresoGlobal plan={plan} />
+          <div className="mb-4 space-y-3">
+            <ProgresoGlobal plan={plan} />
+            <HistorialPanel recurso="planes-tratamiento" id={idActivo} collapsedByDefault />
+            <EvidenciaUploader modelo="plantratamientoriesgos" objectId={idActivo} />
+          </div>
           <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
             {["FASE_1", "FASE_2", "FASE_3", "FASE_4"].map((fase) => (
               <FaseColumna
@@ -121,6 +211,9 @@ export default function PlanTratamiento() {
                 fase={fase}
                 acciones={plan.acciones.filter((a) => a.fase === fase)}
                 guard={guard}
+                puedeEditar={puedeEditar}
+                accionHighlight={accionHighlight}
+                accionRefs={accionRefs}
                 onNueva={() => { setFaseNuevaAccion(fase); setEditandoAccion(null); setFormAccionOpen(true); }}
                 onEditar={(a) => { setEditandoAccion(a); setFormAccionOpen(true); }}
                 onEliminar={setBorrando}
@@ -130,6 +223,16 @@ export default function PlanTratamiento() {
           </div>
         </>
       )}
+
+      <Modal open={editarPlanOpen} onClose={() => setEditarPlanOpen(false)} title="Editar metadatos del PTR" width="max-w-xl">
+        <EntityForm
+          fields={planTratamientoFields({ campanasOptions })}
+          initialValues={{ ...plan, campana_red_team_id: plan?.campana_red_team?.id ?? plan?.campana_red_team }}
+          onSubmit={guardarPlan}
+          onCancel={() => setEditarPlanOpen(false)}
+          submitLabel="Guardar cambios"
+        />
+      </Modal>
 
       <Modal
         open={formAccionOpen}
@@ -176,7 +279,7 @@ function ModalNuevoPlan({ open, onClose, campanasOptions, onSubmit }) {
     <Modal open={open} onClose={onClose} title="Nuevo Plan de Tratamiento de Riesgos" width="max-w-xl">
       <EntityForm
         fields={planTratamientoFields({ campanasOptions })}
-        initialValues={{}}
+        initialValues={{ estado_plan: "ACTIVO" }}
         onSubmit={onSubmit}
         onCancel={onClose}
         submitLabel="Crear PTR"
@@ -187,12 +290,6 @@ function ModalNuevoPlan({ open, onClose, campanasOptions, onSubmit }) {
 
 function ProgresoGlobal({ plan }) {
   const total = plan.acciones.length;
-  // Usa el porcentaje que ya calcula el backend (plan.porcentaje_avance_global)
-  // en vez de recalcularlo aquí — este componente tenía su propia cuenta
-  // aparte que excluía "Aceptado" del avance, el mismo bug que ya se había
-  // corregido del lado del backend pero nunca llegó a usarse en esta vista.
-  // "cerradas" se muestra solo como conteo visual (ESTADOS_CERRADOS del
-  // backend: Cerrado, Falso positivo, Aceptado).
   const ESTADOS_CERRADOS = ["CERRADO", "FALSO_POSITIVO", "ACEPTADO"];
   const cerradas = plan.acciones.filter((a) => ESTADOS_CERRADOS.includes(a.estado)).length;
   const pct = plan.porcentaje_avance_global ?? (total ? Math.round((cerradas / total) * 100) : 0);
@@ -212,7 +309,7 @@ function ProgresoGlobal({ plan }) {
   );
 }
 
-function FaseColumna({ fase, acciones, guard, onNueva, onEditar, onEliminar, onChanged }) {
+function FaseColumna({ fase, acciones, guard, puedeEditar, accionHighlight, accionRefs, onNueva, onEditar, onEliminar, onChanged }) {
   return (
     <div className="rounded-2xl border border-base-700/60 bg-base-900/60 p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -220,16 +317,28 @@ function FaseColumna({ fase, acciones, guard, onNueva, onEditar, onEliminar, onC
           {FASE_LABELS[fase] || fase}
           <span className="ml-2 font-mono-data text-xs font-normal text-base-300">({acciones.length})</span>
         </h3>
-        <button onClick={guard(onNueva)} className="flex items-center gap-1 text-[11px] font-medium text-cric-green-400 hover:underline">
-          <Plus className="h-3 w-3" /> Nueva
-        </button>
+        {puedeEditar && (
+          <button onClick={guard(onNueva)} className="flex items-center gap-1 text-[11px] font-medium text-cric-green-400 hover:underline">
+            <Plus className="h-3 w-3" /> Nueva
+          </button>
+        )}
       </div>
       {acciones.length === 0 ? (
         <p className="py-4 text-center text-[12px] text-base-300/60">Sin acciones en esta fase.</p>
       ) : (
         <div className="space-y-3">
           {acciones.map((accion) => (
-            <AccionCard key={accion.id} accion={accion} guard={guard} onEditar={() => onEditar(accion)} onEliminar={() => onEliminar(accion)} onChanged={onChanged} />
+            <AccionCard
+              key={accion.id}
+              accion={accion}
+              guard={guard}
+              puedeEditar={puedeEditar}
+              resaltada={String(accion.id) === accionHighlight}
+              cardRef={(el) => { accionRefs.current[accion.id] = el; }}
+              onEditar={() => onEditar(accion)}
+              onEliminar={() => onEliminar(accion)}
+              onChanged={onChanged}
+            />
           ))}
         </div>
       )}
@@ -237,7 +346,7 @@ function FaseColumna({ fase, acciones, guard, onNueva, onEditar, onEliminar, onC
   );
 }
 
-function AccionCard({ accion, guard, onEditar, onEliminar, onChanged }) {
+function AccionCard({ accion, guard, puedeEditar, resaltada, cardRef, onEditar, onEliminar, onChanged }) {
   const [guardando, setGuardando] = useState(false);
 
   async function cambiarEstado(nuevoEstado) {
@@ -250,12 +359,14 @@ function AccionCard({ accion, guard, onEditar, onEliminar, onChanged }) {
     }
   }
 
-  const origenLabel = accion.origen_vulnerabilidad_nombre || accion.origen_riesgo_activo_id;
-
   return (
-    <div className={`rounded-xl border p-4 ${
-      accion.esta_vencida ? "border-[#e0475a]/50 bg-[#e0475a]/5" : "border-base-700/60 bg-base-850/60"
-    }`}>
+    <div
+      ref={cardRef}
+      className={`rounded-xl border p-4 ${
+        resaltada ? "border-cric-green-500/60 ring-2 ring-cric-green-500/30"
+          : accion.esta_vencida ? "border-[#e0475a]/50 bg-[#e0475a]/5" : "border-base-700/60 bg-base-850/60"
+      }`}
+    >
       {(accion.esta_vencida || accion.por_vencer) && (
         <div className={`mb-2 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium ${
           accion.esta_vencida ? "bg-[#e0475a]/15 text-[#e0475a]" : "bg-[#e0b559]/15 text-[#e0b559]"
@@ -273,20 +384,20 @@ function AccionCard({ accion, guard, onEditar, onEliminar, onChanged }) {
         </div>
         <div className="flex items-center gap-1">
           <span className="font-mono-data text-[11px] text-base-300">P{accion.probabilidad}×I{accion.impacto}={accion.score}</span>
-          <button onClick={guard(onEditar)} className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={guard(onEliminar)} className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          {puedeEditar && (
+            <>
+              <button onClick={guard(onEditar)} className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={guard(onEliminar)} className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {origenLabel && (
-        <p className="mt-1.5 flex items-center gap-1 text-[11px] text-cric-gold-400/90">
-          <Link2 className="h-3 w-3" /> Generada desde: {origenLabel}
-        </p>
-      )}
+      <OrigenAccionLink accion={accion} />
 
       <p className="mt-2 text-[13px] leading-relaxed text-base-100">{accion.descripcion_riesgo}</p>
 
@@ -317,7 +428,7 @@ function AccionCard({ accion, guard, onEditar, onEliminar, onChanged }) {
       <div className="mt-3 flex items-center justify-between border-t border-base-700/50 pt-3">
         <select
           value={accion.estado}
-          disabled={guardando}
+          disabled={guardando || !puedeEditar}
           onChange={(e) => cambiarEstado(e.target.value)}
           className={`rounded-md border px-2 py-1 text-[11px] font-medium outline-none ${ESTADO_COLORS[accion.estado]}`}
         >

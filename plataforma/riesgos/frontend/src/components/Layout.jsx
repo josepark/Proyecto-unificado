@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import {
-  LayoutDashboard, ShieldAlert, ServerCog, Bug, Users, ClipboardList, Radar, LogIn, LogOut, UserCircle2, ShieldCheck, ArrowLeftCircle, ListChecks,
+  LayoutDashboard, ShieldAlert, ServerCog, Bug, Users, ClipboardList, Radar, LogIn, LogOut, UserCircle2, ShieldCheck, ArrowLeftCircle, ListChecks, Upload, Layers,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { usePlataforma, useRiesgosTo } from "../context/PlataformaContext";
@@ -19,9 +19,11 @@ const NAV_ITEMS = [
   { segment: "", label: "Panel general", icon: LayoutDashboard, end: true },
   { segment: "activos", label: "Activos", icon: ServerCog },
   { segment: "vulnerabilidades", label: "Vulnerabilidades", icon: Bug },
+  { segment: "riesgos-activo", label: "Riesgos por activo", icon: Layers },
   { segment: "riesgos-contextuales", label: "Riesgos contextuales", icon: Users },
   { segment: "red-team", label: "Campañas Red Team", icon: Radar },
   { segment: "plan-tratamiento", label: "Plan de tratamiento", icon: ClipboardList },
+  { segment: "importar", label: "Importar Excel", icon: Upload },
   { segment: "cumplimiento", label: "Cumplimiento ISO 27001", icon: ShieldCheck },
   { segment: "catalogos", label: "Catálogos", icon: ListChecks },
 ];

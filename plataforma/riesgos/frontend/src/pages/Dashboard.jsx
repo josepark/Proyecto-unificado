@@ -3,8 +3,9 @@ import {
   ServerCog, ShieldAlert, Bug, ClipboardCheck, Radar, ArrowUpRight, AlertTriangle,
 } from "lucide-react";
 import endpoints from "../api/endpoints";
-import { useRiesgosTo } from "../context/PlataformaContext";
+import { useRiesgosTo, usePlataforma } from "../context/PlataformaContext";
 import { useApiData } from "../lib/useApiData";
+import { rutaAlertaVencimiento } from "../lib/rutasOrigen";
 import PageHeader from "../components/PageHeader";
 import KpiCard from "../components/KpiCard";
 import RiskHeatmap from "../components/RiskHeatmap";
@@ -134,6 +135,7 @@ export default function Dashboard() {
 }
 
 function AlertaVencimientos({ alertas, rutaPlan }) {
+  const plataforma = usePlataforma();
   const items = [
     ...alertas.acciones_vencidas.map((a) => ({ ...a, tipo: "accion", vencida: true })),
     ...alertas.riesgos_activo_vencidos.map((r) => ({ ...r, tipo: "riesgo", vencida: true })),
@@ -161,16 +163,20 @@ function AlertaVencimientos({ alertas, rutaPlan }) {
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {items.slice(0, 6).map((item, i) => (
-          <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2 text-[12px] ${
-            item.vencida ? "bg-[#e0475a]/10" : "bg-[#e0b559]/10"
-          }`}>
+          <Link
+            key={i}
+            to={rutaAlertaVencimiento(plataforma.anidado, plataforma.prefijo, item)}
+            className={`flex items-center justify-between rounded-lg px-3 py-2 text-[12px] transition-colors hover:brightness-110 ${
+              item.vencida ? "bg-[#e0475a]/10" : "bg-[#e0b559]/10"
+            }`}
+          >
             <span className="font-mono-data font-medium text-base-100">
               {item.id_riesgo} <span className="text-base-300/70">· {item.tipo === "accion" ? "acción" : item.tipo === "contextual" ? "riesgo contextual" : "riesgo"}</span>
             </span>
             <span className={item.vencida ? "text-[#e0475a]" : "text-[#e0b559]"}>
               {item.vencida ? `venció hace ${Math.abs(item.dias_para_vencer)} d.` : `vence en ${item.dias_para_vencer} d.`}
             </span>
-          </div>
+          </Link>
         ))}
       </div>
       {items.length > 6 && (

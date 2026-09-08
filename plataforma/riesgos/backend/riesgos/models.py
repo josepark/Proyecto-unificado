@@ -494,6 +494,13 @@ class RiesgoContextual(TimeStampedModel):
         return dias is not None and 0 <= dias <= 7 and self.estado not in ESTADOS_CERRADOS
 
 
+ESTADO_PLAN_CHOICES = [
+    ("ACTIVO", "Activo"),
+    ("ARCHIVADO", "Archivado"),
+    ("CERRADO", "Cerrado"),
+]
+
+
 class PlanTratamientoRiesgos(TimeStampedModel):
     """
     Portada del PTR (Plan de Tratamiento de Riesgos). Un PTR se emite por host/campaña
@@ -510,6 +517,9 @@ class PlanTratamientoRiesgos(TimeStampedModel):
     periodo_campana_fin = models.DateField(null=True, blank=True)
     herramientas = models.CharField(max_length=500, blank=True,
                                      help_text="Ej. MITRE CALDERA · OpenVAS · OWASP ZAP · Nuclei · NMAP")
+    estado_plan = models.CharField(max_length=20, choices=ESTADO_PLAN_CHOICES, default="ACTIVO",
+                                   help_text="Planes archivados o cerrados quedan fuera del selector "
+                                             "operativo pero conservan historial y evidencia.")
 
     historial = HistoricalRecords()
 
@@ -679,7 +689,10 @@ def validar_tamano_evidencia(archivo):
 
 # Modelos que pueden recibir evidencia adjunta — whitelist explícita para no
 # permitir adjuntar archivos a cualquier tabla del sistema (ej. usuarios, tokens).
-MODELOS_CON_EVIDENCIA = ["activo", "vulnerabilidad", "riesgoactivo", "riesgocontextual", "acciontratamiento"]
+MODELOS_CON_EVIDENCIA = [
+    "activo", "vulnerabilidad", "riesgoactivo", "riesgocontextual",
+    "acciontratamiento", "plantratamientoriesgos",
+]
 
 
 TIPO_ARCHIVO_CHOICES = [

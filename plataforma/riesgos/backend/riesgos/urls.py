@@ -20,6 +20,7 @@ urlpatterns = [
     path("dashboard/resumen/", views.dashboard_resumen, name="dashboard-resumen"),
     path("cumplimiento/resumen/", views.cumplimiento_resumen, name="cumplimiento-resumen"),
     path("alertas/resumen/", views.alertas_resumen, name="alertas-resumen"),
+    path("importar/excel/", views.importar_excel, name="importar-excel"),
     path("auth/login/", views.auth_login, name="auth-login"),
     path("auth/logout/", views.auth_logout, name="auth-logout"),
     path("auth/me/", views.auth_me, name="auth-me"),

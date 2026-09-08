@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import authenticate
 
+from .auth_jwt import ROLES_CON_ESCRITURA
 from .models import (
     Activo, PuertoServicio, Vulnerabilidad, RiesgoActivo, RiesgoContextual,
     CampanaRedTeam, PlanTratamientoRiesgos, AccionTratamiento, ControlISO27001,
@@ -161,11 +162,32 @@ class CampanaRedTeamViewSet(HistorialMixin, viewsets.ModelViewSet):
 
 class PlanTratamientoRiesgosViewSet(HistorialMixin, viewsets.ModelViewSet):
     queryset = PlanTratamientoRiesgos.objects.select_related("campana_red_team").prefetch_related("acciones")
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ["estado_plan", "campana_red_team"]
+    ordering_fields = ["fecha_emision", "referencia"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action == "list":
+            incluir = self.request.query_params.get("incluir_archivados", "").lower() in ("1", "true", "yes")
+            if not incluir:
+                qs = qs.filter(estado_plan="ACTIVO")
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":
             return PlanTratamientoRiesgosListSerializer
         return PlanTratamientoRiesgosDetailSerializer
+
+    @action(detail=True, methods=["get"], url_path="informe.pdf")
+    def informe_pdf(self, request, pk=None):
+        from django.http import HttpResponse
+        from .pdf_informe_ptr import generar_informe_ptr_pdf
+        plan = self.get_object()
+        buf = generar_informe_ptr_pdf(plan)
+        resp = HttpResponse(buf.read(), content_type="application/pdf")
+        resp["Content-Disposition"] = f'attachment; filename="informe_ptr_{plan.referencia.replace(" ", "_")}.pdf"'
+        return resp
 
 
 class AccionTratamientoViewSet(HistorialMixin, viewsets.ModelViewSet):
@@ -302,7 +324,17 @@ def auth_logout(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def auth_me(request):
-    return Response({"username": request.user.username, "is_staff": request.user.is_staff})
+    roles = []
+    puede_editar = True
+    if isinstance(request.auth, dict):
+        roles = request.auth.get("roles", [])
+        puede_editar = bool(set(roles) & ROLES_CON_ESCRITURA)
+    return Response({
+        "username": request.user.username,
+        "is_staff": request.user.is_staff,
+        "roles": roles,
+        "puede_editar": puede_editar,
+    })
 
 
 @api_view(["GET"])
@@ -383,6 +415,23 @@ def cumplimiento_resumen(request):
         "controles_sin_evidencia": ControlISO27001Serializer(
             [c for c in todos_aplicables if not con_evidencia(c)], many=True
         ).data,
+        "controles_con_detalle": [
+            {
+                "id": c.id,
+                "codigo": c.codigo,
+                "nombre": c.nombre,
+                "categoria": c.categoria,
+                "acciones": [
+                    {"id": a.id, "id_riesgo": a.id_riesgo, "plan_id": a.plan_id, "plan_referencia": a.plan.referencia}
+                    for a in c.acciones_tratamiento.select_related("plan").all()[:20]
+                ],
+                "riesgos_contextuales": [
+                    {"id": r.id, "id_riesgo_contextual": r.id_riesgo_contextual}
+                    for r in c.riesgos_contextuales.all()[:20]
+                ],
+            }
+            for c in todos_aplicables if con_evidencia(c)
+        ],
     })
 
 
@@ -454,3 +503,68 @@ def dashboard_resumen(request):
         ).data,
     }
     return Response(data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def importar_excel(request):
+    """POST multipart: matriz_riesgos y/o ptr (uno o varios archivos .xlsx)."""
+    import os
+    import tempfile
+    from django.db import transaction
+    from riesgos.management.commands.importar_matrices import Command
+
+    matriz = request.FILES.get("matriz_riesgos")
+    ptr_files = request.FILES.getlist("ptr")
+    if not matriz and not ptr_files:
+        return Response({"detail": "Envíe al menos matriz_riesgos y/o ptr (.xlsx)."}, status=400)
+
+    forzar = request.data.get("forzar_sobrescritura", "").lower() in ("1", "true", "yes")
+    cmd = Command()
+    cmd.stdout = cmd.stderr = open(os.devnull, "w")
+    cmd.protector = None
+
+    resumen = {"matriz_riesgos": False, "ptr_importados": 0, "errores": []}
+    tmp_paths = []
+
+    try:
+        if matriz:
+            if not matriz.name.lower().endswith((".xlsx", ".xls")):
+                return Response({"detail": "matriz_riesgos debe ser .xlsx"}, status=400)
+            fd, path = tempfile.mkstemp(suffix=".xlsx")
+            os.close(fd)
+            with open(path, "wb") as f:
+                for chunk in matriz.chunks():
+                    f.write(chunk)
+            tmp_paths.append(path)
+            with transaction.atomic():
+                cmd.protector = __import__("riesgos.sincronizacion", fromlist=["ProtectorSincronizacion"]).ProtectorSincronizacion(forzar=forzar)
+                cmd.importar_matriz_riesgos(path)
+            resumen["matriz_riesgos"] = True
+
+        for ptr in ptr_files:
+            if not ptr.name.lower().endswith((".xlsx", ".xls")):
+                resumen["errores"].append(f"{ptr.name}: formato no válido")
+                continue
+            fd, path = tempfile.mkstemp(suffix=".xlsx")
+            os.close(fd)
+            with open(path, "wb") as f:
+                for chunk in ptr.chunks():
+                    f.write(chunk)
+            tmp_paths.append(path)
+            with transaction.atomic():
+                if cmd.protector is None:
+                    cmd.protector = __import__("riesgos.sincronizacion", fromlist=["ProtectorSincronizacion"]).ProtectorSincronizacion(forzar=forzar)
+                cmd.importar_ptr(path)
+            resumen["ptr_importados"] += 1
+    except Exception as exc:
+        return Response({**resumen, "detail": str(exc)}, status=500)
+    finally:
+        for path in tmp_paths:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+        cmd.stdout.close()
+
+    return Response({"ok": True, **resumen})

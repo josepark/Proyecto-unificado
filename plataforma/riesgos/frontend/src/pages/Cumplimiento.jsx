@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ShieldCheck, ChevronDown } from "lucide-react";
 import endpoints from "../api/endpoints";
+import { usePlataforma, rutaRiesgos } from "../context/PlataformaContext";
+import { rutaPlanTratamiento } from "../lib/rutasOrigen";
 import { useApiData } from "../lib/useApiData";
 import { useAuthGuard } from "../lib/useAuthGuard";
 import PageHeader from "../components/PageHeader";
@@ -38,9 +41,15 @@ export default function Cumplimiento() {
   const { data: resumen, loading: loadingResumen, error, reload: reloadResumen } = useApiData(() => endpoints.cumplimientoResumen());
   const { data: controlesData, reload: reloadControles } = useApiData(() => endpoints.controlesIso({ page_size: 100 }));
   const controles = [...(controlesData?.results ?? controlesData ?? [])].sort(compararCodigos);
+  const detallePorControl = Object.fromEntries(
+    (resumen?.controles_con_detalle ?? []).map((c) => [c.id, c])
+  );
+  const controlesConDetalle = controles.map((c) => ({ ...c, _detalle: detallePorControl[c.id] }));
 
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
-  const controlesFiltrados = categoriaFiltro ? controles.filter((c) => c.categoria === categoriaFiltro) : controles;
+  const controlesFiltrados = categoriaFiltro
+    ? controlesConDetalle.filter((c) => c.categoria === categoriaFiltro)
+    : controlesConDetalle;
 
   async function actualizarControl(id, cambios) {
     await endpoints.actualizarControlIso(id, cambios);
@@ -188,6 +197,9 @@ function ControlRow({ control, guard, onGuardar }) {
 }
 
 function ControlDetalle({ control }) {
+  const plataforma = usePlataforma();
+  const detalle = control._detalle;
+
   return (
     <div className="text-[12px] text-base-300">
       <p>
@@ -210,6 +222,42 @@ function ControlDetalle({ control }) {
         Vincule este control desde una acción de tratamiento (Plan de tratamiento) o un riesgo contextual — el
         campo "Controles ISO 27001 (Anexo A)" en sus formularios.
       </p>
+      {detalle && (detalle.acciones?.length > 0 || detalle.riesgos_contextuales?.length > 0) && (
+        <div className="mt-3 space-y-2">
+          {detalle.acciones?.length > 0 && (
+            <div>
+              <p className="mb-1 font-medium text-base-100">Acciones PTR vinculadas</p>
+              <div className="flex flex-wrap gap-1.5">
+                {detalle.acciones.map((a) => (
+                  <Link
+                    key={a.id}
+                    to={rutaPlanTratamiento(plataforma.anidado, plataforma.prefijo, { planId: a.plan_id, accionId: a.id })}
+                    className="rounded-md bg-base-800 px-2 py-0.5 font-mono-data text-[11px] text-cric-gold-400 hover:underline"
+                  >
+                    {a.id_riesgo} · {a.plan_referencia}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {detalle.riesgos_contextuales?.length > 0 && (
+            <div>
+              <p className="mb-1 font-medium text-base-100">Riesgos contextuales vinculados</p>
+              <div className="flex flex-wrap gap-1.5">
+                {detalle.riesgos_contextuales.map((r) => (
+                  <Link
+                    key={r.id}
+                    to={rutaRiesgos(plataforma.anidado, plataforma.prefijo, `riesgos-contextuales?highlight=${r.id}`)}
+                    className="rounded-md bg-base-800 px-2 py-0.5 font-mono-data text-[11px] text-cric-green-400 hover:underline"
+                  >
+                    {r.id_riesgo_contextual}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

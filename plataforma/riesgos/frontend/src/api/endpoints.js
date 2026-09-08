@@ -59,6 +59,11 @@ export const endpoints = {
   planTratamiento: (id) => api.get(`/planes-tratamiento/${id}/`),
   crearPlanTratamiento: (data) => api.post("/planes-tratamiento/", data),
   actualizarPlanTratamiento: (id, data) => api.patch(`/planes-tratamiento/${id}/`, data),
+  informePlanTratamientoPdf: (id) => api.get(`/planes-tratamiento/${id}/informe.pdf/`, { responseType: "blob" }),
+
+  importarExcel: (formData) => api.post("/importar/excel/", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
 
   // Acciones de tratamiento (items del PTR)
   crearAccion: (data) => api.post("/acciones-tratamiento/", data),
