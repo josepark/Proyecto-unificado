@@ -1,20 +1,44 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
-
-const CLASE_COLOR = { INFRA: '#1f6b52', SIST: '#c9a94e', EQUI: '#28407a' };
+import { useInventarioMeta } from '../../hooks/useInventarioMeta';
 
 export default function Dashboard() {
   const navegar = useNavigate();
   const { puedeEditar } = useOutletContext() ?? {};
+  const { coloresClase } = useInventarioMeta();
   const { datos: stats, cargando: cargandoStats } = useApi(() => inventarioApi.estadisticas(), []);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroClase, setFiltroClase] = useState('');
   const [seleccionados, setSeleccionados] = useState(() => new Set());
   const { datos: activos, cargando: cargandoLista } = useApi(
-    () => inventarioApi.listarActivos({ search: busqueda, page_size: 50 }),
-    [busqueda],
+    () => inventarioApi.listarActivos({
+      search: busqueda,
+      page_size: 50,
+      ...(filtroClase ? { clase: filtroClase } : {}),
+    }),
+    [busqueda, filtroClase],
   );
+
+  const clasesCatalogo = stats?.clases ?? [];
+  const kpisClase = useMemo(() => {
+    const por = stats?.por_clase ?? {};
+    if (clasesCatalogo.length) {
+      return clasesCatalogo.map((c) => ({
+        codigo: c.codigo,
+        label: c.nombre,
+        n: por[c.codigo] || 0,
+        color: c.color || coloresClase[c.codigo],
+      }));
+    }
+    return Object.entries(por).map(([codigo, n]) => ({
+      codigo,
+      label: codigo,
+      n,
+      color: coloresClase[codigo],
+    }));
+  }, [stats, clasesCatalogo, coloresClase]);
 
   const filas = activos?.results ?? activos ?? [];
   const todosVisibles = filas.length > 0 && filas.every((a) => seleccionados.has(a.id));
@@ -61,6 +85,9 @@ export default function Dashboard() {
               <Link className="btn btn-sec" to="/inventario/activos/importar" style={{ textDecoration: 'none' }}>
                 ⬆ Importar Excel
               </Link>
+              <Link className="btn btn-sec" to="/inventario/clases" style={{ textDecoration: 'none' }}>
+                Clases de activo
+              </Link>
               <Link className="btn btn-primary" to="/inventario/activos/nuevo" style={{ textDecoration: 'none' }}>
                 + Nuevo activo
               </Link>
@@ -83,21 +110,29 @@ export default function Dashboard() {
           <Kpi n={stats.total_activos} l="Activos totales" />
           <Kpi n={stats.por_nivel_riesgo?.CRIT || 0} l="Riesgo crítico" />
           <Kpi n={stats.por_nivel_riesgo?.ALTO || 0} l="Riesgo alto" />
-          <Kpi n={stats.por_clase?.INFRA || 0} l="Infraestructura" />
-          <Kpi n={stats.por_clase?.SIST || 0} l="Sistemas de info." />
-          <Kpi n={stats.por_clase?.EQUI || 0} l="Equipos de cómputo" />
+          {kpisClase.map((k) => (
+            <Kpi key={k.codigo} n={k.n} l={k.label} color={k.color} />
+          ))}
           <Kpi n={stats.datos_personales || 0} l="Con datos personales" />
         </div>
       ) : (
         <p>No se pudieron cargar los indicadores.</p>
       )}
 
-      <input
-        placeholder="Buscar por ID, nombre, propietario, notas…"
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-        style={{ width: '100%', maxWidth: 420, marginBottom: 12 }}
-      />
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <input
+          placeholder="Buscar por ID, nombre, propietario, notas…"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          style={{ flex: 1, minWidth: 220, maxWidth: 420 }}
+        />
+        <select value={filtroClase} onChange={(e) => setFiltroClase(e.target.value)} style={{ minWidth: 180 }}>
+          <option value="">Todas las clases</option>
+          {clasesCatalogo.map((c) => (
+            <option key={c.codigo} value={c.codigo}>{c.nombre}</option>
+          ))}
+        </select>
+      </div>
 
       {cargandoLista ? (
         <p>Cargando activos…</p>
@@ -141,7 +176,7 @@ export default function Dashboard() {
                   {a.nombre}
                 </td>
                 <td onClick={() => navegar(`/inventario/activos/${a.id}`)} style={{ cursor: 'pointer' }}>
-                  <span className="clase-badge" style={{ background: CLASE_COLOR[a.clase] || '#888' }}>
+                  <span className="clase-badge" style={{ background: coloresClase[a.clase] || '#888' }} title={a.clase_display}>
                     {a.clase}
                   </span>
                 </td>
@@ -160,10 +195,10 @@ export default function Dashboard() {
   );
 }
 
-function Kpi({ n, l }) {
+function Kpi({ n, l, color }) {
   return (
-    <div className="kpi">
-      <div className="n">{n}</div>
+    <div className="kpi" style={color ? { borderLeftColor: color } : undefined}>
+      <div className="n" style={color ? { color } : undefined}>{n}</div>
       <div className="l">{l}</div>
     </div>
   );

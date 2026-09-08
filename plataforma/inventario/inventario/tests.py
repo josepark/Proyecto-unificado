@@ -305,6 +305,53 @@ class EquipoComputoTest(TestCase):
         self.client.post("/api/activos/", self._payload(), content_type="application/json")
         est = self.client.get("/api/activos/estadisticas/").json()
         self.assertGreaterEqual(est["por_clase"].get("EQUI", 0), 1)
+        self.assertIn("clases", est)
+
+
+class ClaseActivoDinamicaTest(TestCase):
+    """Catálogo configurable de clases y metadatos para la SPA."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.dinamizador = User.objects.create_user("clases_test_dinam", password="x")
+        cls.dinamizador.groups.add(cls.grupo_dinamizador)
+
+    def setUp(self):
+        self.client.force_login(self.dinamizador)
+
+    def test_meta_expone_clases_y_datacenter(self):
+        r = self.client.get("/api/activos/meta/")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("clases", data)
+        self.assertGreaterEqual(len(data["clases"]), 3)
+        self.assertIn("INFRA", data["colores_clase"])
+        self.assertIn("tipos", data["datacenter"])
+
+    def test_crear_clase_generica_y_activo_con_detalle_json(self):
+        from inventario.models import ClaseActivo
+        cr = self.client.post("/api/clases-activo/", {
+            "codigo": "SERV", "nombre": "Servicio cloud", "prefijo_id": "SRV",
+            "color": "#0ea5e9", "orden": 10, "modelo_detalle": "generico",
+        }, content_type="application/json")
+        self.assertEqual(cr.status_code, 201, cr.content)
+        ar = self.client.post("/api/activos/", {
+            "nombre": "Bucket S3 auditoría",
+            "clase": "SERV",
+            "detalle_extra": {"proveedor": "AWS", "region": "us-east-1"},
+        }, content_type="application/json")
+        self.assertEqual(ar.status_code, 201, ar.content)
+        self.assertTrue(ar.json()["id_activo"].startswith("SRV-"))
+        ClaseActivo.objects.filter(codigo="SERV").delete()
+
+    def test_rechaza_bloque_detalle_incompatible_con_clase(self):
+        r = self.client.post("/api/activos/", {
+            "nombre": "Incoherente",
+            "clase": "SIST",
+            "infraestructura": {"tipo": "Switch"},
+        }, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
 
 
 class RiesgoCruzadoTest(TestCase):

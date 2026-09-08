@@ -4,6 +4,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 
 router = DefaultRouter()
+router.register(r"clases-activo", views.ClaseActivoViewSet)
 router.register(r"activos", views.ActivoViewSet)
 router.register(r"amenazas", views.AmenazaViewSet)
 router.register(r"controles", views.ControlViewSet)

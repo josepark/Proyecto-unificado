@@ -4,8 +4,7 @@ import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import HojaVidaActivo from './HojaVidaActivo';
-
-const CLASE_COLOR = { INFRA: '#1f6b52', SIST: '#c9a94e', EQUI: '#28407a' };
+import { useInventarioMeta } from '../../hooks/useInventarioMeta';
 
 /** Convierte una clave tecnica del modelo ("fin_soporte_eol") en una
  * etiqueta legible ("Fin soporte eol") sin necesitar un mapa exhaustivo
@@ -105,6 +104,7 @@ export default function Activo() {
   const { id } = useParams();
   const navegar = useNavigate();
   const { puedeEditar, puedeEliminar } = useOutletContext() ?? {};
+  const { coloresClase } = useInventarioMeta();
   const { datos: a, cargando, error } = useApi(() => inventarioApi.obtenerActivo(id), [id]);
   const { datos: historial, cargando: cargandoHistorial } = useApi(
     () => inventarioApi.historialActivo(id),
@@ -151,7 +151,7 @@ export default function Activo() {
 
       <div className="ficha-cabecera">
         <h2>{a.id_activo}</h2>
-        <span className="clase-badge" style={{ background: CLASE_COLOR[a.clase] || '#888' }}>
+        <span className="clase-badge" style={{ background: coloresClase[a.clase] || '#888' }}>
           {a.clase_display}
         </span>
         <span className={`tag t-${a.nivel_riesgo}`}>{a.nivel_riesgo_display}</span>
@@ -266,6 +266,7 @@ export default function Activo() {
         <BloqueDetalleClase titulo="Detalle del sistema" datos={a.sistema} />
         <AccesosSistema sistema={a.sistema} />
         <BloqueDetalleClase titulo="Detalle del equipo" datos={a.equipo} />
+        <BloqueDetalleClase titulo="Detalle adicional" datos={a.detalle_extra} />
 
         {a.amenazas?.length > 0 && (
           <div className="card">

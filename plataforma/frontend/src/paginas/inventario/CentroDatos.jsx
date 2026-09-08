@@ -4,14 +4,15 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
+import { useInventarioMeta } from '../../hooks/useInventarioMeta';
 
-const COLOR_TIPO = { PRIN: '#3fa87f', MINI: '#c9a94e' };
+const COLOR_TIPO_FALLBACK = { PRIN: '#3fa87f', MINI: '#c9a94e', DR: '#8b5cf6', CLOUD: '#0ea5e9' };
 
 function esImagen(url) {
   return /\.(png|jpe?g|gif|webp|svg)$/i.test(url || '');
 }
 
-function Mapa({ datacenters }) {
+function Mapa({ datacenters, coloresTipo }) {
   const contenedorRef = useRef(null);
   const mapaRef = useRef(null);
   const marcadoresRef = useRef([]);
@@ -36,7 +37,7 @@ function Mapa({ datacenters }) {
     marcadoresRef.current = [];
     const puntos = (datacenters || []).filter((c) => c.latitud && c.longitud);
     puntos.forEach((c) => {
-      const color = COLOR_TIPO[c.tipo] || '#6b7280';
+      const color = coloresTipo[c.tipo] || COLOR_TIPO_FALLBACK[c.tipo] || '#6b7280';
       const marcador = L.circleMarker([c.latitud, c.longitud], {
         radius: 11,
         color: '#fff',
@@ -56,12 +57,12 @@ function Mapa({ datacenters }) {
       }
     }
     setTimeout(() => mapa.invalidateSize(), 200);
-  }, [datacenters]);
+  }, [datacenters, coloresTipo]);
 
   return <div ref={contenedorRef} style={{ height: 360, borderRadius: 10, border: '1px solid var(--borde)', marginBottom: 16 }} />;
 }
 
-function TarjetaDatacenter({ dc, puedeEditar }) {
+function TarjetaDatacenter({ dc, puedeEditar, coloresClase }) {
   const [abierto, setAbierto] = useState(false);
   const { datos: activos, cargando } = useApi(
     () => (abierto ? inventarioApi.activosDatacenter(dc.id) : Promise.resolve(null)),
@@ -124,7 +125,9 @@ function TarjetaDatacenter({ dc, puedeEditar }) {
                       </td>
                       <td>{a.nombre}</td>
                       <td>
-                        <span className="clase-badge">{a.clase}</span>
+                        <span className="clase-badge" style={{ background: coloresClase[a.clase] || '#888' }} title={a.clase_display}>
+                          {a.clase_display || a.clase}
+                        </span>
                       </td>
                       <td>
                         <span className={`tag t-${a.nivel_riesgo}`}>{a.nivel_riesgo_display}</span>
@@ -185,6 +188,8 @@ function TarjetaDiagrama({ d, datacenters }) {
 
 export default function CentroDatos() {
   const { puedeEditar } = useOutletContext() ?? {};
+  const { coloresClase, coloresTipoDc } = useInventarioMeta();
+  const coloresTipo = { ...COLOR_TIPO_FALLBACK, ...coloresTipoDc };
   const { datos: datacentersResp, cargando: cargandoDC } = useApi(() => inventarioApi.datacenters(), []);
   const { datos: diagramasResp, cargando: cargandoDiag } = useApi(() => inventarioApi.diagramas(), []);
   const [busqueda, setBusqueda] = useState('');
@@ -219,14 +224,14 @@ export default function CentroDatos() {
         )}
       </div>
 
-      {cargandoDC ? <p>Cargando mapa…</p> : <Mapa datacenters={datacenters} />}
+      {cargandoDC ? <p>Cargando mapa…</p> : <Mapa datacenters={datacenters} coloresTipo={coloresTipo} />}
 
       {cargandoDC ? (
         <p>Cargando centros de datos…</p>
       ) : (
         <div className="detalle-grid" style={{ marginBottom: 20 }}>
           {datacenters.map((dc) => (
-            <TarjetaDatacenter key={dc.id} dc={dc} puedeEditar={puedeEditar} />
+            <TarjetaDatacenter key={dc.id} dc={dc} puedeEditar={puedeEditar} coloresClase={coloresClase} />
           ))}
           {!datacenters.length && <p style={{ color: 'var(--texto-suave)' }}>Sin centros de datos registrados.</p>}
         </div>

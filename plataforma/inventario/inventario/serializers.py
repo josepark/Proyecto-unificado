@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (Activo, ActivoInfraestructura, SistemaInformacion,
-                     EquipoComputo, Zona, VLAN, AmenazaMITRE, ControlISO,
+                     EquipoComputo, ClaseActivo, Zona, VLAN, AmenazaMITRE, ControlISO,
                      RolMCA, AccesoRol)
 
 
@@ -66,8 +66,29 @@ class SistemaSerializer(serializers.ModelSerializer):
         return accesos_rbac_por_sistema(obj.sistema_mca_equivalente)
 
 
+class ClaseActivoSerializer(serializers.ModelSerializer):
+    modelo_detalle_display = serializers.CharField(
+        source="get_modelo_detalle_display", read_only=True)
+    num_activos = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClaseActivo
+        fields = ("id", "codigo", "nombre", "prefijo_id", "color", "orden",
+                  "activo", "modelo_detalle", "modelo_detalle_display",
+                  "detalle_schema", "num_activos")
+
+    def get_num_activos(self, obj):
+        return Activo.objects.filter(clase=obj.codigo).count()
+
+    def validate_codigo(self, value):
+        return value.strip().upper()
+
+    def validate_prefijo_id(self, value):
+        return value.strip().upper()
+
+
 class ActivoListSerializer(serializers.ModelSerializer):
-    clase_display = serializers.CharField(source="get_clase_display", read_only=True)
+    clase_display = serializers.SerializerMethodField()
     nivel_riesgo_display = serializers.CharField(source="get_nivel_riesgo_display", read_only=True)
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
 
@@ -79,9 +100,12 @@ class ActivoListSerializer(serializers.ModelSerializer):
                   "nivel_riesgo_display", "estado", "estado_display",
                   "propietario", "procesa_datos_personales")
 
+    def get_clase_display(self, obj):
+        return obj.nombre_clase()
+
 
 class ActivoDetailSerializer(serializers.ModelSerializer):
-    clase_display = serializers.CharField(source="get_clase_display", read_only=True)
+    clase_display = serializers.SerializerMethodField()
     clasificacion_si_display = serializers.CharField(
         source="get_clasificacion_si_display", read_only=True)
     nivel_riesgo_display = serializers.CharField(
@@ -100,6 +124,9 @@ class ActivoDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Activo
         fields = "__all__"
+
+    def get_clase_display(self, obj):
+        return obj.nombre_clase()
 
     def get_dependencias(self, obj):
         return [{"id": d.id, "id_activo": d.id_activo, "nombre": d.nombre}
@@ -150,6 +177,7 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
         child=serializers.CharField(), required=False, write_only=True)
     dependencias_ids = serializers.ListField(
         child=serializers.IntegerField(), required=False, write_only=True)
+    detalle_extra = serializers.JSONField(required=False)
 
     class Meta:
         model = Activo
@@ -158,8 +186,55 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
                   "disponibilidad", "nivel_riesgo", "estado", "fecha_registro",
                   "notas_seguridad", "propietario", "custodio", "area_responsable",
                   "procesa_datos_personales", "rto", "rpo", "ciclo_vida",
-                  "documentos_relacionados", "datacenter", "infraestructura",
-                  "sistema", "equipo", "amenazas_codigos", "controles_codigos", "dependencias_ids")
+                  "documentos_relacionados", "datacenter", "detalle_extra",
+                  "infraestructura", "sistema", "equipo", "amenazas_codigos",
+                  "controles_codigos", "dependencias_ids")
+
+    def _catalogo_clase(self, codigo):
+        return ClaseActivo.objects.filter(codigo=codigo, activo=True).first()
+
+    def validate_clase(self, value):
+        if not self._catalogo_clase(value):
+            validas = ", ".join(
+                ClaseActivo.objects.filter(activo=True).values_list("codigo", flat=True))
+            raise serializers.ValidationError(
+                f"Clase «{value}» no válida o inactiva. Use: {validas or 'ninguna definida'}.")
+        return value
+
+    def validate(self, attrs):
+        clase = attrs.get("clase") or getattr(self.instance, "clase", None)
+        cat = self._catalogo_clase(clase)
+        if not cat:
+            return attrs
+
+        tiene_infra = "infraestructura" in attrs and attrs["infraestructura"] is not None
+        tiene_sist = "sistema" in attrs and attrs["sistema"] is not None
+        tiene_equipo = "equipo" in attrs and attrs["equipo"] is not None
+        detalle = attrs.get("detalle_extra")
+
+        esperado = cat.modelo_detalle
+        bloques = {
+            "infraestructura": tiene_infra,
+            "sistema": tiene_sist,
+            "equipo": tiene_equipo,
+            "generico": bool(detalle),
+            "ninguno": False,
+        }
+        for otro, presente in bloques.items():
+            if otro == esperado or not presente:
+                continue
+            raise serializers.ValidationError({
+                otro: f"La clase {clase} no admite este bloque de detalle "
+                      f"(esperado: {esperado}).",
+            })
+
+        if esperado == "infraestructura" and self.instance and not tiene_infra:
+            pass
+        elif esperado in ("infraestructura", "sistema", "equipo") and self.instance is None:
+            if not bloques.get(esperado):
+                raise serializers.ValidationError(
+                    f"La clase {clase} requiere el bloque de detalle «{esperado}».")
+        return attrs
 
     def _sync_m2m(self, activo, validated):
         if "amenazas_codigos" in validated:

@@ -72,6 +72,39 @@ export default function PanelEjecutivo() {
           )}
         </div>
       </div>
+
+      {d.datacenters?.length > 0 && (
+        <div className="card">
+          <h2>Activos por centro de datos</h2>
+          <div className="cuerpo" style={{ padding: 0 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Sede</th>
+                  <th className="num">Activos</th>
+                  <th className="num">Críticos</th>
+                  <th className="num">Infra sin rack</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.datacenters.map((dc) => (
+                  <tr key={dc.id}>
+                    <td><Link to={`/inventario/centro-datos/datacenters/${dc.id}/editar`}>{dc.codigo}</Link></td>
+                    <td>{dc.nombre}</td>
+                    <td className="num">{dc.total_activos}</td>
+                    <td className="num" style={{ color: dc.criticos ? 'var(--crit)' : undefined }}>{dc.criticos}</td>
+                    <td className="num">{dc.sin_rack}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p style={{ fontSize: 12, margin: '8px 14px 0' }}>
+              <Link to="/inventario/centro-datos">Ver mapa y diagramas →</Link>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

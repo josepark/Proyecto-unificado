@@ -16,6 +16,16 @@ export const inventarioApi = {
   importarConfirmar: (filas) => api.post('/activos/importar/confirmar/', { filas }),
   eliminarActivo: (id) => api.delete(`/activos/${id}/`),
   estadisticas: () => api.get('/activos/estadisticas/'),
+  metaInventario: () => api.get('/activos/meta/'),
+
+  listarClasesActivo: () => api.get('/clases-activo/?page_size=100'),
+  crearClaseActivo: (datos) => api.post('/clases-activo/', datos),
+  editarClaseActivo: (id, datos) => api.patch(`/clases-activo/${id}/`, datos),
+  eliminarClaseActivo: (id) => api.delete(`/clases-activo/${id}/`),
+
+  obtenerDatacenter: (id) => api.get(`/datacenters/${id}/`),
+  eliminarDatacenter: (id, confirmar = false) =>
+    api.delete(confirmar ? `/datacenters/${id}/?confirmar=1` : `/datacenters/${id}/`),
 
   // --- Hoja de vida ---
   listarHojaVida: (activoId) => api.get('/hojavida/', { activo: activoId }),

@@ -1,18 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useOutletContext, Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, CampoTextarea, Fila } from '../../componentes/CamposFormulario';
+import { useInventarioMeta, claseMeta } from '../../hooks/useInventarioMeta';
 
 // Listas de opciones alineadas con ActivoWriteSerializer (DRF) — mismos
 // valores válidos que el formulario individual del Inventario.
 const OPC = {
-  clase: [
-    ['INFRA', 'Infraestructura de red'],
-    ['SIST', 'Sistema de información'],
-    ['EQUI', 'Equipo de cómputo'],
-  ],
   clasificacion_si: [
     ['', '—'],
     ['ALTA', 'Altamente Confidencial'],
@@ -88,6 +84,7 @@ function vacio() {
       serial: '', mac_address: '', ubicacion_fisica: '', sistema_operativo: '',
       ram_gb: '', almacenamiento: '', antivirus_edr: '', ultima_actualizacion_so: '',
       cifrado_disco: false, unido_a_dominio: false, fecha_adquisicion: '', fin_garantia: '' },
+    detalle_extra_json: '{}',
   };
 }
 
@@ -114,6 +111,7 @@ function desdeActivo(a) {
     infra: a.infraestructura ? { ...base.infra, ...a.infraestructura } : base.infra,
     sist: a.sistema ? { ...base.sist, ...a.sistema } : base.sist,
     equipo: a.equipo ? { ...base.equipo, ...a.equipo } : base.equipo,
+    detalle_extra_json: JSON.stringify(a.detalle_extra || {}, null, 2),
   };
 }
 
@@ -132,10 +130,17 @@ export default function ActivoForm() {
     [id],
   );
   const { datos: datacenters } = useApi(() => inventarioApi.datacenters(), []);
+  const { meta, clases } = useInventarioMeta();
 
   const [form, setForm] = useState(editando ? null : vacio());
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+
+  const opcionesClase = useMemo(
+    () => clases.map((c) => [c.codigo, c.nombre]),
+    [clases],
+  );
+  const modeloDetalle = claseMeta(meta, form?.clase)?.modelo_detalle;
 
   useEffect(() => {
     if (editando && activoExistente) setForm(desdeActivo(activoExistente));
@@ -193,15 +198,15 @@ export default function ActivoForm() {
     };
     if (form.id_activo.trim()) body.id_activo = form.id_activo.trim();
 
-    if (form.clase === 'INFRA') {
+    if (modeloDetalle === 'infraestructura') {
       body.infraestructura = {
         ...form.infra,
         fin_soporte_eol: form.infra.fin_soporte_eol || null,
         hallazgos_abiertos: numOrNull(form.infra.hallazgos_abiertos),
       };
-    } else if (form.clase === 'SIST') {
+    } else if (modeloDetalle === 'sistema') {
       body.sistema = { ...form.sist };
-    } else if (form.clase === 'EQUI') {
+    } else if (modeloDetalle === 'equipo') {
       body.equipo = {
         ...form.equipo,
         ram_gb: numOrNull(form.equipo.ram_gb),
@@ -209,6 +214,14 @@ export default function ActivoForm() {
         fin_garantia: form.equipo.fin_garantia || null,
         ultima_actualizacion_so: form.equipo.ultima_actualizacion_so || null,
       };
+    } else if (modeloDetalle === 'generico') {
+      try {
+        body.detalle_extra = JSON.parse(form.detalle_extra_json || '{}');
+      } catch {
+        setError('El JSON de detalle adicional no es válido.');
+        setGuardando(false);
+        return;
+      }
     }
 
     try {
@@ -245,7 +258,7 @@ export default function ActivoForm() {
               />
               <CampoSelect
                 label="Clase *"
-                opciones={OPC.clase}
+                opciones={opcionesClase.length ? opcionesClase : [['INFRA', 'Infraestructura de red']]}
                 value={form.clase}
                 onChange={(e) => set('clase', e.target.value)}
               />
@@ -366,7 +379,7 @@ export default function ActivoForm() {
           </div>
         </div>
 
-        {form.clase === 'INFRA' && (
+        {modeloDetalle === 'infraestructura' && (
           <div className="card" style={{ marginBottom: 14 }}>
             <h2>Detalle de infraestructura de red</h2>
             <div className="cuerpo">
@@ -424,7 +437,7 @@ export default function ActivoForm() {
           </div>
         )}
 
-        {form.clase === 'SIST' && (
+        {modeloDetalle === 'sistema' && (
           <div className="card" style={{ marginBottom: 14 }}>
             <h2>Detalle de sistema de información</h2>
             <div className="cuerpo">
@@ -498,7 +511,7 @@ export default function ActivoForm() {
           </div>
         )}
 
-        {form.clase === 'EQUI' && (
+        {modeloDetalle === 'equipo' && (
           <div className="card" style={{ marginBottom: 14 }}>
             <h2>Detalle de equipo de cómputo</h2>
             <div className="cuerpo">
@@ -602,6 +615,23 @@ export default function ActivoForm() {
                   onChange={(e) => setSub('equipo', 'fin_garantia', e.target.value)}
                 />
               </Fila>
+            </div>
+          </div>
+        )}
+
+        {modeloDetalle === 'generico' && (
+          <div className="card" style={{ marginBottom: 14 }}>
+            <h2>Detalle adicional (JSON)</h2>
+            <div className="cuerpo">
+              <CampoTextarea
+                label="Campos personalizados"
+                value={form.detalle_extra_json}
+                onChange={(e) => set('detalle_extra_json', e.target.value)}
+                placeholder='{"proveedor": "AWS", "region": "us-east-1"}'
+              />
+              <p style={{ fontSize: 12, color: 'var(--texto-suave)', margin: 0 }}>
+                Clase genérica: defina atributos libres en formato JSON válido.
+              </p>
             </div>
           </div>
         )}

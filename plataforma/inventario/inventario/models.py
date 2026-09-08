@@ -86,6 +86,38 @@ class RolMCA(models.Model):
         return self.sigla
 
 
+class ClaseActivo(models.Model):
+    """Catálogo configurable de clases de activo (INFRA, SIST, EQUI, …)."""
+
+    class ModeloDetalle(models.TextChoices):
+        INFRAESTRUCTURA = "infraestructura", "Infraestructura de red"
+        SISTEMA = "sistema", "Sistema de información"
+        EQUIPO = "equipo", "Equipo de cómputo"
+        GENERICO = "generico", "Campos libres (JSON)"
+        NINGUNO = "ninguno", "Solo campos comunes"
+
+    codigo = models.CharField(max_length=6, unique=True, help_text="Ej: INFRA, SERV")
+    nombre = models.CharField(max_length=120)
+    prefijo_id = models.CharField(max_length=6, help_text="Prefijo del ID (RED, SIS, PC…)")
+    color = models.CharField(max_length=7, default="#6b7280")
+    orden = models.PositiveSmallIntegerField(default=0)
+    activo = models.BooleanField(default=True)
+    modelo_detalle = models.CharField(
+        max_length=20, choices=ModeloDetalle.choices, default=ModeloDetalle.NINGUNO)
+    detalle_schema = models.JSONField(
+        blank=True, default=dict,
+        help_text="Esquema opcional de campos para clases genéricas.")
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "Clase de activo"
+        verbose_name_plural = "Clases de activo"
+        ordering = ["orden", "codigo"]
+
+    def __str__(self):
+        return f"{self.codigo} — {self.nombre}"
+
+
 class Activo(models.Model):
     class Clase(models.TextChoices):
         INFRAESTRUCTURA = "INFRA", "Infraestructura de red"
@@ -127,7 +159,7 @@ class Activo(models.Model):
     id_activo = models.CharField("ID Activo", max_length=30, unique=True, blank=True)
     nombre = models.CharField("Nombre del activo", max_length=255)
     descripcion = models.TextField("Descripcion / Funcion", blank=True)
-    clase = models.CharField(max_length=6, choices=Clase.choices)
+    clase = models.CharField(max_length=6, help_text="Código de ClaseActivo (catálogo dinámico)")
 
     clasificacion_si = models.CharField("Clasificacion SI", max_length=5,
                                         choices=Clasificacion.choices, blank=True)
@@ -176,6 +208,9 @@ class Activo(models.Model):
         verbose_name="Depende de (activos)",
         help_text="Activos de los que este activo depende para operar.")
 
+    detalle_extra = models.JSONField(
+        "Detalle adicional (clases genéricas)", blank=True, default=dict)
+
     amenazas = models.ManyToManyField(AmenazaMITRE, blank=True, related_name="activos")
     controles = models.ManyToManyField(ControlISO, blank=True, related_name="activos")
 
@@ -193,11 +228,23 @@ class Activo(models.Model):
     # Prefijo de codigo por clase de activo
     PREFIJO = {"INFRA": "RED", "SIST": "SIS", "EQUI": "PC"}
 
+    def nombre_clase(self):
+        """Etiqueta legible desde el catálogo dinámico o el enum legacy."""
+        cat = ClaseActivo.objects.filter(codigo=self.clase).first()
+        if cat:
+            return cat.nombre
+        return dict(self.Clase.choices).get(self.clase, self.clase)
+
+    def get_clase_display(self):
+        """Compatibilidad DRF/admin — delega al catálogo dinámico."""
+        return self.nombre_clase()
+
     @classmethod
     def siguiente_codigo(cls, clase):
         """Calcula el proximo codigo secuencial (ej. RED-023) para la clase."""
         import re
-        pref = cls.PREFIJO.get(clase, "ACT")
+        cat = ClaseActivo.objects.filter(codigo=clase).first()
+        pref = cat.prefijo_id if cat else cls.PREFIJO.get(clase, "ACT")
         maximo = 0
         for c in cls.objects.filter(id_activo__startswith=pref + "-").values_list("id_activo", flat=True):
             m = re.search(r"-(\d+)$", c)

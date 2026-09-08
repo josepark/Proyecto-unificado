@@ -1,6 +1,6 @@
 from itertools import chain
 
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import redirect
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import JsonResponse
@@ -20,10 +20,12 @@ class CatalogoPagination(PageNumberPagination):
     max_page_size = 2000
 
 from .models import (Activo, ActivoInfraestructura, SistemaInformacion,
-                     EquipoComputo, AmenazaMITRE, ControlISO)
+                     EquipoComputo, ClaseActivo, AmenazaMITRE, ControlISO)
 from .serializers import (ActivoListSerializer, ActivoDetailSerializer,
-                          ActivoWriteSerializer, AmenazaMITRESerializer,
-                          ControlISOSerializer, HistorialSerializer)
+                          ActivoWriteSerializer, ClaseActivoSerializer,
+                          AmenazaMITRESerializer, ControlISOSerializer,
+                          HistorialSerializer)
+from .meta_inventario import meta_inventario, catalogo_clases_activo
 
 
 class ActivoViewSet(viewsets.ModelViewSet):
@@ -53,6 +55,7 @@ class ActivoViewSet(viewsets.ModelViewSet):
         top_amenazas = list(AmenazaMITRE.objects.annotate(
             n=Count("activos")).filter(n__gt=0).order_by("-n")[:10].values(
             "codigo", "descripcion", "n"))
+        clases = catalogo_clases_activo()
         return Response({
             "total_activos": qs.count(),
             "datos_personales": qs.filter(procesa_datos_personales=True).count(),
@@ -60,7 +63,13 @@ class ActivoViewSet(viewsets.ModelViewSet):
             "por_clase": por_clase,
             "por_clasificacion": por_clasif,
             "top_amenazas": top_amenazas,
+            "clases": clases,
         })
+
+    @action(detail=False, methods=["get"])
+    def meta(self, request):
+        """Metadatos para la SPA: clases configurables, enums y colores."""
+        return Response(meta_inventario())
 
     @action(detail=True)
     def historial(self, request, pk=None):
@@ -83,6 +92,24 @@ class ControlViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ControlISO.objects.annotate(num_activos=Count("activos"))
     serializer_class = ControlISOSerializer
     search_fields = ["codigo", "descripcion"]
+
+
+class ClaseActivoViewSet(viewsets.ModelViewSet):
+    """Catálogo dinámico de clases de activo — editable por Dinamizador/Admin."""
+    queryset = ClaseActivo.objects.all()
+    serializer_class = ClaseActivoSerializer
+    search_fields = ["codigo", "nombre"]
+    ordering_fields = ["orden", "codigo"]
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        n = Activo.objects.filter(clase=obj.codigo).count()
+        if n:
+            return Response(
+                {"detail": f"No se puede eliminar: hay {n} activo(s) con la clase {obj.codigo}."},
+                status=409,
+            )
+        return super().destroy(request, *args, **kwargs)
 
 
 @api_view(["GET"])
@@ -133,6 +160,18 @@ class DatacenterViewSet(viewsets.ModelViewSet):
     queryset = Datacenter.objects.all()
     serializer_class = DatacenterSerializer
     search_fields = ["codigo", "nombre", "ciudad"]
+
+    def destroy(self, request, *args, **kwargs):
+        dc = self.get_object()
+        n = dc.activos.count()
+        if n and request.query_params.get("confirmar") != "1":
+            return Response(
+                {"detail": f"El centro {dc.codigo} tiene {n} activo(s) asignado(s). "
+                           "Confirme para eliminarlo; los activos quedarán sin sede.",
+                 "activos_afectados": n},
+                status=409,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True)
     def activos(self, request, pk=None):
@@ -452,6 +491,18 @@ def calcular_panel_ejecutivo():
     cambios30 = Activo.history.filter(history_date__gte=hace30).count()
     total_ctrl = ControlISO.objects.count()
     ctrl_usados = ControlISO.objects.annotate(n=Count("activos")).filter(n__gt=0).count()
+    datacenters_resumen = list(
+        Datacenter.objects.annotate(
+            total_activos=Count("activos"),
+            criticos=Count("activos", filter=Q(activos__nivel_riesgo="CRIT")),
+            sin_rack=Count("activos", filter=Q(
+                activos__clase="INFRA",
+                activos__infraestructura__rack="",
+            )),
+        ).order_by("codigo").values(
+            "id", "codigo", "nombre", "tipo", "total_activos", "criticos", "sin_rack",
+        )
+    )
     return {
         "total_activos": qs.count(),
         "completitud": {
@@ -467,6 +518,7 @@ def calcular_panel_ejecutivo():
         "por_nivel_riesgo": por_riesgo,
         "por_ciclo_vida": por_ciclo,
         "cambios_30dias": cambios30,
+        "datacenters": datacenters_resumen,
         "rbac": _resumen_rbac(),
     }
 

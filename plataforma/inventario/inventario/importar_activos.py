@@ -71,8 +71,11 @@ def generar_plantilla():
 
     ref = wb.create_sheet("Valores válidos")
     ref.append(["Campo", "Valores aceptados"])
-    from .models import Activo
-    ref.append(["clase", " / ".join(c[0] for c in Activo.Clase.choices)])
+    from .models import Activo, ClaseActivo
+    ref.append(["clase", " / ".join(
+        ClaseActivo.objects.filter(activo=True).order_by("orden", "codigo").values_list(
+            "codigo", flat=True)
+    ) or [c[0] for c in Activo.Clase.choices])])
     ref.append(["clasificacion_si", " / ".join(c[0] for c in Activo.Clasificacion.choices)])
     ref.append(["nivel_riesgo", " / ".join(c[0] for c in Activo.NivelRiesgo.choices)])
     ref.append(["estado", " / ".join(c[0] for c in Activo.Estado.choices)])

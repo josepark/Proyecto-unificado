@@ -27,6 +27,7 @@ import Excepciones from './paginas/rbac/Excepciones';
 import ExcepcionMasiva from './paginas/rbac/ExcepcionMasiva';
 import Auditoria from './paginas/rbac/Auditoria';
 import Inicio from './paginas/rbac/Inicio';
+import ClasesActivos from './paginas/inventario/ClasesActivos';
 import Login from './paginas/Login';
 
 // Fase 4 completa: React es la interfaz principal en "/". Login propio en
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="centro-datos/diagramas/nuevo" element={<DiagramaForm />} />
             <Route path="centro-datos/diagramas/:id/editar" element={<DiagramaForm />} />
             <Route path="bitacora" element={<Bitacora />} />
+            <Route path="clases" element={<ClasesActivos />} />
           </Route>
 
           <Route path="gestion-riesgos/*" element={<ModuloRiesgosPTR />} />

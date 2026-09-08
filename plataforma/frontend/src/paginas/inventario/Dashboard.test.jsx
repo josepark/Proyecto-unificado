@@ -6,8 +6,26 @@ import Dashboard from './Dashboard';
 beforeEach(() => {
   global.fetch = vi.fn(async (url) => {
     const u = String(url);
+    if (u.includes('/meta/')) {
+      return ok({
+        clases: [
+          { codigo: 'INFRA', nombre: 'Infraestructura', color: '#1f6b52' },
+          { codigo: 'SIST', nombre: 'Sistemas', color: '#c9a94e' },
+        ],
+        colores_clase: { INFRA: '#1f6b52', SIST: '#c9a94e' },
+      });
+    }
     if (u.includes('/estadisticas/')) {
-      return ok({ total_activos: 2, por_nivel_riesgo: {}, por_clase: {}, datos_personales: 0 });
+      return ok({
+        total_activos: 2,
+        por_nivel_riesgo: {},
+        por_clase: { SIST: 1, INFRA: 1 },
+        clases: [
+          { codigo: 'INFRA', nombre: 'Infraestructura', color: '#1f6b52' },
+          { codigo: 'SIST', nombre: 'Sistemas', color: '#c9a94e' },
+        ],
+        datos_personales: 0,
+      });
     }
     if (u.includes('/activos/')) {
       return ok({
