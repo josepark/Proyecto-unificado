@@ -2,6 +2,24 @@ import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import ModuloRBAC from './ModuloRBAC';
 
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** GET /api/auth-rbac/ con reintento — evita falsos 401 por carreras SQLite/nginx. */
+async function verificarAuthRbac() {
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      const r = await fetch('/api/auth-rbac/', { credentials: 'same-origin' });
+      if (r.status === 204) return true;
+    } catch {
+      // sigue al reintento
+    }
+    if (i < 1) await esperar(250);
+  }
+  return false;
+}
+
 /** Puerta RBAC: solo Dinamizador/Administrador (mismo criterio que nginx). */
 export default function PuertaRBAC() {
   const { puedeEditar, autenticado } = useOutletContext();
@@ -14,8 +32,8 @@ export default function PuertaRBAC() {
     }
     let vivo = true;
     setAutorizadoRbac(null);
-    fetch('/api/auth-rbac/', { credentials: 'same-origin' })
-      .then((r) => vivo && setAutorizadoRbac(r.status === 204))
+    verificarAuthRbac()
+      .then((ok) => vivo && setAutorizadoRbac(ok))
       .catch(() => vivo && setAutorizadoRbac(false));
     return () => {
       vivo = false;

@@ -30,6 +30,10 @@ function limpiarSiEraSSO() {
   return false;
 }
 
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function aplicarPerfil(data, setUser, setRoles, setPuedeEditar) {
   const userRoles = data.roles || [];
   setUser({ username: data.username, is_staff: data.is_staff ?? userRoles.includes("Administrador") });
@@ -147,8 +151,13 @@ export function AuthProvider({
       }
 
       const reintentos = unificado && plataformaAutenticada ? 2 : 1;
-      await sincronizarSSO(reintentos);
-      if (!cancelado) setChecking(false);
+      try {
+        await sincronizarSSO(reintentos);
+      } catch {
+        // No bloquear la UI si falla la sincronización SSO (p. ej. red puntual).
+      } finally {
+        if (!cancelado) setChecking(false);
+      }
     }
 
     bootstrap();

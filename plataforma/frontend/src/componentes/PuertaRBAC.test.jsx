@@ -48,10 +48,22 @@ describe('PuertaRBAC', () => {
     expect(fetch).toHaveBeenCalledWith('/api/auth-rbac/', { credentials: 'same-origin' });
   });
 
+  it('Reintenta /api/auth-rbac/ antes de mostrar error si la primera respuesta es 401', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({ status: 401 })
+      .mockResolvedValueOnce({ status: 204 });
+    renderConContexto({ puedeEditar: true, autenticado: true });
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /^Roles$/i })).toBeInTheDocument();
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('Muestra aviso si /api/auth-rbac/ rechaza la sesión', async () => {
     vi.mocked(fetch).mockResolvedValue({ status: 401 });
     renderConContexto({ puedeEditar: true, autenticado: true });
     expect(await screen.findByText(/No se pudo autorizar el acceso a RBAC/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^Roles$/i })).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
