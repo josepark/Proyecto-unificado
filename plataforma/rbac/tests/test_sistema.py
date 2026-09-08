@@ -125,8 +125,19 @@ def test_api_resumen_expone_los_kpis_esperados(cliente):
     claves = {"roles_total", "sistemas_total", "usuarios_activos",
               "mfa_pct", "mfa_ok", "mfa_total", "proximos_vencimientos",
               "excepciones_vigentes", "excepciones_vencidas",
-              "roles_certificacion_vencida", "pendientes_total"}
+              "roles_certificacion_vencida", "pendientes_total",
+              "desglose_pendientes", "alertas_mfa"}
     assert claves.issubset(data.keys())
+    assert data["pendientes_total"] == sum(data["desglose_pendientes"].values())
+
+
+def test_api_matriz_heatmap_por_categoria(cliente):
+    r = cliente.get("/api/matriz/heatmap")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert isinstance(data, list)
+    if data:
+        assert {"categoria", "sistemas", "n_admin", "n_elevados"} <= data[0].keys()
 
 
 def test_api_sistemas_expone_el_catalogo_canonico_con_accesos(cliente):

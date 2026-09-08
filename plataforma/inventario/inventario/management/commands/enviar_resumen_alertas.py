@@ -26,7 +26,7 @@ from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from inventario.integracion_rbac import inicio_rbac
+from inventario.integracion_rbac import inicio_rbac, resumen_rbac
 from inventario.views import calcular_alertas
 
 MAX_ITEMS_POR_GRUPO = 8
@@ -59,14 +59,13 @@ class Command(BaseCommand):
 
         alertas = calcular_alertas()
         rbac = inicio_rbac()  # None si RBAC no responde — no debe romper el envío del lado Inventario
+        resumen = resumen_rbac()
 
         for g in alertas["grupos"]:
             g["items_mostrados"] = g["items"][:MAX_ITEMS_POR_GRUPO]
             g["items_restantes"] = len(g["items"]) - len(g["items_mostrados"])
 
-        rbac_pendientes = 0
-        if rbac:
-            rbac_pendientes = len(rbac["proximos_vencimientos"]) + len(rbac["alertas_mfa"])
+        rbac_pendientes = resumen["pendientes_total"] if resumen else 0
 
         if opts["solo_si_hay_criticas"] and alertas["alertas_criticas"] == 0 and rbac_pendientes == 0:
             self.stdout.write("Sin alertas críticas ni vencimientos en RBAC — no se envía correo (--solo-si-hay-criticas).")

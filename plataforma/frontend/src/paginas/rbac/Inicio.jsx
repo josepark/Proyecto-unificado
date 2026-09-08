@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import { mensajeErrorRbac } from './rbacUtil';
 
 export default function Inicio() {
   const { datos: d, cargando, error } = useApi(() => rbacApi.inicio(), []);
@@ -10,7 +11,7 @@ export default function Inicio() {
     return (
       <div className="card">
         <div className="cuerpo">
-          No se pudo cargar el tablero ({error.status === 401 ? 'inicie sesión con rol Dinamizador o Administrador' : error.message}).
+          {mensajeErrorRbac('el tablero de control de acceso', error)}
         </div>
       </div>
     );
@@ -117,12 +118,12 @@ export default function Inicio() {
                 </thead>
                 <tbody>
                   {d.proximos_vencimientos.map((v, i) => (
-                    <tr key={i}>
+                    <tr key={i} style={v.dias <= 2 ? { background: '#fdecea' } : undefined}>
                       <td>{v.tipo}</td>
                       <td>{v.nombre}</td>
                       <td>{v.contexto}</td>
                       <td>{v.fecha_fin}</td>
-                      <td className="num" style={{ color: v.dias <= 2 ? 'var(--alto)' : 'var(--medio)' }}>
+                      <td className="num" style={{ color: v.dias <= 2 ? 'var(--alto)' : 'var(--medio)', fontWeight: v.dias <= 2 ? 'bold' : 'normal' }}>
                         {v.dias}
                       </td>
                     </tr>

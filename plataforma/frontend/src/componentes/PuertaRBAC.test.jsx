@@ -16,10 +16,15 @@ function renderConContexto(contexto) {
 }
 
 describe('PuertaRBAC', () => {
-  it('Consultor ve mensaje de acceso restringido, no la sub-navegación RBAC', () => {
-    renderConContexto({ puedeEditar: false, autenticado: true });
-    expect(screen.getByText(/Matriz de Control de Acceso/i)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /^Roles$/i })).not.toBeInTheDocument();
+  it('Consultor entra en modo consulta (solo lectura)', () => {
+    renderConContexto({
+      puedeEditar: false,
+      autenticado: true,
+      roles: ['Consultor'],
+      soloLecturaRbac: true,
+    });
+    expect(screen.getByText(/Modo consulta RBAC/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^Roles$/i })).toBeInTheDocument();
   });
 
   it('Anónimo ve enlace para iniciar sesión', () => {

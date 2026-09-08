@@ -37,9 +37,15 @@ class AuthCheckRBACTest(TestCase):
         r = self.client.get(self.URL)
         self.assertEqual(r.status_code, 401)
 
-    def test_consultor_no_autorizado(self):
+    def test_consultor_autorizado_en_get(self):
         self.client.force_login(self.consultor)
-        r = self.client.get(self.URL)
+        r = self.client.get(self.URL, HTTP_X_ORIGINAL_METHOD="GET")
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(r.headers.get("X-Usuario-Autorizado"), "consultor_test")
+
+    def test_consultor_no_autorizado_en_escritura(self):
+        self.client.force_login(self.consultor)
+        r = self.client.get(self.URL, HTTP_X_ORIGINAL_METHOD="POST")
         self.assertEqual(r.status_code, 401)
 
     def test_dinamizador_autorizado(self):
@@ -137,6 +143,12 @@ class PanelEjecutivoUnificadoTest(TestCase):
             "proximos_vencimientos": 0, "excepciones_vigentes": 37,
             "excepciones_vencidas": 0, "roles_certificacion_vencida": 27,
             "pendientes_total": 27,
+            "desglose_pendientes": {
+                "proximos_vencimientos": 0,
+                "excepciones_vencidas": 0,
+                "roles_certificacion_vencida": 27,
+                "alertas_mfa": 0,
+            },
         }
         respuesta_falsa = MagicMock()
         respuesta_falsa.json.return_value = resumen_falso
@@ -748,7 +760,9 @@ class ResumenAlertasEmailTest(TestCase):
             "riesgo": [], "max_riesgo": 1, "stats": {},
         }
         with patch("inventario.management.commands.enviar_resumen_alertas.inicio_rbac",
-                   return_value=rbac_simulado):
+                   return_value=rbac_simulado), \
+             patch("inventario.management.commands.enviar_resumen_alertas.resumen_rbac",
+                   return_value={"pendientes_total": 2}):
             call_command("enviar_resumen_alertas")
         correo = mail.outbox[0]
         self.assertIn("Persona De Prueba", correo.body)

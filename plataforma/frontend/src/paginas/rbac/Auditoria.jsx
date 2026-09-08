@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import { mensajeErrorRbac } from './rbacUtil';
 
 export default function Auditoria() {
   const [busqueda, setBusqueda] = useState('');
@@ -44,7 +45,7 @@ export default function Auditoria() {
     return (
       <div className="card">
         <div className="cuerpo">
-          No se pudo cargar la Matriz RBAC ({error.status === 401 ? 'inicie sesión con rol Dinamizador o Administrador' : error.message}).
+          {mensajeErrorRbac('auditoría', error)}
         </div>
       </div>
     );

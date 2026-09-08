@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { rbacApi } from '../../api/rbac';
 import { formatearErrorApi } from '../../api/client';
@@ -12,6 +12,12 @@ export default function MatrizImportar() {
   const [confirmando, setConfirmando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState(null);
+  const [seleccionados, setSeleccionados] = useState(new Set());
+
+  useEffect(() => {
+    const cambios = analisis?.cambios ?? [];
+    setSeleccionados(new Set(cambios.map((_, i) => i)));
+  }, [analisis]);
 
   if (puedeEditar === false) {
     return (
@@ -43,10 +49,24 @@ export default function MatrizImportar() {
     }
   }
 
-  async function confirmar() {
+  function alternarIndice(i) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  function alternarTodos(marcar) {
     const cambios = analisis?.cambios ?? [];
+    setSeleccionados(marcar ? new Set(cambios.map((_, i) => i)) : new Set());
+  }
+
+  async function confirmar() {
+    const cambios = (analisis?.cambios ?? []).filter((_, i) => seleccionados.has(i));
     if (!cambios.length) return;
-    if (!window.confirm(`¿Aplicar ${cambios.length} cambio(s) en la matriz? Quedará registrado en la bitácora.`)) return;
+    if (!window.confirm(`¿Aplicar ${cambios.length} cambio(s) seleccionado(s) en la matriz? Quedará registrado en la bitácora.`)) return;
     setConfirmando(true);
     setError(null);
     try {
@@ -130,9 +150,15 @@ export default function MatrizImportar() {
                 <p style={{ fontSize: 13, margin: 0 }}>No hay diferencias respecto a la matriz actual.</p>
               ) : (
                 <>
+                  <p style={{ fontSize: 13, marginTop: 0 }}>
+                    Seleccione qué cambios aplicar (importación parcial).{' '}
+                    <button type="button" className="btn-sec" onClick={() => alternarTodos(true)}>Todos</button>{' '}
+                    <button type="button" className="btn-sec" onClick={() => alternarTodos(false)}>Ninguno</button>
+                  </p>
                   <table>
                     <thead>
                       <tr>
+                        <th>Aplicar</th>
                         <th>Sistema</th>
                         <th>Rol</th>
                         <th>Actual</th>
@@ -142,6 +168,14 @@ export default function MatrizImportar() {
                     <tbody>
                       {analisis.cambios.map((c, i) => (
                         <tr key={i}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={seleccionados.has(i)}
+                              onChange={() => alternarIndice(i)}
+                              aria-label={`Aplicar cambio ${c.sistema} / ${c.rol}`}
+                            />
+                          </td>
                           <td>{c.sistema}</td>
                           <td>{c.rol}</td>
                           <td>{c.actual}</td>
@@ -154,10 +188,10 @@ export default function MatrizImportar() {
                     <button
                       type="button"
                       className="btn btn-primary"
-                      disabled={confirmando}
+                      disabled={confirmando || seleccionados.size === 0}
                       onClick={confirmar}
                     >
-                      {confirmando ? 'Aplicando…' : `Confirmar ${analisis.cambios.length} cambio(s)`}
+                      {confirmando ? 'Aplicando…' : `Confirmar ${seleccionados.size} cambio(s) seleccionado(s)`}
                     </button>
                   </p>
                 </>

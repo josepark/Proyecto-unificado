@@ -10,6 +10,7 @@ export default function MatrizComparar() {
   const [rolB, setRolB] = useState('');
   const [comparando, setComparando] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [soloDiferencias, setSoloDiferencias] = useState(false);
   const [error, setError] = useState(null);
 
   async function comparar(ev) {
@@ -73,6 +74,17 @@ export default function MatrizComparar() {
               {resultado.filas.length} sistemas)
             </span>
           </h2>
+          <div className="cuerpo" style={{ paddingBottom: 12 }}>
+            <label style={{ fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={soloDiferencias}
+                onChange={(e) => setSoloDiferencias(e.target.checked)}
+                style={{ marginRight: 6 }}
+              />
+              Mostrar solo diferencias
+            </label>
+          </div>
           <div className="cuerpo" style={{ padding: 0 }}>
             <table>
               <thead>
@@ -84,7 +96,9 @@ export default function MatrizComparar() {
                 </tr>
               </thead>
               <tbody>
-                {resultado.filas.map((f, i) => (
+                {resultado.filas
+                  .filter((f) => !soloDiferencias || f.difiere)
+                  .map((f, i) => (
                   <tr key={i} style={f.difiere ? { background: '#fdf1e4' } : undefined}>
                     <td>{f.sistema}</td>
                     <td>{f.categoria}</td>

@@ -222,9 +222,45 @@ export default function UsuarioForm() {
           </div>
         </div>
 
+        {editando && (usuarioExistente?.accesos?.length ?? 0) > 0 && (
+          <div className="card" style={{ marginBottom: 14 }}>
+            <h2>Accesos efectivos (matriz + excepciones)</h2>
+            <div className="cuerpo" style={{ padding: 0 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sistema</th>
+                    <th>Categoría</th>
+                    <th>Nivel rol</th>
+                    <th>Excepción</th>
+                    <th>Efectivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usuarioExistente.accesos
+                    .filter((a) => a.nivel_efectivo && a.nivel_efectivo !== '—')
+                    .map((a) => (
+                      <tr key={a.sistema_id} style={a.nivel_exc ? { background: '#fdf1e4' } : undefined}>
+                        <td>{a.nombre}</td>
+                        <td>{a.categoria}</td>
+                        <td>{a.nivel_rol}</td>
+                        <td>{a.nivel_exc ? `${a.nivel_exc}${a.motivo ? ` — ${a.motivo}` : ''}` : '—'}</td>
+                        <td><strong>{a.nivel_efectivo}</strong></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              <p style={{ fontSize: 12, color: 'var(--texto-suave)', margin: '8px 14px 0' }}>
+                Las filas resaltadas tienen excepción vigente. Para cambiar la matriz base, use la{' '}
+                <Link to="/rbac/matriz">Matriz</Link>.
+              </p>
+            </div>
+          </div>
+        )}
+
         {avisoMfa && (
           <p style={{ color: 'var(--alto)', fontWeight: 'bold', marginBottom: 12 }}>
-            Advertencia: el rol seleccionado exige MFA y el usuario no lo tiene activo. Se guardó de todas formas —
+            Advertencia: el rol seleccionado exige MFA y el usuario no lo tiene activo. Los cambios se guardaron —
             corrija el MFA cuando corresponda, o{' '}
             <button
               type="button"

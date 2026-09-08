@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useSesion } from '../hooks/useSesion';
 import { consultarSesionInventario, eventosApi } from '../api/client';
 import { rbacApi } from '../api/rbac';
+import { puedeVerRbac } from '../paginas/rbac/rbacUtil';
 
 function moduloDeRuta(pathname) {
   if (pathname.startsWith('/rbac')) return 'rbac';
@@ -13,12 +14,17 @@ function moduloDeRuta(pathname) {
 
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
-  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando } = useSesion();
+  const sesion = useSesion();
+  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, roles } = sesion;
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
+  const [desgloseRbac, setDesgloseRbac] = useState(null);
+  const [mostrarDesglose, setMostrarDesglose] = useState(false);
   const ubicacion = useLocation();
   const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
   const moduloActivo = useMemo(() => moduloDeRuta(ubicacion.pathname), [ubicacion.pathname]);
+  const soloLecturaRbac = autenticado && !puedeEditar && (roles ?? []).includes('Consultor');
+  const verRbac = puedeVerRbac({ autenticado, puedeEditar, roles });
 
   useEffect(() => {
     function alVencer() {
@@ -28,32 +34,44 @@ export default function Shell() {
     return () => eventosApi.removeEventListener('sesion-vencida', alVencer);
   }, []);
 
-  // Al cambiar de módulo solo se oculta el aviso de sesión vencida — NO se
-  // vuelve a llamar GET /api/sesion/ aquí (provocaba falsos cierres al ir a RBAC).
   useEffect(() => {
     setSesionVencida(false);
   }, [moduloActivo]);
 
   useEffect(() => {
-    if (!puedeEditar || !autenticado || cargando) {
+    if (!verRbac || cargando) {
       setPendientesRbac(0);
+      setDesgloseRbac(null);
       return;
     }
     let vivo = true;
     consultarSesionInventario()
       .then((s) => {
-        if (!vivo || !s.autenticado || !s.puede_editar) {
+        if (!vivo || !s.autenticado) {
           setPendientesRbac(0);
           return null;
         }
         return rbacApi.resumen();
       })
-      .then((r) => vivo && r && setPendientesRbac(r.pendientes_total || 0))
+      .then((r) => {
+        if (!vivo || !r) return;
+        setPendientesRbac(r.pendientes_total || 0);
+        setDesgloseRbac(r.desglose_pendientes || null);
+      })
       .catch(() => vivo && setPendientesRbac(0));
     return () => {
       vivo = false;
     };
-  }, [puedeEditar, autenticado, cargando]);
+  }, [verRbac, cargando, autenticado]);
+
+  const outletContext = {
+    autenticado,
+    puedeEditar,
+    puedeEliminar,
+    cargando,
+    roles,
+    soloLecturaRbac,
+  };
 
   return (
     <>
@@ -69,6 +87,7 @@ export default function Shell() {
           {cargando && !autenticado ? null : autenticado ? (
             <>
               Sesión: <b>{usuario}</b>
+              {soloLecturaRbac ? ' · consulta RBAC' : null}
               {cargando ? ' · …' : null} · <a href="/logout/">Salir</a>
             </>
           ) : (
@@ -92,21 +111,54 @@ export default function Shell() {
           <NavLink to="/inventario" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Inventario
           </NavLink>
-          <NavLink to="/rbac" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
-            Matriz RBAC
-            {pendientesRbac > 0 ? <span className="badge-modulo">{pendientesRbac}</span> : null}
-          </NavLink>
+          <span style={{ position: 'relative', display: 'inline-block' }}>
+            <NavLink to="/rbac" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
+              Matriz RBAC
+              {pendientesRbac > 0 ? (
+                <button
+                  type="button"
+                  className="badge-modulo"
+                  style={{ cursor: 'pointer', border: 'none', padding: '0 6px' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMostrarDesglose((v) => !v);
+                  }}
+                  title="Ver desglose de pendientes"
+                >
+                  {pendientesRbac}
+                </button>
+              ) : null}
+            </NavLink>
+            {mostrarDesglose && desgloseRbac && (
+              <div
+                className="card"
+                style={{
+                  position: 'absolute', top: '100%', left: 0, zIndex: 30, minWidth: 280,
+                  marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,.15)',
+                }}
+              >
+                <div className="cuerpo" style={{ fontSize: 13 }}>
+                  <strong>Pendientes RBAC</strong>
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                    <li>Vencimientos próximos (7 d): <b>{desgloseRbac.proximos_vencimientos}</b></li>
+                    <li>MFA incumplido: <b>{desgloseRbac.alertas_mfa}</b></li>
+                    <li>Certificación de rol vencida: <b>{desgloseRbac.roles_certificacion_vencida}</b></li>
+                    <li>Excepciones vencidas: <b>{desgloseRbac.excepciones_vencidas}</b></li>
+                  </ul>
+                  <Link to="/rbac/inicio" onClick={() => setMostrarDesglose(false)} style={{ fontSize: 12 }}>
+                    Ir al tablero RBAC →
+                  </Link>
+                </div>
+              </div>
+            )}
+          </span>
           <NavLink to="/gestion-riesgos" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Gestión de Riesgos y PTR
           </NavLink>
         </nav>
 
-        {/* Matriz RBAC exige rol Dinamizador/Administrador — mismo
-           criterio que ya usa la puerta de autorización de nginx (README
-           sección 6.3). El servidor sigue siendo quien realmente lo
-           impide; esto solo evita que alguien sin el rol vea un módulo
-           que de todas formas le va a rechazar cada llamada. */}
-        <Outlet context={{ autenticado, puedeEditar, puedeEliminar, cargando }} />
+        <Outlet context={outletContext} />
       </div>
     </>
   );

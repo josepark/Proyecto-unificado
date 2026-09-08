@@ -39,7 +39,15 @@ function renderShell(initial = '/inventario/dashboard') {
 }
 
 beforeEach(() => {
-  vi.mocked(rbacApi.resumen).mockResolvedValue({ pendientes_total: 3 });
+  vi.mocked(rbacApi.resumen).mockResolvedValue({
+    pendientes_total: 3,
+    desglose_pendientes: {
+      proximos_vencimientos: 1,
+      alertas_mfa: 1,
+      roles_certificacion_vencida: 1,
+      excepciones_vencidas: 0,
+    },
+  });
   vi.mocked(consultarSesionInventario).mockResolvedValue({
     autenticado: true,
     puede_editar: true,
@@ -64,13 +72,29 @@ describe('Shell — pestañas de módulo', () => {
     expect(screen.getByRole('link', { name: /Gestión de Riesgos y PTR/i })).toBeInTheDocument();
   });
 
-  it('muestra badge de pendientes RBAC solo cuando puedeEditar', async () => {
+  it('muestra badge de pendientes RBAC cuando puede editar o es Consultor', async () => {
     vi.mocked(useSesion).mockReturnValue({
       autenticado: true,
       usuario: 'dinamizador',
       puedeEditar: true,
       puedeEliminar: false,
       cargando: false,
+      roles: ['Dinamizador'],
+      recargar: vi.fn(),
+    });
+    renderShell();
+    expect(await screen.findByText('3')).toHaveClass('badge-modulo');
+    expect(rbacApi.resumen).toHaveBeenCalled();
+  });
+
+  it('muestra badge de pendientes RBAC también para Consultor (solo lectura)', async () => {
+    vi.mocked(useSesion).mockReturnValue({
+      autenticado: true,
+      usuario: 'consultor',
+      puedeEditar: false,
+      puedeEliminar: false,
+      cargando: false,
+      roles: ['Consultor'],
       recargar: vi.fn(),
     });
     renderShell();

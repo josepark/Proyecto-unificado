@@ -39,6 +39,7 @@ export const rbacApi = {
 
   // --- Matriz ---
   matriz: (params) => api.get('/matriz', params),
+  heatmapMatriz: () => api.get('/matriz/heatmap'),
   compararRoles: (rolA, rolB) => api.get('/matriz/comparar', { rol_a: rolA, rol_b: rolB }),
   editarCeldaMatriz: (rol_id, sistema_id, nivel) => api.put('/matriz', { rol_id, sistema_id, nivel }),
   importarMatrizAnalizar: (formData) => api.postForm('/matriz/importar/analizar', formData),

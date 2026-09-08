@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import { mensajeErrorRbac } from './rbacUtil';
 
 export default function Excepciones() {
   const { puedeEditar } = useOutletContext();
@@ -29,7 +30,7 @@ export default function Excepciones() {
     return (
       <div className="card">
         <div className="cuerpo">
-          No se pudo cargar la Matriz RBAC ({error.status === 401 ? 'inicie sesión con rol Dinamizador o Administrador' : error.message}).
+          {mensajeErrorRbac('excepciones', error)}
         </div>
       </div>
     );

@@ -165,7 +165,7 @@ def registrar(app):
             f"AND {negocio.SQL_REVISION_VENCIDA} = 1").fetchone()["n"]
 
         pendientes_total = (proximos_vencimientos + excepciones_vencidas
-                            + roles_certificacion_vencida)
+                            + roles_certificacion_vencida + alertas_mfa)
 
         return jsonify({
             "roles_total": roles_total,
@@ -176,7 +176,14 @@ def registrar(app):
             "excepciones_vigentes": excepciones_vigentes,
             "excepciones_vencidas": excepciones_vencidas,
             "roles_certificacion_vencida": roles_certificacion_vencida,
+            "alertas_mfa": alertas_mfa,
             "pendientes_total": pendientes_total,
+            "desglose_pendientes": {
+                "proximos_vencimientos": proximos_vencimientos,
+                "excepciones_vencidas": excepciones_vencidas,
+                "roles_certificacion_vencida": roles_certificacion_vencida,
+                "alertas_mfa": alertas_mfa,
+            },
         })
 
     # -------------------------------------------------------- catálogos
@@ -786,6 +793,24 @@ def registrar(app):
                   for m in c.execute("SELECT * FROM matriz_acceso")}
         niveles = [dict(r) for r in c.execute("SELECT * FROM nivel_acceso ORDER BY orden")]
         return jsonify({"roles": roles, "sistemas": sistemas, "celdas": celdas, "niveles": niveles})
+
+    @app.route("/api/matriz/heatmap")
+    def api_matriz_heatmap():
+        """Accesos nivel Admin (A) por categoría de sistema — vista resumida."""
+        c = db()
+        filas = c.execute(
+            """SELECT cat.nombre categoria,
+                      COUNT(DISTINCT s.id) sistemas,
+                      SUM(CASE WHEN ma.nivel_codigo='A' THEN 1 ELSE 0 END) n_admin,
+                      SUM(CASE WHEN ma.nivel_codigo NOT IN ('—','L') THEN 1 ELSE 0 END) n_elevados
+               FROM sistema s
+               JOIN categoria_sistema cat ON cat.id = s.categoria_id
+               JOIN matriz_acceso ma ON ma.sistema_id = s.id
+               JOIN rol r ON r.id = ma.rol_id AND r.activo = 1
+               WHERE s.activo = 1
+               GROUP BY cat.id ORDER BY n_admin DESC, cat.nombre"""
+        ).fetchall()
+        return jsonify([dict(r) for r in filas])
 
     @app.route("/api/matriz/comparar")
     def api_matriz_comparar():

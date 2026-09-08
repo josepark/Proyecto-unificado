@@ -981,21 +981,24 @@ def logout_view(request):
 # propio por diseño. nginx delega la autorización en la sesión del
 # Inventario (auth_request) antes de reenviar a Flask.
 #
-# Devuelve 204 si la sesión activa tiene rol Dinamizador o Administrador;
-# 401 en caso contrario (nginx redirige a /login/?next=… según la ruta).
+# Devuelve 204 si la sesión activa tiene rol Dinamizador o Administrador
+# (lectura y escritura), o Consultor solo en peticiones GET de la SPA
+# (lectura de /rbac/api/). 401 en caso contrario.
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @ensure_csrf_cookie
 def auth_check_rbac(request):
+    from .permisos import ROL_CONSULTOR
+
     user = _usuario_desde_sesion(request)
     if user is None:
         return Response(status=401, headers={"Cache-Control": "no-store"})
-    _, puede_editar, _ = _permisos_plataforma(user)
-    if puede_editar:
+    rs = roles_de(user)
+    metodo_original = request.META.get("HTTP_X_ORIGINAL_METHOD", "GET").upper()
+    puede_editar = bool(rs & {ROL_DINAMIZADOR, ROL_ADMIN})
+    puede_leer = puede_editar or (ROL_CONSULTOR in rs and metodo_original == "GET")
+    if puede_leer:
         resp = Response(status=204, headers={"Cache-Control": "no-store"})
-        # nginx lee este header de la subpetición interna (auth_request_set)
-        # y lo reenvía a RBAC como X-Usuario-SGSI, para que su bitácora
-        # registre quién hizo cada cambio en vez de "operador local".
         resp["X-Usuario-Autorizado"] = user.get_username()
         return resp
     return Response(status=401, headers={"Cache-Control": "no-store"})

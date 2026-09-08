@@ -312,10 +312,36 @@ export default function RolForm() {
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Accesos y usuarios</h2>
           <div className="cuerpo">
-            <p style={{ fontSize: 13, margin: 0 }}>
+            <p style={{ fontSize: 13, marginTop: 0 }}>
               {rolExistente?.accesos?.length ?? 0} acceso(s) definidos · {rolExistente?.usuarios?.length ?? 0} usuario(s) con este rol.{' '}
               Para cambiar los niveles de acceso, use la <Link to="/rbac/matriz">Matriz</Link>.
             </p>
+            {(rolExistente?.accesos?.length ?? 0) > 0 && (
+              <table style={{ marginTop: 12 }}>
+                <thead>
+                  <tr>
+                    <th>Sistema</th>
+                    <th>Categoría</th>
+                    <th>Clasificación</th>
+                    <th>Nivel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rolExistente.accesos.map((a) => (
+                    <tr key={a.sistema_id}>
+                      <td>{a.nombre}</td>
+                      <td>{a.categoria}</td>
+                      <td>{a.clasificacion}</td>
+                      <td>
+                        <span className={`chip niv-${a.nivel === '—' ? 'X' : a.nivel}`} title={a.nivel_nombre}>
+                          {a.nivel}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
