@@ -23,7 +23,7 @@ export default function PlanTratamiento() {
   const idActivo = planId ?? listaPlanes[0]?.id;
 
   const { data: plan, loading, error, reload } = useApiData(
-    () => endpoints.planTratamiento(idActivo),
+    () => (idActivo ? endpoints.planTratamiento(idActivo) : Promise.resolve({ data: null })),
     [idActivo]
   );
   const { data: campanasData } = useApiData(() => endpoints.campanasRedTeam());
@@ -66,7 +66,7 @@ export default function PlanTratamiento() {
     }
   }
 
-  if (loadingPlanes) return <PageShell><LoadingState /></PageShell>;
+  if (loadingPlanes || (idActivo && loading)) return <PageShell><LoadingState /></PageShell>;
 
   if (!listaPlanes.length) {
     return (
@@ -107,7 +107,7 @@ export default function PlanTratamiento() {
         }
       />
 
-      {loading ? (
+      {idActivo && loading ? (
         <LoadingState />
       ) : error || !plan ? (
         <ErrorState />
