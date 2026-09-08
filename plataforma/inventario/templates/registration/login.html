@@ -3,25 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
 <title>Ingreso — Soluciones SUIIN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--verde-profundo:#0d2b23;--verde-medio:#164a3b;--acento:#3fa87f;--dorado:#c9a94e;--borde:#d9e2dd}
+  :root{
+    --base-950:#060a10;--base-900:#0b121c;--base-700:#22303f;--base-300:#8b9bad;--base-100:#dbe4ec;
+    --cric-green-600:#1d6b4a;--cric-green-500:#2b8a5f;--cric-green-400:#4bab7c;
+    --cric-gold-500:#c99a35;--cric-gold-400:#e0b559;
+    --borde:color-mix(in srgb,#22303f 60%,transparent);
+    --panel:#0b121c;
+    --risk-critico:#e0475a;
+    --font-display:"Space Grotesk","Inter",system-ui,sans-serif;
+    --font-body:"Inter",system-ui,sans-serif;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--verde-profundo);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .box{background:#fff;border-radius:14px;width:100%;max-width:390px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3)}
-  .head{background:var(--verde-profundo);color:#fff;padding:26px 28px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden}
-  .head::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border:2px solid rgba(63,168,127,.25);border-radius:50%;box-shadow:0 0 0 16px rgba(63,168,127,.08)}
-  .ring{width:46px;height:46px;border:3px solid var(--acento);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ring span{font-weight:bold;color:var(--dorado);font-size:16px}
-  .head h1{font-size:16px} .head .s{font-size:11px;color:#a9c7ba;margin-top:2px}
+  body{
+    font-family:var(--font-body);background:var(--base-950);color:var(--base-100);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background-image:
+      radial-gradient(ellipse 900px 500px at 12% -10%, rgba(43,138,95,.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(201,154,53,.10), transparent 55%);
+  }
+  .box{background:var(--panel);border:1px solid var(--borde);border-radius:16px;width:100%;max-width:390px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+  .head{color:var(--base-100);padding:26px 28px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;border-bottom:1px solid var(--borde)}
+  .head::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border:2px solid rgba(43,138,95,.25);border-radius:50%;box-shadow:0 0 0 16px rgba(43,138,95,.08)}
+  .ring{width:46px;height:46px;border:3px solid var(--cric-green-500);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ring span{font-family:var(--font-display);font-weight:700;color:var(--cric-gold-500);font-size:16px}
+  .head h1{font-family:var(--font-display);font-size:16px}
+  .head .s{font-size:11px;color:var(--base-300);margin-top:2px}
   form{padding:26px 28px}
-  label{display:block;font-size:12px;font-weight:bold;color:#3a4b44;margin:12px 0 4px}
-  input{width:100%;padding:11px 12px;border:1px solid var(--borde);border-radius:8px;font-size:14px}
-  button{width:100%;margin-top:20px;padding:12px;background:var(--acento);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer}
-  button:hover{background:var(--verde-medio)}
-  .err{background:#fbeae9;color:#8a1c17;border:1px solid #e7b3af;border-radius:7px;padding:9px 12px;font-size:13px;margin-top:14px}
-  .foot{text-align:center;font-size:11px;color:#7c8a83;padding:0 28px 22px}
-  a{color:var(--acento);text-decoration:none}
+  label{display:block;font-size:12px;font-weight:600;color:var(--base-300);margin:12px 0 4px}
+  input{width:100%;padding:11px 12px;border:1px solid var(--borde);border-radius:8px;font-size:14px;background:color-mix(in srgb,var(--base-900) 80%,transparent);color:var(--base-100)}
+  input:focus{outline:none;border-color:var(--cric-green-500)}
+  button{width:100%;margin-top:20px;padding:12px;background:var(--cric-green-600);color:var(--base-100);border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+  button:hover{background:var(--cric-green-500)}
+  .err{background:color-mix(in srgb,var(--risk-critico) 12%,var(--base-900));color:var(--risk-critico);border:1px solid color-mix(in srgb,var(--risk-critico) 35%,transparent);border-radius:8px;padding:9px 12px;font-size:13px;margin-top:14px}
+  .foot{text-align:center;font-size:11px;color:var(--base-300);padding:0 28px 22px}
+  a{color:var(--cric-green-400);text-decoration:none}
 </style>
 </head>
 <body>

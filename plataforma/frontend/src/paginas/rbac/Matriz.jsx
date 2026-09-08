@@ -98,7 +98,7 @@ export default function Matriz() {
         <table style={{ borderRadius: 0 }}>
           <thead>
             <tr>
-              <th style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--verde-profundo)' }}>Rol</th>
+              <th style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--panel-solid)' }}>Rol</th>
               {sistemas.map((s) => (
                 <th
                   key={s.id}
@@ -106,8 +106,8 @@ export default function Matriz() {
                   title={s.nombre}
                   style={{
                     writingMode: 'vertical-rl', textAlign: 'left', minWidth: 30,
-                    background: resaltado === s.id ? '#fdf6e3' : undefined,
-                    color: resaltado === s.id ? '#5c4a12' : undefined,
+                    background: resaltado === s.id ? 'var(--resaltado)' : undefined,
+                    color: resaltado === s.id ? 'var(--cric-gold-400)' : undefined,
                   }}
                 >
                   {s.nombre.length > 18 ? s.nombre.slice(0, 18) + '…' : s.nombre}
@@ -118,7 +118,7 @@ export default function Matriz() {
           <tbody>
             {roles.map((r) => (
               <tr key={r.id}>
-                <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                <td style={{ position: 'sticky', left: 0, background: 'var(--panel-solid)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                   {r.abreviatura}
                 </td>
                 {sistemas.map((s) => {
@@ -131,7 +131,7 @@ export default function Matriz() {
                       onClick={() => puedeEditar && !guardando && setEditando(clave)}
                       style={{
                         textAlign: 'center', cursor: puedeEditar ? 'pointer' : 'default',
-                        background: esEditable ? '#fff' : resaltado === s.id ? '#fdf6e3' : undefined,
+                        background: esEditable ? 'var(--panel-solid)' : resaltado === s.id ? 'var(--resaltado)' : undefined,
                       }}
                     >
                       {esEditable ? (
