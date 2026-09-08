@@ -831,10 +831,41 @@ def integridad_verificar(request):
 from django.conf import settings
 from django.contrib.auth import get_user, get_user_model
 from django.contrib.sessions.backends.db import SessionStore
+from django.db.utils import OperationalError
+import time
 
 
 def _uid_desde_sesion(sesion):
     return sesion.get("_auth_user_id")
+
+
+def _cargar_sesion_por_cookie(clave):
+    """Carga sesión desde cookie con reintento breve (SQLite bajo ráfaga concurrente)."""
+    for intento in range(3):
+        sesion = SessionStore(session_key=clave)
+        try:
+            sesion.load()
+            return _uid_desde_sesion(sesion)
+        except OperationalError:
+            if intento == 2:
+                return None
+            time.sleep(0.05 * (intento + 1))
+        except Exception:
+            return None
+    return None
+
+
+def _usuario_por_id(uid):
+    for intento in range(3):
+        try:
+            return get_user_model().objects.get(pk=uid)
+        except OperationalError:
+            if intento == 2:
+                raise
+            time.sleep(0.05 * (intento + 1))
+        except get_user_model().DoesNotExist:
+            return None
+    return None
 
 
 def _usuario_desde_sesion(request):
@@ -850,19 +881,11 @@ def _usuario_desde_sesion(request):
     if not uid:
         clave = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
         if clave:
-            sesion = SessionStore(session_key=clave)
-            try:
-                sesion.load()
-                uid = _uid_desde_sesion(sesion)
-            except Exception:
-                uid = None
+            uid = _cargar_sesion_por_cookie(clave)
 
     if not uid:
         return None
-    try:
-        return get_user_model().objects.get(pk=uid)
-    except get_user_model().DoesNotExist:
-        return None
+    return _usuario_por_id(uid)
 
 
 def _permisos_plataforma(user):

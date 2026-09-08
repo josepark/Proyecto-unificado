@@ -16,12 +16,18 @@ describe('client — manejo de 401', () => {
     eventosApi.addEventListener('sesion-vencida', vencida);
     eventosApi.addEventListener('sesion-actualizada', actualizada);
 
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      statusText: 'Unauthorized',
-      json: async () => ({ detail: 'No autorizado' }),
-    });
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: async () => ({ detail: 'No autorizado' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ autenticado: false, puede_editar: false }),
+      });
 
     const rbac = crearCliente({
       base: '/rbac/api',
@@ -63,6 +69,40 @@ describe('client — manejo de 401', () => {
     expect(vencida).toHaveBeenCalledTimes(1);
 
     eventosApi.removeEventListener('sesion-vencida', vencida);
+  });
+
+  it('reintenta GET de RBAC tras 401 si la sesión del Inventario sigue activa', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: async () => ({ detail: 'No autorizado' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          autenticado: true,
+          puede_editar: true,
+          usuario: 'admin',
+          roles: ['Administrador'],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ ok: true }),
+      });
+
+    const rbac = crearCliente({
+      base: '/rbac/api',
+      csrf: { tipo: 'token', endpoint: '/csrf', campo: 'csrf_token', header: 'X-CSRF-Token' },
+    });
+
+    await expect(rbac.get('/inicio')).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it('consultarSesionInventario devuelve autenticado false si la petición falla', async () => {

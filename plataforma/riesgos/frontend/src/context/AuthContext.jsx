@@ -54,11 +54,13 @@ export function AuthProvider({
   const ssoEnVuelo = useRef(null);
 
   const intentarSSO = useCallback(
-    async ({ verificarSesion = unificado } = {}) => {
+    async ({ verificarSesion } = {}) => {
       if (ssoEnVuelo.current) return ssoEnVuelo.current;
 
+      const debeVerificarSesion = verificarSesion ?? (unificado && !plataformaAutenticada);
+
       const promesa = (async () => {
-        if (verificarSesion) {
+        if (debeVerificarSesion) {
           const sesion = await consultarSesionInventario();
           if (!sesion.autenticado) {
             if (limpiarSiEraSSO()) setUser(null);
@@ -82,7 +84,7 @@ export function AuthProvider({
       ssoEnVuelo.current = promesa;
       return promesa;
     },
-    [unificado],
+    [unificado, plataformaAutenticada],
   );
 
   const sincronizarSSO = useCallback(
@@ -176,13 +178,14 @@ export function AuthProvider({
   }, [sincronizarSSO, unificado]);
 
   useEffect(() => {
+    if (unificado) return;
     const id = setInterval(() => {
       const esquema = localStorage.getItem("suiin_auth_scheme");
       const origen = localStorage.getItem("suiin_auth_origen");
       if (esquema === "Bearer" && origen === "sso") intentarSSO();
     }, INTERVALO_REVALIDACION_MS);
     return () => clearInterval(id);
-  }, [intentarSSO]);
+  }, [intentarSSO, unificado]);
 
   const login = useCallback(async (username, password) => {
     try {

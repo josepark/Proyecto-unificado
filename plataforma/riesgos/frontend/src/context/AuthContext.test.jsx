@@ -221,13 +221,13 @@ describe("AuthProvider — plataforma unificada (sesión del shell)", () => {
     expect(screen.getByTestId("autenticado")).toHaveTextContent("false");
   });
 
-  it("verifica sesión antes de pedir token-jwt cuando hay sesión en el shell", async () => {
+  it("verifica sesión antes de pedir token-jwt solo si el shell aún no confirmó sesión", async () => {
     endpoints.ssoJWT.mockResolvedValue({ token: "jwt-sso-nuevo", username: "admin", roles: [] });
 
     renderizar({ plataformaAutenticada: true, sesionCargando: false, unificado: true });
     await esperarQueTermineDeVerificar();
 
-    expect(consultarSesionInventario).toHaveBeenCalled();
+    expect(consultarSesionInventario).not.toHaveBeenCalled();
     expect(endpoints.ssoJWT).toHaveBeenCalled();
     expect(screen.getByTestId("usuario")).toHaveTextContent("admin");
   });

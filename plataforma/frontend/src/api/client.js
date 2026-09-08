@@ -68,34 +68,55 @@ async function notificar401(url) {
   }
 }
 
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function peticion(url, opciones = {}) {
-  const respuesta = await fetch(url, {
-    ...opciones,
-    credentials: 'same-origin',
-    headers: { ...(opciones.headers || {}) },
-  });
-  if (respuesta.status === 401) {
-    await notificar401(url);
-  }
-  if (!respuesta.ok) {
-    let cuerpo;
-    try {
-      cuerpo = await respuesta.json();
-    } catch {
-      cuerpo = null;
+  const esRbac = url.includes('/rbac/api');
+  const maxIntentos = esRbac ? 3 : 1;
+
+  for (let intento = 0; intento < maxIntentos; intento += 1) {
+    const respuesta = await fetch(url, {
+      ...opciones,
+      credentials: 'same-origin',
+      headers: { ...(opciones.headers || {}) },
+    });
+
+    if (
+      respuesta.status === 401
+      && esRbac
+      && intento < maxIntentos - 1
+    ) {
+      const sesion = await consultarSesionInventario();
+      if (!sesion.autenticado || !sesion.puede_editar) break;
+      await esperar(250 * (intento + 1));
+      continue;
     }
-    const error = new Error(cuerpo?.detail || respuesta.statusText);
-    error.status = respuesta.status;
-    // DRF devuelve errores de validación como {campo: [mensajes]}, sin
-    // 'detail' — se conserva el cuerpo completo para que cada formulario
-    // pueda mostrar el mensaje exacto por campo en vez de un genérico
-    // "Bad Request".
-    error.data = cuerpo;
-    throw error;
+
+    if (respuesta.status === 401) {
+      await notificar401(url);
+    }
+    if (!respuesta.ok) {
+      let cuerpo;
+      try {
+        cuerpo = await respuesta.json();
+      } catch {
+        cuerpo = null;
+      }
+      const error = new Error(cuerpo?.detail || respuesta.statusText);
+      error.status = respuesta.status;
+      error.data = cuerpo;
+      throw error;
+    }
+    if (respuesta.status === 204) return null;
+    const tipo = respuesta.headers.get('content-type') || '';
+    return tipo.includes('application/json') ? respuesta.json() : respuesta.text();
   }
-  if (respuesta.status === 204) return null;
-  const tipo = respuesta.headers.get('content-type') || '';
-  return tipo.includes('application/json') ? respuesta.json() : respuesta.text();
+
+  const error = new Error('Unauthorized');
+  error.status = 401;
+  throw error;
 }
 
 /** Fábrica de cliente para un backend dado (base + esquema de CSRF). */
