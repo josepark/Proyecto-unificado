@@ -3,22 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
 <title>Acceso bloqueado temporalmente — Soluciones SUIIN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--verde-profundo:#0d2b23;--verde-medio:#164a3b;--acento:#3fa87f;--dorado:#c9a94e;--borde:#d9e2dd;--crit:#b3261e}
+  :root{
+    --base-950:#060a10;--base-900:#0b121c;--base-300:#8b9bad;--base-100:#dbe4ec;
+    --cric-green-400:#4bab7c;--risk-critico:#e0475a;
+    --borde:color-mix(in srgb,#22303f 60%,transparent);--panel:#0b121c;
+    --font-display:"Space Grotesk","Inter",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--verde-profundo);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .box{background:#fff;border-radius:14px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3)}
-  .head{background:var(--verde-profundo);color:#fff;padding:26px 28px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden}
-  .head::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border:2px solid rgba(63,168,127,.25);border-radius:50%;box-shadow:0 0 0 16px rgba(63,168,127,.08)}
-  .ring{width:46px;height:46px;border:3px solid var(--crit);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ring span{font-weight:bold;color:#fff;font-size:16px}
-  .head h1{font-size:16px} .head .s{font-size:11px;color:#a9c7ba;margin-top:2px}
+  body{
+    font-family:var(--font-body);background:var(--base-950);color:var(--base-100);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background-image:
+      radial-gradient(ellipse 900px 500px at 12% -10%, rgba(43,138,95,.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(201,154,53,.10), transparent 55%);
+  }
+  .box{background:var(--panel);border:1px solid var(--borde);border-radius:16px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+  .head{color:var(--base-100);padding:26px 28px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--borde)}
+  .ring{width:46px;height:46px;border:3px solid var(--risk-critico);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ring span{font-family:var(--font-display);font-weight:700;color:var(--risk-critico);font-size:16px}
+  .head h1{font-family:var(--font-display);font-size:16px}
+  .head .s{font-size:11px;color:var(--base-300);margin-top:2px}
   .cuerpo{padding:26px 28px}
-  .cuerpo p{font-size:14px;color:#3a4b44;line-height:1.6;margin-bottom:12px}
-  .aviso{background:#fbeae9;color:#8a1c17;border:1px solid #e7b3af;border-radius:7px;padding:11px 14px;font-size:13.5px}
-  .foot{text-align:center;font-size:11px;color:#7c8a83;padding:0 28px 22px}
-  a{color:var(--acento);text-decoration:none}
+  .cuerpo p{font-size:14px;color:var(--base-300);line-height:1.6;margin-bottom:12px}
+  .aviso{background:color-mix(in srgb,var(--risk-critico) 12%,var(--base-900));color:var(--risk-critico);border:1px solid color-mix(in srgb,var(--risk-critico) 35%,transparent);border-radius:8px;padding:11px 14px;font-size:13.5px}
+  .foot{text-align:center;font-size:11px;color:var(--base-300);padding:0 28px 22px}
+  a{color:var(--cric-green-400);text-decoration:none}
 </style>
 </head>
 <body>
