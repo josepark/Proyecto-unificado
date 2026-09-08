@@ -16,7 +16,7 @@ const CATEGORIAS = [
 ];
 
 export default function Catalogos() {
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [categoriaActiva, setCategoriaActiva] = useState(CATEGORIAS[0].value);
 
   return (
@@ -46,6 +46,7 @@ export default function Catalogos() {
       <PanelCategoria
         categoria={CATEGORIAS.find((c) => c.value === categoriaActiva)}
         guard={guard}
+        puedeEditar={puedeEditar}
       />
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
@@ -53,7 +54,7 @@ export default function Catalogos() {
   );
 }
 
-function PanelCategoria({ categoria, guard }) {
+function PanelCategoria({ categoria, guard, puedeEditar }) {
   const { data, loading, error, reload } = useApiData(
     () => endpoints.catalogoTodos(categoria.value), [categoria.value]
   );
@@ -92,21 +93,23 @@ function PanelCategoria({ categoria, guard }) {
         Usado en: <span className="text-base-100">{categoria.usadoEn}</span> · {activos.length} valor(es) activo(s)
       </p>
 
-      <form onSubmit={guard(agregar)} className="mb-5 flex gap-2">
-        <input
-          value={nuevoValor}
-          onChange={(e) => setNuevoValor(e.target.value)}
-          placeholder="Agregar un valor nuevo…"
-          className="flex-1 rounded-lg border border-base-700/60 bg-base-850/60 px-3 py-2 text-sm text-base-100 outline-none focus:border-cric-green-500"
-        />
-        <button
-          type="submit"
-          disabled={guardando || !nuevoValor.trim()}
-          className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3 py-2 text-[12px] font-medium text-white hover:bg-cric-green-500 disabled:opacity-50"
-        >
-          <Plus className="h-3.5 w-3.5" /> Agregar
-        </button>
-      </form>
+      {puedeEditar && (
+        <form onSubmit={guard(agregar)} className="mb-5 flex gap-2">
+          <input
+            value={nuevoValor}
+            onChange={(e) => setNuevoValor(e.target.value)}
+            placeholder="Agregar un valor nuevo…"
+            className="flex-1 rounded-lg border border-base-700/60 bg-base-850/60 px-3 py-2 text-sm text-base-100 outline-none focus:border-cric-green-500"
+          />
+          <button
+            type="submit"
+            disabled={guardando || !nuevoValor.trim()}
+            className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3 py-2 text-[12px] font-medium text-white hover:bg-cric-green-500 disabled:opacity-50"
+          >
+            <Plus className="h-3.5 w-3.5" /> Agregar
+          </button>
+        </form>
+      )}
 
       {activos.length === 0 && (
         <p className="py-4 text-center text-[12px] text-base-300/70">Sin valores activos todavía.</p>
@@ -116,13 +119,15 @@ function PanelCategoria({ categoria, guard }) {
         {activos.map((v) => (
           <li key={v.id} className="flex items-center justify-between rounded-lg bg-base-850/60 px-3 py-2">
             <span className="text-[13px] text-base-100">{v.valor}</span>
-            <button
-              onClick={guard(() => alternarActivo(v))}
-              title="Desactivar (deja de sugerirse, no borra lo ya usado)"
-              className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-[#e0475a]"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            {puedeEditar && (
+              <button
+                onClick={guard(() => alternarActivo(v))}
+                title="Desactivar (deja de sugerirse, no borra lo ya usado)"
+                className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-[#e0475a]"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -136,13 +141,15 @@ function PanelCategoria({ categoria, guard }) {
             {desactivados.map((v) => (
               <li key={v.id} className="flex items-center justify-between rounded-lg bg-base-850/30 px-3 py-2 opacity-70">
                 <span className="text-[13px] text-base-300 line-through">{v.valor}</span>
-                <button
-                  onClick={guard(() => alternarActivo(v))}
-                  title="Reactivar"
-                  className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-cric-green-400"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </button>
+                {puedeEditar && (
+                  <button
+                    onClick={guard(() => alternarActivo(v))}
+                    title="Reactivar"
+                    className="rounded p-1 text-base-300 hover:bg-base-800 hover:text-cric-green-400"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </li>
             ))}
           </ul>

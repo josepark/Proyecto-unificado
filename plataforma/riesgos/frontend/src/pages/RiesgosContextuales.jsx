@@ -14,11 +14,18 @@ import EvidenciaUploader from "../components/EvidenciaUploader";
 import GenerarAccionModal from "../components/GenerarAccionModal";
 import HistorialPanel from "../components/HistorialPanel";
 import EnlacesAccionesPtr from "../components/EnlacesAccionesPtr";
+import Paginador from "../components/Paginador";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
+
+const PAGE_SIZE = 50;
 
 export default function RiesgosContextuales() {
   const highlightId = new URLSearchParams(window.location.search).get("highlight");
-  const { data, loading, error, reload } = useApiData(() => endpoints.riesgosContextuales({ ordering: "-score", page_size: 100 }));
+  const [page, setPage] = useState(1);
+  const { data, loading, error, reload } = useApiData(
+    () => endpoints.riesgosContextuales({ ordering: "-score", page: page, page_size: PAGE_SIZE }),
+    [page]
+  );
   const { data: activosData } = useApiData(() => endpoints.activos({ page_size: 200, ordering: "id_activo" }));
   const riesgos = data?.results ?? data ?? [];
   const activosOptions = (activosData?.results ?? activosData ?? []).map((a) => ({ value: a.id, label: `${a.id_activo} — ${a.nombre}` }));
@@ -26,7 +33,7 @@ export default function RiesgosContextuales() {
   const controlesOptions = (controlesData?.results ?? controlesData ?? [])
     .map((c) => ({ value: c.id, label: `${c.codigo} — ${c.nombre}` }));
 
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null);
   const [borrando, setBorrando] = useState(null);
@@ -66,14 +73,14 @@ export default function RiesgosContextuales() {
         eyebrow="Contexto organizacional · ISO 27001 cláusula 4.1/4.2"
         title="Riesgos contextuales"
         description="Escenarios de amenaza no detectables por escáneres técnicos: derivan del perfil de CRIC como organización indígena en zonas de operación con alta exposición. Escala propia 1–5, independiente del CVSS."
-        actions={
+        actions={puedeEditar && (
           <button
             onClick={guard(() => { setEditando(null); setFormOpen(true); })}
             className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3.5 py-2 text-[13px] font-medium text-base-100 transition-colors hover:bg-cric-green-500"
           >
             <Plus className="h-4 w-4" /> Nuevo riesgo
           </button>
-        }
+        )}
       />
 
       {loading ? (
@@ -89,6 +96,7 @@ export default function RiesgosContextuales() {
               key={r.id}
               riesgo={r}
               resaltado={highlightId && String(r.id) === highlightId}
+              puedeEditar={puedeEditar}
               onEditar={guard(() => { setEditando(r); setFormOpen(true); })}
               onEliminar={guard(() => setBorrando(r))}
               onGenerarAccion={guard(() => setOrigenAccion({ tipo: "riesgo_contextual", objeto: r }))}
@@ -96,6 +104,8 @@ export default function RiesgosContextuales() {
           ))}
         </div>
       )}
+
+      <Paginador data={data} page={page} onPageChange={setPage} pageSize={PAGE_SIZE} />
 
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editando ? `Editar ${editando.id_riesgo_contextual}` : "Nuevo riesgo contextual"} width="max-w-3xl">
         <EntityForm
@@ -122,7 +132,7 @@ export default function RiesgosContextuales() {
   );
 }
 
-function RiesgoContextualCard({ riesgo, resaltado, onEditar, onEliminar, onGenerarAccion }) {
+function RiesgoContextualCard({ riesgo, resaltado, puedeEditar, onEditar, onEliminar, onGenerarAccion }) {
   const [abierto, setAbierto] = useState(!!resaltado);
 
   return (
@@ -157,15 +167,19 @@ function RiesgoContextualCard({ riesgo, resaltado, onEditar, onEliminar, onGener
             P{riesgo.probabilidad}×I{riesgo.impacto}={riesgo.score}
           </span>
           <NivelBadge nivel={riesgo.nivel_riesgo} size="sm" />
-          <button onClick={onGenerarAccion} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
-            <ClipboardPlus className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={onEditar} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={onEliminar} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          {puedeEditar && (
+            <>
+              <button onClick={onGenerarAccion} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
+                <ClipboardPlus className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={onEditar} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={onEliminar} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
           <button onClick={() => setAbierto((v) => !v)}>
             <ChevronDown className={`h-4 w-4 text-base-300 transition-transform ${abierto ? "rotate-180" : ""}`} />
           </button>

@@ -37,7 +37,7 @@ function compararCodigos(a, b) {
 }
 
 export default function Cumplimiento() {
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const { data: resumen, loading: loadingResumen, error, reload: reloadResumen } = useApiData(() => endpoints.cumplimientoResumen());
   const { data: controlesData, reload: reloadControles } = useApiData(() => endpoints.controlesIso({ page_size: 100 }));
   const controles = [...(controlesData?.results ?? controlesData ?? [])].sort(compararCodigos);
@@ -115,7 +115,7 @@ export default function Cumplimiento() {
           </thead>
           <tbody className="divide-y divide-base-700/40">
             {controlesFiltrados.map((c) => (
-              <ControlRow key={c.id} control={c} guard={guard} onGuardar={actualizarControl} />
+              <ControlRow key={c.id} control={c} guard={guard} puedeEditar={puedeEditar} onGuardar={actualizarControl} />
             ))}
           </tbody>
         </table>
@@ -126,7 +126,7 @@ export default function Cumplimiento() {
   );
 }
 
-function ControlRow({ control, guard, onGuardar }) {
+function ControlRow({ control, guard, puedeEditar, onGuardar }) {
   const [abierto, setAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const evidencias = control.acciones_count + control.riesgos_contextuales_count;
@@ -151,7 +151,7 @@ function ControlRow({ control, guard, onGuardar }) {
           <input
             type="checkbox"
             checked={control.aplicable}
-            disabled={guardando}
+            disabled={guardando || !puedeEditar}
             onChange={guard((e) => cambiar("aplicable", e.target.checked))}
             className="h-4 w-4 rounded border-base-600 bg-base-850 accent-cric-green-500"
           />
@@ -159,7 +159,7 @@ function ControlRow({ control, guard, onGuardar }) {
         <td className="px-3 py-2.5">
           <select
             value={control.estado_implementacion}
-            disabled={guardando}
+            disabled={guardando || !puedeEditar}
             onChange={guard((e) => cambiar("estado_implementacion", e.target.value))}
             className={`rounded-md border border-base-700/60 bg-base-850/60 px-2 py-1 text-[12px] outline-none ${ESTADO_IMPL_COLOR[control.estado_implementacion]}`}
           >

@@ -51,7 +51,7 @@ function EnlaceNav({ segment, label, icon: Icon, end }) {
 }
 
 export default function Layout() {
-  const { user, isAuthenticated, logout, checking, plataformaAutenticada } = useAuth();
+  const { user, isAuthenticated, logout, checking, plataformaAutenticada, puedeEditar } = useAuth();
   const { anidado } = usePlataforma();
   const [loginOpen, setLoginOpen] = useState(false);
   const EMBEBIDO = esModoEmbebido(anidado);
@@ -76,6 +76,9 @@ export default function Layout() {
           <div className="border-b border-base-700/60 px-4 py-3">
             <p className="font-display text-[12px] font-semibold text-base-100">Gestión de Riesgos</p>
             <p className="text-[10px] text-base-300">Plan de Tratamiento (PTR)</p>
+            {isAuthenticated && !puedeEditar && (
+              <p className="mt-1 text-[10px] font-medium text-cric-gold-400">Modo consulta (solo lectura)</p>
+            )}
           </div>
         )}
         {!EMBEBIDO && (
@@ -86,6 +89,9 @@ export default function Layout() {
             <div className="leading-tight">
               <p className="font-display text-[13px] font-semibold text-base-100">SUIIN-SGSI</p>
               <p className="text-[11px] text-base-300">Gestión de Riesgos</p>
+              {isAuthenticated && !puedeEditar && (
+                <p className="text-[10px] font-medium text-cric-gold-400">Modo consulta</p>
+              )}
             </div>
           </div>
         )}

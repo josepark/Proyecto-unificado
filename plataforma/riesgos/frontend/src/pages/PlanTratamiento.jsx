@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarClock, Wrench, Target, Plus, Pencil, Trash2, AlertTriangle, FileDown, Archive } from "lucide-react";
+import { CalendarClock, Wrench, Target, Plus, Pencil, Trash2, AlertTriangle, FileDown, Archive, RotateCcw } from "lucide-react";
 import endpoints from "../api/endpoints";
 import { useApiData } from "../lib/useApiData";
 import { useAuthGuard } from "../lib/useAuthGuard";
@@ -184,6 +184,14 @@ export default function PlanTratamiento() {
                     className="flex items-center gap-1.5 rounded-lg border border-base-700/60 px-3 py-2 text-[12px] text-base-300 hover:text-cric-gold-400"
                   >
                     <Archive className="h-3.5 w-3.5" /> Archivar
+                  </button>
+                )}
+                {plan?.estado_plan !== "ACTIVO" && (
+                  <button
+                    onClick={guard(() => archivarPlan("ACTIVO"))}
+                    className="flex items-center gap-1.5 rounded-lg border border-cric-green-500/40 px-3 py-2 text-[12px] text-cric-green-400 hover:bg-cric-green-600/10"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Reactivar plan
                   </button>
                 )}
                 <NuevoPTRButton guard={guard} onClick={() => setNuevoPlanOpen(true)} />

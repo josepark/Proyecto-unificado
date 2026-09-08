@@ -15,13 +15,14 @@ import EntityForm from "../components/EntityForm";
 import ConfirmDialog from "../components/ConfirmDialog";
 import GenerarAccionModal from "../components/GenerarAccionModal";
 import HistorialPanel from "../components/HistorialPanel";
+import EnlacesAccionesPtr from "../components/EnlacesAccionesPtr";
 import EvidenciaUploader from "../components/EvidenciaUploader";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
 
 export default function ActivoDetalle() {
   const { id } = useParams();
   const rutaActivos = useRiesgosTo("activos");
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [origenAccion, setOrigenAccion] = useState(null);
 
   const { data: activo, loading, error, reload: reloadActivo } = useApiData(() => endpoints.activo(id), [id]);
@@ -82,6 +83,7 @@ export default function ActivoDetalle() {
         riesgos={riesgosData?.results ?? riesgosData ?? []}
         onChanged={() => { reloadRiesgos(); reloadActivo(); }}
         guard={guard}
+        puedeEditar={puedeEditar}
         onGenerarAccion={(r) => setOrigenAccion({ tipo: "riesgo_activo", objeto: r })}
       />
 
@@ -91,6 +93,7 @@ export default function ActivoDetalle() {
         vulnerabilidades={vulnsData?.results ?? vulnsData ?? []}
         onChanged={() => { reloadVulns(); reloadActivo(); }}
         guard={guard}
+        puedeEditar={puedeEditar}
         onGenerarAccion={(v) => setOrigenAccion({ tipo: "vulnerabilidad", objeto: v })}
       />
 
@@ -138,7 +141,7 @@ export default function ActivoDetalle() {
   );
 }
 
-function SeccionRiesgosAgregados({ activoId, activoOptions, riesgos, onChanged, guard, onGenerarAccion }) {
+function SeccionRiesgosAgregados({ activoId, activoOptions, riesgos, onChanged, guard, puedeEditar, onGenerarAccion }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null);
   const [borrando, setBorrando] = useState(null);
@@ -169,12 +172,14 @@ function SeccionRiesgosAgregados({ activoId, activoOptions, riesgos, onChanged, 
         <h3 className="flex items-center gap-2 font-display text-sm font-semibold text-base-100">
           <Gauge className="h-4 w-4 text-cric-gold-400" /> Riesgo agregado del activo
         </h3>
-        <button
-          onClick={guard(() => { setEditando(null); setFormOpen(true); })}
-          className="flex items-center gap-1 text-[12px] font-medium text-cric-green-400 hover:underline"
-        >
-          <Plus className="h-3.5 w-3.5" /> Nuevo riesgo
-        </button>
+        {puedeEditar && (
+          <button
+            onClick={guard(() => { setEditando(null); setFormOpen(true); })}
+            className="flex items-center gap-1 text-[12px] font-medium text-cric-green-400 hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" /> Nuevo riesgo
+          </button>
+        )}
       </div>
 
       {riesgos.length === 0 ? (
@@ -191,15 +196,19 @@ function SeccionRiesgosAgregados({ activoId, activoOptions, riesgos, onChanged, 
               </div>
               <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                 <EvidenciaBoton modelo="riesgoactivo" objectId={r.id} etiqueta={r.id_riesgo} />
-                <button onClick={guard(() => onGenerarAccion(r))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
-                  <ClipboardPlus className="h-3.5 w-3.5" />
-                </button>
-                <button onClick={guard(() => { setEditando(r); setFormOpen(true); })} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button onClick={guard(() => setBorrando(r))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {puedeEditar && (
+                  <>
+                    <button onClick={guard(() => onGenerarAccion(r))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
+                      <ClipboardPlus className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={guard(() => { setEditando(r); setFormOpen(true); })} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={guard(() => setBorrando(r))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -214,6 +223,12 @@ function SeccionRiesgosAgregados({ activoId, activoOptions, riesgos, onChanged, 
           onCancel={() => setFormOpen(false)}
           submitLabel={editando ? "Guardar cambios" : "Crear riesgo"}
         />
+        {editando && (
+          <div className="mt-4 space-y-3 border-t border-base-700/60 pt-4">
+            <EnlacesAccionesPtr acciones={editando.acciones_ptr} />
+            <HistorialPanel recurso="riesgos-activo" id={editando.id} collapsedByDefault={false} />
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog open={!!borrando} onClose={() => setBorrando(null)} onConfirm={confirmarEliminar} loading={eliminando}
@@ -222,7 +237,7 @@ function SeccionRiesgosAgregados({ activoId, activoOptions, riesgos, onChanged, 
   );
 }
 
-function SeccionVulnerabilidades({ activoId, activoOptions, vulnerabilidades, onChanged, guard, onGenerarAccion }) {
+function SeccionVulnerabilidades({ activoId, activoOptions, vulnerabilidades, onChanged, guard, puedeEditar, onGenerarAccion }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null);
   const [borrando, setBorrando] = useState(null);
@@ -259,12 +274,14 @@ function SeccionVulnerabilidades({ activoId, activoOptions, vulnerabilidades, on
         <h3 className="flex items-center gap-2 font-display text-sm font-semibold text-base-100">
           <Bug className="h-4 w-4 text-[#e0475a]" /> Vulnerabilidades ({vulnerabilidades.length})
         </h3>
-        <button
-          onClick={guard(() => { setEditando(null); setFormOpen(true); })}
-          className="flex items-center gap-1 text-[12px] font-medium text-cric-green-400 hover:underline"
-        >
-          <Plus className="h-3.5 w-3.5" /> Nueva vulnerabilidad
-        </button>
+        {puedeEditar && (
+          <button
+            onClick={guard(() => { setEditando(null); setFormOpen(true); })}
+            className="flex items-center gap-1 text-[12px] font-medium text-cric-green-400 hover:underline"
+          >
+            <Plus className="h-3.5 w-3.5" /> Nueva vulnerabilidad
+          </button>
+        )}
       </div>
 
       {vulnerabilidades.length === 0 ? (
@@ -293,15 +310,19 @@ function SeccionVulnerabilidades({ activoId, activoOptions, vulnerabilidades, on
                   <td className="py-2.5">
                     <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <EvidenciaBoton modelo="vulnerabilidad" objectId={v.id} etiqueta={v.nombre_vulnerabilidad} />
-                      <button onClick={guard(() => onGenerarAccion(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
-                        <ClipboardPlus className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={guard(() => { setEditando(v); setFormOpen(true); })} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={guard(() => setBorrando(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {puedeEditar && (
+                        <>
+                          <button onClick={guard(() => onGenerarAccion(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
+                            <ClipboardPlus className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={guard(() => { setEditando(v); setFormOpen(true); })} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={guard(() => setBorrando(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -319,6 +340,12 @@ function SeccionVulnerabilidades({ activoId, activoOptions, vulnerabilidades, on
           onCancel={() => setFormOpen(false)}
           submitLabel={editando ? "Guardar cambios" : "Crear vulnerabilidad"}
         />
+        {editando && (
+          <div className="mt-4 space-y-3 border-t border-base-700/60 pt-4">
+            <EnlacesAccionesPtr acciones={editando.acciones_ptr} />
+            <HistorialPanel recurso="vulnerabilidades" id={editando.id} collapsedByDefault={false} />
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog open={!!borrando} onClose={() => setBorrando(null)} onConfirm={confirmarEliminar} loading={eliminando}

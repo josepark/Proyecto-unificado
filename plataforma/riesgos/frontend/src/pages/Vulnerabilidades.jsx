@@ -33,7 +33,7 @@ export default function Vulnerabilidades() {
   const [severidad, setSeveridad] = useState("");
   const [estado, setEstado] = useState("");
 
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null);
   const [borrando, setBorrando] = useState(null);
@@ -132,14 +132,14 @@ export default function Vulnerabilidades() {
         eyebrow="Hallazgos técnicos"
         title="Vulnerabilidades"
         description={`${vulnerabilidades.length} hallazgo(s)${totalCriticas ? ` · ${totalCriticas} crítico(s)` : ""} — de los 38 activos, sin tener que entrar uno por uno.`}
-        actions={
+        actions={puedeEditar && (
           <button
             onClick={guard(abrirCreacion)}
             className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3.5 py-2 text-[13px] font-medium text-base-100 transition-colors hover:bg-cric-green-500"
           >
             <Plus className="h-4 w-4" /> Nueva vulnerabilidad
           </button>
-        }
+        )}
       />
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -172,7 +172,7 @@ export default function Vulnerabilidades() {
         </select>
       </div>
 
-      {seleccionados.size > 0 && (
+      {seleccionados.size > 0 && puedeEditar && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-cric-green-500/40 bg-cric-green-900/20 px-4 py-2.5">
           <span className="text-[13px] font-medium text-cric-green-400">
             {seleccionados.size} seleccionada{seleccionados.size > 1 ? "s" : ""}
@@ -264,18 +264,20 @@ export default function Vulnerabilidades() {
                     <td className="px-3 py-2.5"><NivelBadge nivel={v.nivel_riesgo} size="sm" /></td>
                     <td className="px-3 py-2.5 text-base-300">{v.estado_display}</td>
                     <td className="px-5 py-2.5">
-                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button onClick={guard(() => setOrigenAccion({ tipo: "vulnerabilidad", objeto: v }))}
-                          className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
-                          <ClipboardPlus className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={guard(() => abrirEdicion(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400" title="Editar">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={guard(() => setBorrando(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]" title="Eliminar">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                      {puedeEditar && (
+                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button onClick={guard(() => setOrigenAccion({ tipo: "vulnerabilidad", objeto: v }))}
+                            className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-gold-400" title="Generar acción de tratamiento">
+                            <ClipboardPlus className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={guard(() => abrirEdicion(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400" title="Editar">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={guard(() => setBorrando(v))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]" title="Eliminar">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -10,7 +10,7 @@ import { useAuth } from "../context/AuthContext";
  *   <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
  */
 export function useAuthGuard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, puedeEditar } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
 
   function guard(action) {
@@ -19,9 +19,10 @@ export function useAuthGuard() {
         setLoginOpen(true);
         return;
       }
+      if (!puedeEditar) return;
       return action(...args);
     };
   }
 
-  return { guard, loginOpen, setLoginOpen, isAuthenticated };
+  return { guard, loginOpen, setLoginOpen, isAuthenticated, puedeEditar };
 }

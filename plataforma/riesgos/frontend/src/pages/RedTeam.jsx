@@ -14,7 +14,7 @@ export default function RedTeam() {
   const { data, loading, error, reload } = useApiData(() => endpoints.campanasRedTeam());
   const campanas = data?.results ?? data ?? [];
 
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null);
 
@@ -31,14 +31,14 @@ export default function RedTeam() {
         eyebrow="MITRE CALDERA · OpenVAS · OWASP ZAP · Nuclei · NMAP"
         title="Campañas Red Team"
         description="Detalle técnico de cada engagement: compromiso confirmado, agentes implantados, servidores C2 y datos exfiltrados."
-        actions={
+        actions={puedeEditar && (
           <button
             onClick={guard(() => { setEditando(null); setFormOpen(true); })}
             className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3.5 py-2 text-[13px] font-medium text-base-100 transition-colors hover:bg-cric-green-500"
           >
             <Plus className="h-4 w-4" /> Nueva campaña
           </button>
-        }
+        )}
       />
 
       {loading ? (
@@ -50,7 +50,7 @@ export default function RedTeam() {
       ) : (
         <div className="space-y-5">
           {campanas.map((c) => (
-            <CampanaCard key={c.id} campana={c} onEditar={guard(() => { setEditando(c); setFormOpen(true); })} />
+            <CampanaCard key={c.id} campana={c} puedeEditar={puedeEditar} onEditar={guard(() => { setEditando(c); setFormOpen(true); })} />
           ))}
         </div>
       )}
@@ -70,7 +70,7 @@ export default function RedTeam() {
   );
 }
 
-function CampanaCard({ campana, onEditar }) {
+function CampanaCard({ campana, puedeEditar, onEditar }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[#e0475a]/25 bg-base-900/60">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-700/60 bg-base-850/60 px-5 py-4">
@@ -91,9 +91,11 @@ function CampanaCard({ campana, onEditar }) {
             <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-[#e0475a]" />
             {campana.estado_compromiso_display}
           </span>
-          <button onClick={onEditar} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400" title="Editar">
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+          {puedeEditar && (
+            <button onClick={onEditar} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400" title="Editar">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

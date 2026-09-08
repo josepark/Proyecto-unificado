@@ -30,7 +30,7 @@ export default function RiesgosActivo() {
   const [busqueda, setBusqueda] = useState("");
   const [nivel, setNivel] = useState("");
   const [page, setPage] = useState(1);
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null);
   const [borrando, setBorrando] = useState(null);
@@ -79,14 +79,14 @@ export default function RiesgosActivo() {
         eyebrow="Riesgos agregados por activo"
         title="Riesgos por activo"
         description="Vista global de la matriz de riesgos técnicos (RA-XX) — complementa el detalle por activo."
-        actions={
+        actions={puedeEditar && (
           <button
             onClick={guard(() => { setEditando(null); setFormOpen(true); })}
             className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3.5 py-2 text-[13px] font-medium text-base-100 hover:bg-cric-green-500"
           >
             <Plus className="h-4 w-4" /> Nuevo riesgo
           </button>
-        }
+        )}
       />
 
       <div className="mb-5 flex flex-wrap gap-3">
@@ -149,21 +149,28 @@ export default function RiesgosActivo() {
                       <td className="px-3 py-2.5"><NivelBadge nivel={r.nivel_riesgo} size="sm" /></td>
                       <td className="px-3 py-2.5 text-base-300">{r.estado_display}</td>
                       <td className="px-5 py-2.5">
-                        <div className="flex justify-end gap-1">
-                          <button onClick={() => setExpandido(expandido === r.id ? null : r.id)} className="rounded p-1.5 text-base-300 hover:bg-base-800" title="Detalle">
-                            {(r.esta_vencido || r.por_vencer) && <AlertTriangle className="inline h-3 w-3 text-[#e0475a] mr-1" />}
+                        {puedeEditar && (
+                          <div className="flex justify-end gap-1">
+                            <button onClick={() => setExpandido(expandido === r.id ? null : r.id)} className="rounded p-1.5 text-base-300 hover:bg-base-800" title="Detalle">
+                              {(r.esta_vencido || r.por_vencer) && <AlertTriangle className="inline h-3 w-3 text-[#e0475a] mr-1" />}
+                              Detalle
+                            </button>
+                            <button onClick={guard(() => setOrigenAccion({ tipo: "riesgo_activo", objeto: r }))} className="rounded p-1.5 text-base-300 hover:text-cric-gold-400">
+                              <ClipboardPlus className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={guard(() => { setEditando(r); setFormOpen(true); })} className="rounded p-1.5 text-base-300 hover:text-cric-green-400">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={guard(() => setBorrando(r))} className="rounded p-1.5 text-base-300 hover:text-[#e0475a]">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        {!puedeEditar && (
+                          <button onClick={() => setExpandido(expandido === r.id ? null : r.id)} className="rounded p-1.5 text-base-300 hover:bg-base-800 text-[12px]">
                             Detalle
                           </button>
-                          <button onClick={guard(() => setOrigenAccion({ tipo: "riesgo_activo", objeto: r }))} className="rounded p-1.5 text-base-300 hover:text-cric-gold-400">
-                            <ClipboardPlus className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={guard(() => { setEditando(r); setFormOpen(true); })} className="rounded p-1.5 text-base-300 hover:text-cric-green-400">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={guard(() => setBorrando(r))} className="rounded p-1.5 text-base-300 hover:text-[#e0475a]">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                        )}
                       </td>
                     </tr>
                     {expandido === r.id && (

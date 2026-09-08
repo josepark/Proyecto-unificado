@@ -23,7 +23,7 @@ vi.mock("../api/endpoints", () => ({
 // deja pasar todo, como si hubiera sesión.
 const guardMock = vi.fn((accion) => accion);
 vi.mock("../lib/useAuthGuard", () => ({
-  useAuthGuard: () => ({ guard: guardMock, loginOpen: false, setLoginOpen: vi.fn() }),
+  useAuthGuard: () => ({ guard: guardMock, loginOpen: false, setLoginOpen: vi.fn(), puedeEditar: true, isAuthenticated: true }),
 }));
 
 // EntityForm y GenerarAccionModal ya tienen sus propios archivos de pruebas

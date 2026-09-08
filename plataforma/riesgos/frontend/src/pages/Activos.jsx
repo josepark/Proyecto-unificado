@@ -11,10 +11,12 @@ import Modal from "../components/Modal";
 import LoginModal from "../components/LoginModal";
 import EntityForm from "../components/EntityForm";
 import ConfirmDialog from "../components/ConfirmDialog";
+import Paginador from "../components/Paginador";
 import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates";
 import { usePlataforma, rutaRiesgos } from "../context/PlataformaContext";
 
 const NIVELES = ["CRITICO", "ALTO", "MEDIO", "BAJO"];
+const PAGE_SIZE = 50;
 
 export default function Activos() {
   const plataforma = usePlataforma();
@@ -24,7 +26,8 @@ export default function Activos() {
   const [soloSinCobertura, setSoloSinCobertura] = useState(false);
   const [soloRedTeam, setSoloRedTeam] = useState(false);
 
-  const { guard, loginOpen, setLoginOpen } = useAuthGuard();
+  const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
+  const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null); // null = creando
   const [borrando, setBorrando] = useState(null);
@@ -36,12 +39,13 @@ export default function Activos() {
     cobertura: soloSinCobertura ? "SIN_COBERTURA" : undefined,
     afectado_red_team: soloRedTeam ? true : undefined,
     ordering: "-valor",
-    page_size: 200,
+    page,
+    page_size: PAGE_SIZE,
   };
 
   const { data, loading, error, reload } = useApiData(
     () => endpoints.activos(params),
-    [busqueda, nivel, soloSinCobertura, soloRedTeam]
+    [busqueda, nivel, soloSinCobertura, soloRedTeam, page]
   );
   const { data: campanasData } = useApiData(() => endpoints.campanasRedTeam());
 
@@ -88,14 +92,14 @@ export default function Activos() {
         eyebrow="Inventario técnico"
         title="Activos"
         description="Correlación Matriz de Activos × OpenVAS × Nmap × Red Team."
-        actions={
+        actions={puedeEditar && (
           <button
             onClick={guard(abrirCreacion)}
             className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3.5 py-2 text-[13px] font-medium text-base-100 transition-colors hover:bg-cric-green-500"
           >
             <Plus className="h-4 w-4" /> Nuevo activo
           </button>
-        }
+        )}
       />
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -103,7 +107,7 @@ export default function Activos() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-300" />
           <input
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => { setBusqueda(e.target.value); setPage(1); }}
             placeholder="Buscar por ID, nombre o IP…"
             className="w-full rounded-lg border border-base-700/60 bg-base-900/60 py-2 pl-9 pr-3 text-sm text-base-100 placeholder:text-base-300/60 outline-none focus:border-cric-green-500"
           />
@@ -111,7 +115,7 @@ export default function Activos() {
 
         <select
           value={nivel}
-          onChange={(e) => setNivel(e.target.value)}
+          onChange={(e) => { setNivel(e.target.value); setPage(1); }}
           className="rounded-lg border border-base-700/60 bg-base-900/60 px-3 py-2 text-sm text-base-100 outline-none focus:border-cric-green-500"
         >
           <option value="">Todos los niveles</option>
@@ -120,8 +124,8 @@ export default function Activos() {
           ))}
         </select>
 
-        <ToggleChip active={soloSinCobertura} onClick={() => setSoloSinCobertura((v) => !v)} icon={ShieldOff} label="Sin cobertura" />
-        <ToggleChip active={soloRedTeam} onClick={() => setSoloRedTeam((v) => !v)} icon={RadarIcon} label="Comprometidos (Red Team)" />
+        <ToggleChip active={soloSinCobertura} onClick={() => { setSoloSinCobertura((v) => !v); setPage(1); }} icon={ShieldOff} label="Sin cobertura" />
+        <ToggleChip active={soloRedTeam} onClick={() => { setSoloRedTeam((v) => !v); setPage(1); }} icon={RadarIcon} label="Comprometidos (Red Team)" />
       </div>
 
       <div className="rounded-2xl border border-base-700/60 bg-base-900/60">
@@ -176,14 +180,16 @@ export default function Activos() {
                     </td>
                     <td className="px-3 py-2.5"><NivelBadge nivel={a.riesgo_matriz} size="sm" /></td>
                     <td className="px-5 py-2.5">
-                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button onClick={guard(() => abrirEdicion(a))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400" title="Editar">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={guard(() => setBorrando(a))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]" title="Eliminar">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                      {puedeEditar && (
+                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button onClick={guard(() => abrirEdicion(a))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-cric-green-400" title="Editar">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={guard(() => setBorrando(a))} className="rounded p-1.5 text-base-300 hover:bg-base-800 hover:text-[#e0475a]" title="Eliminar">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -192,6 +198,8 @@ export default function Activos() {
           </div>
         )}
       </div>
+
+      <Paginador data={data} page={page} onPageChange={setPage} pageSize={PAGE_SIZE} />
 
       <Modal
         open={formOpen}
