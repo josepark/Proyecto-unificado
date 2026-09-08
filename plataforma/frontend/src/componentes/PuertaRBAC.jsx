@@ -12,10 +12,18 @@ export default function PuertaRBAC() {
           La <b>Matriz de Control de Acceso (SUIIN-SGSI-MCA-001)</b> requiere una sesión con rol{' '}
           <b>Dinamizador</b> o <b>Administrador</b>.
         </p>
-        {!autenticado && (
-          <Link className="btn btn-primary" to="/login?next=/rbac/inicio">
+        {!autenticado ? (
+          <Link
+            className="btn btn-primary"
+            to={`/login?next=${encodeURIComponent('/rbac/inicio')}`}
+          >
             Iniciar sesión
           </Link>
+        ) : (
+          <p className="sub">
+            Su sesión no tiene permisos para RBAC.{' '}
+            <a href="/logout/">Cierre sesión</a> e ingrese con una cuenta Dinamizador o Administrador.
+          </p>
         )}
       </div>
     );

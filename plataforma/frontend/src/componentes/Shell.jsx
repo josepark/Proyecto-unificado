@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useSesion } from '../hooks/useSesion';
-import { eventosApi } from '../api/client';
+import { consultarSesionInventario, eventosApi } from '../api/client';
 import { rbacApi } from '../api/rbac';
 
 function moduloDeRuta(pathname) {
@@ -13,7 +13,7 @@ function moduloDeRuta(pathname) {
 
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
-  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, recargar } = useSesion();
+  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando } = useSesion();
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const ubicacion = useLocation();
@@ -28,28 +28,32 @@ export default function Shell() {
     return () => eventosApi.removeEventListener('sesion-vencida', alVencer);
   }, []);
 
-  // Al cambiar de módulo se oculta el aviso de sesión vencida. Solo al entrar
-  // a RBAC se revalida la sesión en silencio (con reintento en useSesion) para
-  // que el encabezado y nginx auth_request vean la misma cookie de sesión.
+  // Al cambiar de módulo solo se oculta el aviso de sesión vencida — NO se
+  // vuelve a llamar GET /api/sesion/ aquí (provocaba falsos cierres al ir a RBAC).
   useEffect(() => {
     setSesionVencida(false);
-    if (moduloActivo === 'rbac') recargar({ silencioso: true });
-  }, [moduloActivo, recargar]);
+  }, [moduloActivo]);
 
   useEffect(() => {
     if (!puedeEditar || !autenticado || cargando) {
-      if (!puedeEditar) setPendientesRbac(0);
+      setPendientesRbac(0);
       return;
     }
     let vivo = true;
-    rbacApi
-      .resumen()
-      .then((r) => vivo && setPendientesRbac(r.pendientes_total || 0))
+    consultarSesionInventario()
+      .then((s) => {
+        if (!vivo || !s.autenticado || !s.puede_editar) {
+          setPendientesRbac(0);
+          return null;
+        }
+        return rbacApi.resumen();
+      })
+      .then((r) => vivo && r && setPendientesRbac(r.pendientes_total || 0))
       .catch(() => vivo && setPendientesRbac(0));
     return () => {
       vivo = false;
     };
-  }, [puedeEditar, autenticado, cargando, moduloActivo]);
+  }, [puedeEditar, autenticado, cargando]);
 
   return (
     <>

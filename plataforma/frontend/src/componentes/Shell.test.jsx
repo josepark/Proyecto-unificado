@@ -16,8 +16,17 @@ vi.mock('../api/rbac', () => ({
   rbacApi: { resumen: vi.fn() },
 }));
 
+vi.mock('../api/client', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    consultarSesionInventario: vi.fn(),
+  };
+});
+
 import { useSesion } from '../hooks/useSesion';
 import { rbacApi } from '../api/rbac';
+import { consultarSesionInventario } from '../api/client';
 
 function renderShell(initial = '/inventario/dashboard') {
   return render(
@@ -31,6 +40,12 @@ function renderShell(initial = '/inventario/dashboard') {
 
 beforeEach(() => {
   vi.mocked(rbacApi.resumen).mockResolvedValue({ pendientes_total: 3 });
+  vi.mocked(consultarSesionInventario).mockResolvedValue({
+    autenticado: true,
+    puede_editar: true,
+    usuario: 'dinamizador',
+    roles: ['Dinamizador'],
+  });
 });
 
 describe('Shell — pestañas de módulo', () => {
