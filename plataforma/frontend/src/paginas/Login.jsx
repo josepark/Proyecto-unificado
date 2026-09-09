@@ -41,8 +41,14 @@ export default function Login() {
     } catch (err) {
       if (err.status === 429) {
         setError('Acceso bloqueado temporalmente por demasiados intentos fallidos.');
+      } else if (err.status >= 500 || !err.status) {
+        setError(
+          'No se pudo contactar al servidor de autenticación (error '
+          + (err.status || 'de red')
+          + '). Verifique que los contenedores estén en ejecución: docker compose ps',
+        );
       } else {
-        setError('Usuario o contraseña incorrectos.');
+        setError(err.data?.detail || err.message || 'Usuario o contraseña incorrectos.');
       }
     } finally {
       setEnviando(false);

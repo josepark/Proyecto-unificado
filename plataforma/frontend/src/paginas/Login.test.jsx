@@ -24,8 +24,27 @@ describe('Login', () => {
     recargar.mockClear();
   });
 
+  it('muestra error de servidor cuando el backend no responde (502)', async () => {
+    vi.mocked(inventarioApi.login).mockRejectedValue({ status: 502, message: 'Bad Gateway' });
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText(/Usuario/i), { target: { value: 'admin' } });
+    fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: /Ingresar/i }));
+    expect(await screen.findByText(/No se pudo contactar al servidor/i)).toBeInTheDocument();
+  });
+
   it('muestra error cuando las credenciales son inválidas', async () => {
-    vi.mocked(inventarioApi.login).mockRejectedValue({ status: 401, message: 'Unauthorized' });
+    vi.mocked(inventarioApi.login).mockRejectedValue({
+      status: 401,
+      message: 'Unauthorized',
+      data: { detail: 'Usuario o contraseña incorrectos.' },
+    });
     render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
