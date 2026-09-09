@@ -95,6 +95,7 @@ class ControlViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ControlISO.objects.annotate(num_activos=Count("activos"))
     serializer_class = ControlISOSerializer
     search_fields = ["codigo", "descripcion"]
+    pagination_class = CatalogoPagination
 
 
 class ClaseActivoViewSet(viewsets.ModelViewSet):

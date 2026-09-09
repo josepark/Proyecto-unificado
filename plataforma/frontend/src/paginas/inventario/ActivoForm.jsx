@@ -4,6 +4,7 @@ import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, CampoTextarea, Fila } from '../../componentes/CamposFormulario';
+import { CampoCodigosCatalogo } from '../../componentes/CampoCodigosCatalogo';
 import { useInventarioMeta, claseMeta } from '../../hooks/useInventarioMeta';
 
 // Listas de opciones alineadas con ActivoWriteSerializer (DRF) — mismos
@@ -143,6 +144,14 @@ export default function ActivoForm() {
   );
   const { datos: datacenters } = useApi(() => inventarioApi.datacenters(), []);
   const { datos: catalogoRbac } = useApi(() => inventarioApi.catalogoSistemasRbac(), []);
+  const { datos: catalogoAmenazas, cargando: cargandoAmenazas, error: errorAmenazas } = useApi(
+    () => inventarioApi.amenazas().then((r) => r.results || r),
+    [],
+  );
+  const { datos: catalogoControles, cargando: cargandoControles, error: errorControles } = useApi(
+    () => inventarioApi.controles({ page_size: 500 }).then((r) => r.results || r),
+    [],
+  );
   const { meta, clases } = useInventarioMeta();
 
   const [form, setForm] = useState(editando ? null : vacio());
@@ -764,19 +773,26 @@ export default function ActivoForm() {
           <h2>Amenazas, controles y trazabilidad</h2>
           <div className="cuerpo">
             <div style={{ marginBottom: 12 }}>
-              <Campo
+              <CampoCodigosCatalogo
                 label="Amenazas MITRE (códigos separados por coma)"
-                placeholder="T1486, T1190"
+                placeholder="T1486, T1190 — escriba T para ver sugerencias"
                 value={form.amenazas}
-                onChange={(e) => set('amenazas', e.target.value)}
+                onChange={(v) => set('amenazas', v)}
+                items={catalogoAmenazas || []}
+                cargando={cargandoAmenazas}
+                errorCatalogo={errorAmenazas}
+                filtrarItem={(a) => a.tipo === 'TE' || a.tipo === 'ST'}
               />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <Campo
+              <CampoCodigosCatalogo
                 label="Controles ISO / Políticas (códigos separados por coma)"
                 placeholder="8.13, POL-SI-009"
                 value={form.controles}
-                onChange={(e) => set('controles', e.target.value)}
+                onChange={(v) => set('controles', v)}
+                items={catalogoControles || []}
+                cargando={cargandoControles}
+                errorCatalogo={errorControles}
               />
             </div>
             <CampoTextarea

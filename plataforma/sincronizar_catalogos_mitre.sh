@@ -1,6 +1,8 @@
 #!/bin/bash
 # Sincroniza el catálogo MITRE ATT&CK desde el Inventario hacia Riesgos y RBAC.
-# Fuente canónica: AmenazaMITRE en Inventario (/api/interno/catalogo-mitre/).
+#
+# NOTA: preferible usar ./desplegar.sh (incluye import MITRE + sync + verificación).
+# Este script queda para re-sync puntual sin reconstruir toda la plataforma.
 #
 # Uso (desde la raíz de plataforma/, con docker compose arriba):
 #   ./sincronizar_catalogos_mitre.sh

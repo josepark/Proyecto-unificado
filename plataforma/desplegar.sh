@@ -1,25 +1,21 @@
 #!/bin/bash
-# Plataforma SUIIN-SGSI — Despliegue automatizado
+# Plataforma SUIIN-SGSI — Despliegue automatizado (único punto de entrada)
 #
-# Encadena la secuencia completa que se arma a mano en README-DESPLIEGUE.md:
-# generar secretos que falten, detener lo que esté corriendo, reconstruir,
-# esperar a que los servicios con healthcheck queden sanos, y opcionalmente
-# desbloquear una cuenta y/o sincronizar el catálogo de activos.
+# Hace TODO en un solo comando: secretos, rebuild, healthchecks, desbloqueo
+# opcional, sync activos, import MITRE (si falta), propagación MITRE a
+# Riesgos/RBAC y verificación del login.
 #
 # Uso:
-#   ./desplegar.sh                        # despliegue normal (sin purgar imágenes)
-#   ./desplegar.sh --purgar               # además purga imágenes antes de reconstruir
-#                                          #   (recomendado tras actualizar el código —
-#                                          #   garantiza que no quede nada en caché de un
-#                                          #   build anterior; NO borra sus bases de datos,
-#                                          #   son archivos del host, no volúmenes)
-#   ./desplegar.sh --desbloquear admin    # además desbloquea esa cuenta al final
-#   ./desplegar.sh --no-sincronizar          # omite la sincronización de activos al final
-#   ./desplegar.sh --no-sincronizar-mitre    # omite la propagación MITRE Inventario→Riesgos/RBAC
-#   ./desplegar.sh --purgar --desbloquear admin   # todo junto (sync activos va por defecto)
+#   ./desplegar.sh                        # despliegue completo
+#   ./desplegar.sh --purgar               # rebuild limpio (recomendado tras git pull)
+#   ./desplegar.sh --desbloquear admin    # además desbloquea cuenta tras axes
+#   ./desplegar.sh --no-sincronizar       # omite sync de activos
+#   ./desplegar.sh --no-sincronizar-mitre # omite import/sync MITRE
 #
-# Requiere: docker, el plugin "docker compose" (v2.17+, para --wait), y correrse
-# desde la raíz de la plataforma (donde está este script y docker-compose.yml).
+# Catálogo MITRE: coloque enterprise-attack-v19_1.xlsx en inventario/data/
+# (ver inventario/data/README.md). Si falta y el catálogo está vacío, avisa al final.
+#
+# Requiere: docker compose v2.17+ (--wait) desde la raíz de plataforma/.
 
 set -euo pipefail
 
@@ -29,7 +25,7 @@ SINCRONIZAR=true
 SINCRONIZAR_MITRE=true
 
 mostrar_ayuda() {
-    sed -n '2,21p' "$0" | sed 's/^# \?//'
+    sed -n '2,18p' "$0" | sed 's/^# \?//'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -48,92 +44,189 @@ done
 
 paso() { echo ""; echo "=== $1 ==="; }
 
-paso "1/8 · Verificando requisitos"
+cargar_env() {
+    if [ -f .env ]; then
+        set -a
+        # shellcheck disable=SC1091
+        source .env
+        set +a
+    fi
+}
+
+paso "1/10 · Verificando requisitos"
 if ! command -v docker >/dev/null 2>&1; then
     echo "docker no está instalado o no está en el PATH." >&2
     exit 1
 fi
 if ! docker compose version >/dev/null 2>&1; then
-    echo "El plugin 'docker compose' (v2) no está disponible — ¿tiene una versión reciente de Docker?" >&2
+    echo "El plugin 'docker compose' (v2) no está disponible." >&2
     exit 1
 fi
 if [ ! -f docker-compose.yml ]; then
-    echo "No se encontró docker-compose.yml en este directorio — corra este script desde la raíz de la plataforma." >&2
+    echo "Corra este script desde la raíz de plataforma/." >&2
     exit 1
 fi
 
-paso "2/8 · Verificando .env"
+paso "2/10 · Verificando .env"
 if [ ! -f .env ]; then
     if [ -f .env.example ]; then
         echo "No hay .env — copiando desde .env.example..."
         cp .env.example .env
     else
-        echo ".env.example tampoco existe en este directorio." >&2
+        echo ".env.example tampoco existe." >&2
         exit 1
     fi
 fi
 
-paso "3/8 · Generando secretos que falten"
+paso "3/10 · Generando secretos que falten"
 python3 generar_secretos.py
+cargar_env
 
 if $PURGAR; then
-    paso "4/8 · Deteniendo y purgando contenedores + imágenes anteriores"
+    paso "4/10 · Deteniendo y purgando contenedores + imágenes"
     docker compose down --rmi all
 else
-    paso "4/8 · Deteniendo contenedores actuales (sin purgar imágenes — use --purgar si acaba de actualizar el código)"
+    paso "4/10 · Deteniendo contenedores (use --purgar tras actualizar código)"
     docker compose down
 fi
 
-paso "5/8 · Reconstruyendo y esperando a que todo quede sano"
+paso "5/10 · Reconstruyendo y esperando servicios sanos"
 if docker compose up -d --build --wait --wait-timeout 180; then
     echo "Todos los servicios con healthcheck quedaron 'healthy'."
 else
-    echo "⚠ Algún servicio no quedó sano dentro del tiempo de espera." >&2
-    echo "" >&2
-    echo "--- docker compose ps ---" >&2
+    echo "⚠ Algún servicio no quedó sano." >&2
     docker compose ps >&2 || true
-    echo "" >&2
-    echo "--- Últimas 40 líneas de log de cada servicio no saludable ---" >&2
     for servicio in $(docker compose ps --format '{{.Service}}' --filter "health=unhealthy" 2>/dev/null || true); do
         echo "" >&2
         echo ">> $servicio:" >&2
         docker compose logs --tail=40 "$servicio" >&2 || true
     done
-    echo "" >&2
-    echo "(si no se listó ningún servicio arriba, corra manualmente: docker compose logs -f <servicio>)" >&2
     exit 1
 fi
 
+importar_mitre_si_falta() {
+    local count
+    count=$(docker compose exec -T inventario python manage.py shell -c \
+        "from inventario.models import AmenazaMITRE; print(AmenazaMITRE.objects.count())" \
+        2>/dev/null | tr -d '\r\n' || echo "0")
+    if [ "${count:-0}" -ge 100 ]; then
+        echo "Catálogo MITRE en Inventario: ${count} entradas (OK)."
+        return 0
+    fi
+
+    local xlsx=""
+    for candidato in inventario/data/enterprise-attack*.xlsx inventario/data/*.xlsx; do
+        if [ -f "$candidato" ]; then
+            xlsx="$candidato"
+            break
+        fi
+    done
+
+    if [ -z "$xlsx" ]; then
+        echo "AVISO: catálogo MITRE casi vacío (${count:-0} entradas) y no hay .xlsx en inventario/data/."
+        echo "      Descargue enterprise-attack-v19_1.xlsx de attack.mitre.org, colóquelo ahí y vuelva a ejecutar ./desplegar.sh"
+        return 0
+    fi
+
+    local base
+    base=$(basename "$xlsx")
+    echo "Importando MITRE desde inventario/data/${base}..."
+    docker compose exec -T inventario python manage.py importar_mitre --file "/app/data/${base}"
+}
+
+sync_mitre_plataforma() {
+    if [ -z "${JWT_SHARED_SECRET:-}" ]; then
+        echo "ERROR: JWT_SHARED_SECRET no definido en .env." >&2
+        exit 1
+    fi
+    if [[ "${JWT_SHARED_SECRET}" == defina-* ]]; then
+        echo "ERROR: JWT_SHARED_SECRET sigue siendo placeholder — ejecute python3 generar_secretos.py" >&2
+        exit 1
+    fi
+
+    echo "→ Verificando endpoint interno MITRE..."
+    docker compose exec -T \
+        -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
+        riesgos-backend python3 -c "
+import os, urllib.request
+req = urllib.request.Request(
+    'http://inventario:8000/api/interno/catalogo-mitre/?page_size=1',
+    headers={'X-Plataforma-Secret': os.environ['JWT_SHARED_SECRET']},
+)
+with urllib.request.urlopen(req, timeout=15) as r:
+    assert r.status == 200
+"
+
+    echo "→ Riesgos: espejo TecnicaMitre"
+    docker compose exec -T \
+        -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
+        riesgos-backend python manage.py sincronizar_tecnicas_mitre
+
+    echo "→ RBAC: attack_tecnicas.json"
+    docker compose exec -T \
+        -e INVENTARIO_URL="${INVENTARIO_URL:-http://inventario:8000}" \
+        -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
+        rbac python3 catalogo_attack_desde_inventario.py
+
+    echo "→ RBAC: migrar_v2_1.py"
+    docker compose exec -T rbac python3 migrar_v2_1.py
+}
+
+verificar_login() {
+    local codigo
+    codigo=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1/api/auth/login/ 2>/dev/null || echo "000")
+    case "$codigo" in
+        200) echo "Login API responde OK (GET /api/auth/login/ → 200)." ;;
+        502|503|504)
+            echo "ERROR: login devuelve $codigo — inventario no alcanzable desde nginx." >&2
+            echo "       Revise: docker compose logs inventario --tail 30" >&2
+            return 1
+            ;;
+        *) echo "GET /api/auth/login/ → $codigo (revise nginx/inventario si no puede entrar)." ;;
+    esac
+}
+
+if $SINCRONIZAR_MITRE; then
+    paso "6/10 · Importar catálogo MITRE en Inventario (si falta)"
+    importar_mitre_si_falta
+
+    paso "7/10 · Propagar MITRE Inventario → Riesgos + RBAC"
+    sync_mitre_plataforma
+else
+    paso "6/10 · (MITRE omitido — omita --no-sincronizar-mitre para habilitarlo)"
+    paso "7/10 · (omitido)"
+fi
+
 if [ -n "$DESBLOQUEAR_USUARIO" ]; then
-    paso "6/8 · Desbloqueando la cuenta '$DESBLOQUEAR_USUARIO'"
+    paso "8/10 · Desbloqueando cuenta '$DESBLOQUEAR_USUARIO'"
     docker compose exec -T inventario python manage.py desbloquear_login "$DESBLOQUEAR_USUARIO" || true
     docker compose exec -T riesgos-backend python manage.py desbloquear_login "$DESBLOQUEAR_USUARIO" || true
 else
-    paso "6/8 · (sin --desbloquear, se omite)"
+    paso "8/10 · (sin --desbloquear — omita si axes bloqueó su usuario)"
 fi
 
 if $SINCRONIZAR; then
-    paso "7/8 · Sincronizando catálogo de activos desde el Inventario"
-    docker compose exec -T riesgos-backend python manage.py sincronizar_activos_inventario
+    paso "9/10 · Sincronizando activos Inventario → Riesgos"
+    docker compose exec -T \
+        -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET:-}" \
+        riesgos-backend python manage.py sincronizar_activos_inventario
 else
-    paso "7/8 · (sin sincronización de activos — omita --no-sincronizar para habilitarla)"
+    paso "9/10 · (sync activos omitido)"
 fi
 
-if $SINCRONIZAR_MITRE; then
-    paso "8/8 · Propagando catálogo MITRE (Inventario → Riesgos + RBAC)"
-    INVENTARIO_URL="${INVENTARIO_URL:-http://inventario:8000}" ./sincronizar_catalogos_mitre.sh
-else
-    paso "8/8 · (sin sincronización MITRE — omita --no-sincronizar-mitre para habilitarla)"
-fi
+paso "10/10 · Verificación final"
+verificar_login || exit 1
 
 paso "Listo"
 cat << 'EOF'
-Plataforma arriba, en el host/dominio configurado en DJANGO_ALLOWED_HOSTS:
-  - Inicio de sesión (Inventario):  http://<host>/login/
-  - Gestión de Riesgos:             http://<host>/riesgos/  (sesión única con lo de arriba)
-  - Matriz RBAC:                    pestaña dentro del Inventario
+Plataforma desplegada. Acceda en el host de DJANGO_ALLOWED_HOSTS:
+  http://<host>/login/          — inicio de sesión unificado
+  http://<host>/inventario/     — inventario de activos
+  http://<host>/gestion-riesgos/ — riesgos
+  http://<host>/rbac/           — matriz RBAC
 
-Si algo no arranca, revise primero:
-  docker compose ps
-  docker compose logs -f <servicio>
+Un solo comando para todo (recomendado tras actualizar código):
+  ./desplegar.sh --purgar --desbloquear admin
+
+Si algo falla: ./diagnostico_login.sh
 EOF
