@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 
 export default function PanelEjecutivo() {
+  const { alertasUnificadas } = useOutletContext() ?? {};
   const { datos: d, cargando, error } = useApi(() => inventarioApi.panelEjecutivo(), []);
 
   if (cargando) return <p>Cargando panel ejecutivo…</p>;
@@ -15,9 +16,15 @@ export default function PanelEjecutivo() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 16px' }}>
         <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Panel ejecutivo</h2>
-        <a className="btn btn-sec" href="/api/reporte-consolidado.pdf" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-          ⬇ Reporte consolidado (PDF)
-        </a>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link className="btn btn-sec" to="/inventario/alertas" style={{ textDecoration: 'none' }}>
+            🔔 Centro de alertas
+            {(alertasUnificadas?.total_consolidado ?? 0) > 0 ? ` (${alertasUnificadas.total_consolidado})` : ''}
+          </Link>
+          <a className="btn btn-sec" href="/api/reporte-consolidado.pdf" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+            ⬇ Reporte consolidado (PDF)
+          </a>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 13, marginBottom: 20 }}>
@@ -68,6 +75,38 @@ export default function PanelEjecutivo() {
                   <Link to="/rbac/inicio" style={{ fontSize: 12 }}>Ir al tablero RBAC →</Link>
                 </div>
               )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2>Gestión de Riesgos y PTR</h2>
+        <div className="cuerpo">
+          {!d.riesgos ? (
+            <p style={{ color: 'var(--texto-suave)', fontSize: 13, margin: 0 }}>
+              El módulo de Riesgos no respondió — estos indicadores no están disponibles en este momento.
+            </p>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 13, marginBottom: 16 }}>
+                <Kpi n={d.riesgos.pendientes_total ?? 0} l="Pendientes operativos" crit={(d.riesgos.pendientes_total ?? 0) > 0} />
+                <Kpi n={d.riesgos.vulnerabilidades_criticas ?? 0} l="Vulns. críticas" crit={(d.riesgos.vulnerabilidades_criticas ?? 0) > 0} />
+                <Kpi n={d.riesgos.activos_sin_cobertura ?? 0} l="Activos sin cobertura" crit={(d.riesgos.activos_sin_cobertura ?? 0) > 0} />
+                <Kpi n={d.riesgos.activos_comprometidos ?? 0} l="Comprometidos (Red Team)" crit={(d.riesgos.activos_comprometidos ?? 0) > 0} />
+                <Kpi n={d.riesgos.total_vencidas ?? 0} l="Acciones PTR vencidas" crit={(d.riesgos.total_vencidas ?? 0) > 0} />
+                <Kpi n={d.riesgos.total_por_vencer ?? 0} l="Acciones PTR por vencer" crit={(d.riesgos.total_por_vencer ?? 0) > 0} />
+              </div>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12 }}>
+                <Link to="/gestion-riesgos">Ir a Gestión de Riesgos →</Link>
+                <Link to="/inventario/alertas">
+                  Centro de alertas
+                  {(alertasUnificadas?.resumen?.riesgos ?? 0) > 0
+                    ? ` (${alertasUnificadas.resumen.riesgos})`
+                    : ''}{' '}
+                  →
+                </Link>
+              </div>
             </>
           )}
         </div>

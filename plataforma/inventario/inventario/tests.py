@@ -1616,6 +1616,23 @@ class PoliticaSeguridadAPITest(TestCase):
         r = self.client.get(self.URL_KPI)
         self.assertEqual(r.status_code, 200)
         self.assertIn("total_activos", r.json())
+        self.assertIn("riesgos", r.json())
+
+    def test_panel_incluye_riesgos_cuando_responde(self):
+        from unittest.mock import patch
+
+        riesgos_falso = {
+            "disponible": True,
+            "pendientes_total": 6,
+            "total_vencidas": 1,
+            "total_por_vencer": 2,
+            "activos_sin_cobertura": 1,
+            "vulnerabilidades_criticas": 1,
+            "activos_comprometidos": 1,
+        }
+        with patch("inventario.views._resumen_riesgos", return_value=riesgos_falso):
+            r = self.client.get(self.URL_KPI)
+        self.assertEqual(r.json()["riesgos"]["pendientes_total"], 6)
 
     def test_anonimo_no_accede_a_detalle_de_activos(self):
         from .models import Activo

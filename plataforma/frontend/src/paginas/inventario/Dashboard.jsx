@@ -6,10 +6,10 @@ import { useInventarioMeta } from '../../hooks/useInventarioMeta';
 
 export default function Dashboard() {
   const navegar = useNavigate();
-  const { puedeEditar } = useOutletContext() ?? {};
+  const { puedeEditar, alertasUnificadas } = useOutletContext() ?? {};
+  const alertasRes = alertasUnificadas;
   const { coloresClase } = useInventarioMeta();
   const { datos: stats, cargando: cargandoStats } = useApi(() => inventarioApi.estadisticas(), []);
-  const { datos: alertasRes } = useApi(() => inventarioApi.alertasUnificadas(), []);
   const [busqueda, setBusqueda] = useState('');
   const [filtroClase, setFiltroClase] = useState('');
   const [seleccionados, setSeleccionados] = useState(() => new Set());

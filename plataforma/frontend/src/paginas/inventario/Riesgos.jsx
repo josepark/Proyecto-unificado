@@ -1,4 +1,4 @@
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 
@@ -50,8 +50,8 @@ export default function Riesgos() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 16px', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Valoración inherente</h2>
         <span style={{ fontSize: 13, color: 'var(--texto-suave)' }}>
-          Motor probabilidad × impacto del Inventario (ISO/IEC 27005). Para vulns y PTR use{' '}
-          <a href="/gestion-riesgos">Gestión de Riesgos</a>.
+          Motor probabilidad × impacto del Inventario (ISO/IEC 27005). Para vulns, cobertura y PTR use{' '}
+          <Link to="/gestion-riesgos">Gestión de Riesgos</Link>.
         </span>
         {puedeEditar && (
           <button className="btn btn-sec" style={{ marginLeft: 'auto' }} onClick={recalcular}>

@@ -1,6 +1,4 @@
 import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
-import { useApi } from '../hooks/useApi';
-import { inventarioApi } from '../api/inventario';
 
 const PESTANAS = [
   { to: 'dashboard', etiqueta: 'Dashboard' },
@@ -13,9 +11,8 @@ const PESTANAS = [
 ];
 
 export default function ModuloInventario() {
-  const contexto = useOutletContext();
-  const { datos: alertas } = useApi(() => inventarioApi.alertasUnificadas(), []);
-  const totalAlertas = alertas?.total_consolidado ?? 0;
+  const { alertasUnificadas, ...contexto } = useOutletContext() ?? {};
+  const totalAlertas = alertasUnificadas?.total_consolidado ?? 0;
 
   return (
     <div>

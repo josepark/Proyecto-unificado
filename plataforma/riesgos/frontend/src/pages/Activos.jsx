@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, ShieldOff, Radar as RadarIcon, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, ShieldOff, Radar as RadarIcon, Plus, Pencil, Trash2, Unlink } from "lucide-react";
 import endpoints from "../api/endpoints";
 import { useApiData } from "../lib/useApiData";
 import { useAuthGuard } from "../lib/useAuthGuard";
@@ -25,6 +25,7 @@ export default function Activos() {
   const [nivel, setNivel] = useState("");
   const [soloSinCobertura, setSoloSinCobertura] = useState(false);
   const [soloRedTeam, setSoloRedTeam] = useState(false);
+  const [soloHuerfanos, setSoloHuerfanos] = useState(false);
 
   const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [page, setPage] = useState(1);
@@ -38,6 +39,7 @@ export default function Activos() {
     riesgo_matriz: nivel || undefined,
     cobertura: soloSinCobertura ? "SIN_COBERTURA" : undefined,
     afectado_red_team: soloRedTeam ? true : undefined,
+    sin_vinculo_inventario: soloHuerfanos ? true : undefined,
     ordering: "-valor",
     page,
     page_size: PAGE_SIZE,
@@ -45,7 +47,7 @@ export default function Activos() {
 
   const { data, loading, error, reload } = useApiData(
     () => endpoints.activos(params),
-    [busqueda, nivel, soloSinCobertura, soloRedTeam, page]
+    [busqueda, nivel, soloSinCobertura, soloRedTeam, soloHuerfanos, page]
   );
   const { data: campanasData } = useApiData(() => endpoints.campanasRedTeam());
 
@@ -109,6 +111,13 @@ export default function Activos() {
             Inventario
           </a>
           . Este módulo refleja la sincronización para vulnerabilidades, cobertura y PTR.
+          {soloHuerfanos && (
+            <span className="mt-2 block text-[#e0475a]">
+              Mostrando activos huérfanos (sin vínculo al Inventario). Ejecute{' '}
+              <code className="text-[11px]">sincronizar_activos_inventario</code> o{' '}
+              <code className="text-[11px]">./desplegar.sh</code>.
+            </span>
+          )}
         </div>
       )}
 
@@ -136,6 +145,9 @@ export default function Activos() {
 
         <ToggleChip active={soloSinCobertura} onClick={() => { setSoloSinCobertura((v) => !v); setPage(1); }} icon={ShieldOff} label="Sin cobertura" />
         <ToggleChip active={soloRedTeam} onClick={() => { setSoloRedTeam((v) => !v); setPage(1); }} icon={RadarIcon} label="Comprometidos (Red Team)" />
+        {plataforma.anidado && (
+          <ToggleChip active={soloHuerfanos} onClick={() => { setSoloHuerfanos((v) => !v); setPage(1); }} icon={Unlink} label="Huérfanos (sin Inventario)" />
+        )}
       </div>
 
       <div className="rounded-2xl border border-base-700/60 bg-base-900/60">

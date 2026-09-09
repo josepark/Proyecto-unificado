@@ -69,6 +69,12 @@ class ActivoViewSet(HistorialMixin, viewsets.ModelViewSet):
     search_fields = ["id_activo", "nombre", "ip_principal"]
     ordering_fields = ["valor", "id_activo", "nombre"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.query_params.get("sin_vinculo_inventario", "").lower() in ("1", "true", "yes"):
+            qs = qs.filter(inventario_id__isnull=True)
+        return qs
+
     def get_serializer_class(self):
         if self.action == "list":
             return ActivoListSerializer

@@ -6,7 +6,7 @@ import { apiBaseURL } from "../api/client";
 import { useApiData } from "../lib/useApiData";
 import { useAuthGuard } from "../lib/useAuthGuard";
 import { vulnerabilidadFields, riesgoActivoFields } from "../lib/entitySchemas";
-import { useRiesgosTo } from "../context/PlataformaContext";
+import { useRiesgosTo, usePlataforma } from "../context/PlataformaContext";
 import PageHeader from "../components/PageHeader";
 import NivelBadge from "../components/NivelBadge";
 import Modal from "../components/Modal";
@@ -21,6 +21,7 @@ import { LoadingState, ErrorState, EmptyState } from "../components/StatusStates
 
 export default function ActivoDetalle() {
   const { id } = useParams();
+  const plataforma = usePlataforma();
   const rutaActivos = useRiesgosTo("activos");
   const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [origenAccion, setOrigenAccion] = useState(null);
@@ -61,6 +62,26 @@ export default function ActivoDetalle() {
           </>
         }
       />
+
+      {plataforma.anidado && activo.inventario_id && (
+        <div className="mb-5 rounded-xl border border-cric-green-500/30 bg-cric-green-600/10 px-4 py-3 text-[13px] text-cric-green-400">
+          Ficha canónica en Inventario:{' '}
+          <a
+            href={`/inventario/activos/${activo.inventario_id}`}
+            className="font-medium underline hover:text-cric-green-300"
+          >
+            {activo.id_activo} (#{activo.inventario_id})
+          </a>
+          {' '}— valoración C-I-D, propietario y ciclo de vida se gestionan allí.
+        </div>
+      )}
+
+      {plataforma.anidado && !activo.inventario_id && (
+        <div className="mb-5 rounded-xl border border-[#e0475a]/30 bg-[#e0475a]/5 px-4 py-3 text-[13px] text-[#e0475a]">
+          Activo huérfano: no está vinculado al Inventario. Créelo o sincronice con{' '}
+          <code className="text-[11px]">sincronizar_activos_inventario</code>.
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MiniStat label="Valor" value={`${activo.valor}/12`} />

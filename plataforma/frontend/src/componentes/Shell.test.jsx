@@ -16,6 +16,10 @@ vi.mock('../api/rbac', () => ({
   rbacApi: { resumen: vi.fn() },
 }));
 
+vi.mock('../api/inventario', () => ({
+  inventarioApi: { alertasUnificadas: vi.fn() },
+}));
+
 vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal();
   return {
@@ -26,6 +30,7 @@ vi.mock('../api/client', async (importOriginal) => {
 
 import { useSesion } from '../hooks/useSesion';
 import { rbacApi } from '../api/rbac';
+import { inventarioApi } from '../api/inventario';
 import { consultarSesionInventario } from '../api/client';
 
 function renderShell(initial = '/inventario/dashboard') {
@@ -47,6 +52,10 @@ beforeEach(() => {
       roles_certificacion_vencida: 1,
       excepciones_vencidas: 0,
     },
+  });
+  vi.mocked(inventarioApi.alertasUnificadas).mockResolvedValue({
+    total_consolidado: 8,
+    resumen: { inventario: 4, rbac: 3, riesgos: 2, inventario_criticas: 1 },
   });
   vi.mocked(consultarSesionInventario).mockResolvedValue({
     autenticado: true,
@@ -100,5 +109,22 @@ describe('Shell — pestañas de módulo', () => {
     renderShell();
     expect(await screen.findByText('3')).toHaveClass('badge-modulo');
     expect(rbacApi.resumen).toHaveBeenCalled();
+  });
+
+  it('muestra badges de alertas unificadas en Inventario y Riesgos', async () => {
+    vi.mocked(useSesion).mockReturnValue({
+      autenticado: true,
+      usuario: 'dinamizador',
+      puedeEditar: true,
+      puedeEliminar: false,
+      cargando: false,
+      roles: ['Dinamizador'],
+      recargar: vi.fn(),
+    });
+    renderShell();
+    const badges = await screen.findAllByText('8');
+    expect(badges.some((el) => el.classList.contains('badge-modulo'))).toBe(true);
+    expect(await screen.findByText('2')).toHaveClass('badge-modulo');
+    expect(inventarioApi.alertasUnificadas).toHaveBeenCalled();
   });
 });

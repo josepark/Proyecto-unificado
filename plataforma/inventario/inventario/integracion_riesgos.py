@@ -69,3 +69,25 @@ def kpis_riesgos_dashboard():
         }
     except requests.RequestException:
         return {"disponible": False}
+
+
+def resumen_riesgos_panel():
+    """KPIs de Riesgos para panel ejecutivo y badges del Shell."""
+    alertas = alertas_riesgos_resumen()
+    kpis = kpis_riesgos_dashboard()
+    if not alertas.get("disponible") and not kpis.get("disponible"):
+        return None
+    pendientes = 0
+    if alertas.get("disponible"):
+        pendientes += alertas.get("total_vencidas", 0)
+        pendientes += alertas.get("total_por_vencer", 0)
+    if kpis.get("disponible"):
+        pendientes += kpis.get("activos_sin_cobertura", 0)
+        pendientes += kpis.get("vulnerabilidades_criticas", 0)
+        pendientes += kpis.get("activos_comprometidos", 0)
+    return {
+        "disponible": True,
+        "pendientes_total": pendientes,
+        **alertas,
+        **kpis,
+    }

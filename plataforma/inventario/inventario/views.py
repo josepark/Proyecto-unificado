@@ -580,6 +580,7 @@ def cobertura_controles(request):
 # Ver inventario/integracion_rbac.py.
 from .integracion_rbac import catalogo_sistemas_rbac
 from .integracion_rbac import resumen_rbac as _resumen_rbac
+from .integracion_riesgos import resumen_riesgos_panel as _resumen_riesgos
 
 
 def calcular_panel_ejecutivo():
@@ -628,6 +629,7 @@ def calcular_panel_ejecutivo():
         "cambios_30dias": cambios30,
         "datacenters": datacenters_resumen,
         "rbac": _resumen_rbac(),
+        "riesgos": _resumen_riesgos(),
     }
 
 

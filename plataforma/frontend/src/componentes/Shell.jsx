@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useSesion } from '../hooks/useSesion';
+import { useApi } from '../hooks/useApi';
 import { consultarSesionInventario, eventosApi } from '../api/client';
+import { inventarioApi } from '../api/inventario';
 import { rbacApi } from '../api/rbac';
 import { puedeVerRbac } from '../paginas/rbac/rbacUtil';
 
@@ -64,6 +66,13 @@ export default function Shell() {
     };
   }, [verRbac, cargando, autenticado]);
 
+  const { datos: alertasUni } = useApi(
+    () => (autenticado && !cargando ? inventarioApi.alertasUnificadas() : Promise.resolve(null)),
+    [autenticado, cargando],
+  );
+  const totalAlertas = alertasUni?.total_consolidado ?? 0;
+  const pendientesRiesgos = alertasUni?.resumen?.riesgos ?? 0;
+
   const outletContext = {
     autenticado,
     puedeEditar,
@@ -71,6 +80,7 @@ export default function Shell() {
     cargando,
     roles,
     soloLecturaRbac,
+    alertasUnificadas: alertasUni,
   };
 
   return (
@@ -86,6 +96,15 @@ export default function Shell() {
         <div className="auth">
           {cargando && !autenticado ? null : autenticado ? (
             <>
+              {totalAlertas > 0 ? (
+                <Link
+                  to="/inventario/alertas"
+                  style={{ fontSize: 12, marginRight: 8, textDecoration: 'none' }}
+                  title="Centro de alertas unificado"
+                >
+                  🔔 {totalAlertas}
+                </Link>
+              ) : null}
               Sesión: <b>{usuario}</b>
               {soloLecturaRbac ? ' · consulta RBAC' : null}
               {cargando ? ' · …' : null}
@@ -114,6 +133,11 @@ export default function Shell() {
         <nav className="pestanas-modulo">
           <NavLink to="/inventario" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Inventario
+            {totalAlertas > 0 ? (
+              <span className="badge-modulo" style={{ marginLeft: 6 }} title="Señales en centro de alertas">
+                {totalAlertas}
+              </span>
+            ) : null}
           </NavLink>
           <span style={{ position: 'relative', display: 'inline-block' }}>
             <NavLink to="/rbac" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
@@ -163,6 +187,11 @@ export default function Shell() {
           </span>
           <NavLink to="/gestion-riesgos" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Gestión de Riesgos y PTR
+            {pendientesRiesgos > 0 ? (
+              <span className="badge-modulo" style={{ marginLeft: 6 }} title="Pendientes operativos en Riesgos">
+                {pendientesRiesgos}
+              </span>
+            ) : null}
           </NavLink>
         </nav>
 
