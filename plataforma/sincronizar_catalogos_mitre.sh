@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sincroniza el catálogo MITRE ATT&CK desde el Inventario hacia Riesgos y RBAC.
-# Fuente canónica: AmenazaMITRE en Inventario (/api/amenazas/).
+# Fuente canónica: AmenazaMITRE en Inventario (/api/interno/catalogo-mitre/).
 #
 # Uso (desde la raíz de plataforma/, con docker compose arriba):
 #   ./sincronizar_catalogos_mitre.sh
@@ -8,7 +8,7 @@
 #
 # Requisitos:
 #   - JWT_SHARED_SECRET definido en .env (mismo valor en los tres servicios)
-#   - Código con RolPermisoOServicioInterno (fix post-Ola 1) y requests en rbac/
+#   - Endpoint interno /api/interno/catalogo-mitre/ (auth X-Plataforma-Secret)
 #   - Catálogo ya importado: docker compose exec inventario python manage.py importar_mitre ...
 
 set -euo pipefail
@@ -58,23 +58,14 @@ if $RECONSTRUIR; then
     docker compose up -d
 fi
 
-paso "Verificando dependencias en contenedor rbac"
-if ! docker compose exec -T rbac python3 -c "import requests" 2>/dev/null; then
-    echo "ERROR: el contenedor rbac no tiene el paquete 'requests'." >&2
-    echo "Su imagen es antigua — reconstruya y reintente:" >&2
-    echo "  ./sincronizar_catalogos_mitre.sh --reconstruir" >&2
-    echo "  # o: docker compose build rbac && docker compose up -d rbac" >&2
-    exit 1
-fi
-
-paso "Verificando acceso interno a /api/amenazas/"
+paso "Verificando acceso interno a /api/interno/catalogo-mitre/"
 if ! docker compose exec -T \
     -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
     riesgos-backend python3 -c "
 import os, urllib.request
 secret = os.environ['JWT_SHARED_SECRET']
 req = urllib.request.Request(
-    'http://inventario:8000/api/amenazas/?page_size=1',
+    'http://inventario:8000/api/interno/catalogo-mitre/?page_size=1',
     headers={'X-Plataforma-Secret': secret},
 )
 try:
@@ -82,9 +73,9 @@ try:
         assert r.status == 200, r.status
 except Exception as e:
     raise SystemExit(
-        'No se pudo leer /api/amenazas/ con X-Plataforma-Secret: ' + str(e) + '\n'
-        '¿Tiene el código actualizado (RolPermisoOServicioInterno)? '
-        'Reconstruya inventario: docker compose build inventario && docker compose up -d inventario'
+        'No se pudo leer /api/interno/catalogo-mitre/ con X-Plataforma-Secret: ' + str(e) + '\n'
+        '¿Tiene el código actualizado? Reconstruya: '
+        './sincronizar_catalogos_mitre.sh --reconstruir'
     )
 "; then
     exit 1

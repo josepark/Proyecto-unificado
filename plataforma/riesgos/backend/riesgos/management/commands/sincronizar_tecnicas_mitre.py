@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 sincronizar_tecnicas_mitre — Trae el catálogo MITRE ATT&CK desde
-/api/amenazas/ del Inventario y lo sistematiza en riesgos.
+/api/interno/catalogo-mitre/ del Inventario y lo sistematiza en riesgos.
 
 A diferencia de sincronizar_activos_inventario, este NO usa el mecanismo de
 protección contra ediciones manuales — es catálogo de referencia externo
@@ -16,12 +16,12 @@ import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from riesgos.inventario_cliente import get as inventario_get
+from riesgos.inventario_cliente import get as inventario_get, url_catalogo_mitre
 from riesgos.models import TecnicaMitre
 
 
 class Command(BaseCommand):
-    help = "Sincroniza el catálogo MITRE ATT&CK desde /api/amenazas/ del Inventario."
+    help = "Sincroniza el catálogo MITRE ATT&CK desde /api/interno/catalogo-mitre/ del Inventario."
 
     def add_arguments(self, parser):
         parser.add_argument("--url", type=str, default=None,
@@ -70,7 +70,7 @@ class Command(BaseCommand):
 
     def _obtener_todas(self, base_url, timeout):
         tecnicas = []
-        url = f"{base_url}/amenazas/"
+        url = url_catalogo_mitre(base_url)
         params = {"page_size": 200}
         while url:
             resp = inventario_get(url, params=params, timeout=timeout)

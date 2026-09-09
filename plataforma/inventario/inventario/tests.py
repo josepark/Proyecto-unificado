@@ -1491,6 +1491,22 @@ class ServicioInternoCatalogoTest(TestCase):
         r = self.client.get("/api/amenazas/?page_size=5")
         self.assertEqual(r.status_code, 403)
 
+    @override_settings(JWT_SHARED_SECRET="secreto-sync-interno-test")
+    def test_catalogo_mitre_interno_con_secreto(self):
+        r = self.client.get(
+            "/api/interno/catalogo-mitre/?page_size=5",
+            HTTP_X_PLATAFORMA_SECRET="secreto-sync-interno-test",
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        data = r.json()
+        self.assertIn("results", data)
+        self.assertIn("count", data)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-sync-interno-test")
+    def test_catalogo_mitre_interno_sin_secreto_403(self):
+        r = self.client.get("/api/interno/catalogo-mitre/?page_size=5")
+        self.assertEqual(r.status_code, 403)
+
 
 class AllowedHostsInternoTest(TestCase):
     """

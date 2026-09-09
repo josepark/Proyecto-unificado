@@ -1102,6 +1102,49 @@ def auth_check_rbac(request):
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
+def catalogo_mitre_interno(request):
+    """Catálogo MITRE para sync servidor-a-servidor (Riesgos/RBAC).
+
+    No usa sesión de usuario: exige cabecera X-Plataforma-Secret = JWT_SHARED_SECRET.
+    Misma respuesta paginada que /api/amenazas/ pero accesible desde la red interna
+    de docker-compose sin depender de RolPermisoOServicioInterno en el ViewSet.
+    """
+    from django.conf import settings
+    secreto = request.headers.get("X-Plataforma-Secret", "")
+    if not settings.JWT_SHARED_SECRET or secreto != settings.JWT_SHARED_SECRET:
+        return Response(
+            {"detail": "Acceso denegado. Configure JWT_SHARED_SECRET en .env y envíe "
+             "X-Plataforma-Secret en la petición."},
+            status=403,
+        )
+    try:
+        page_size = min(max(int(request.GET.get("page_size", 200)), 1), 2000)
+        page = max(int(request.GET.get("page", 1)), 1)
+    except (TypeError, ValueError):
+        return Response({"detail": "page y page_size deben ser enteros."}, status=400)
+
+    qs = AmenazaMITRE.objects.all().order_by("codigo")
+    total = qs.count()
+    inicio = (page - 1) * page_size
+    fin = inicio + page_size
+    resultados = AmenazaMITRESerializer(qs[inicio:fin], many=True).data
+
+    def _url(p):
+        if p < 1 or (p - 1) * page_size >= total:
+            return None
+        return request.build_absolute_uri(
+            f"{request.path}?page={p}&page_size={page_size}")
+
+    return Response({
+        "count": total,
+        "next": _url(page + 1) if fin < total else None,
+        "previous": _url(page - 1) if page > 1 else None,
+        "results": resultados,
+    })
+
+
+@api_view(["GET"])
 @permission_classes([RolPermiso])
 def catalogo_sistemas_rbac_view(request):
     """Catálogo de sistemas RBAC para vincular activos SIST (Ola 2)."""
