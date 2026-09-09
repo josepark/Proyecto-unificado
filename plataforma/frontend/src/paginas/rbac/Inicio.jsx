@@ -103,7 +103,7 @@ export default function Inicio() {
             {d.proximos_vencimientos.length} vencimiento(s) en los próximos {d.dias_alerta} días — revíselos antes de
             que el sistema los suspenda/retire automáticamente.
           </div>
-          <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card" style={{ marginBottom: 20 }} id="vencimientos">
             <h2>Vencimientos próximos ({d.dias_alerta} días)</h2>
             <div className="cuerpo">
               <table>
@@ -136,7 +136,7 @@ export default function Inicio() {
       )}
 
       <div className="detalle-grid">
-        <div className="card">
+        <div className="card" id="mfa">
           <h2>Alertas de cumplimiento MFA</h2>
           <div className="cuerpo">
             {d.alertas_mfa.length ? (

@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import BannerErrorMutacion from '../../componentes/BannerErrorMutacion';
 import { mensajeErrorRbac } from './rbacUtil';
 
 export default function Roles() {
   const { puedeEditar } = useOutletContext();
+  const [searchParams] = useSearchParams();
   const [busqueda, setBusqueda] = useState('');
   const [incluirInactivos, setIncluirInactivos] = useState(false);
+  const [soloCertVencida, setSoloCertVencida] = useState(searchParams.get('cert_vencida') === '1');
   const { datos: roles, cargando, error, recargar } = useApi(
     () => rbacApi.listarRoles({
       ...(busqueda ? { q: busqueda } : {}),
@@ -17,14 +20,16 @@ export default function Roles() {
   );
   const [certificando, setCertificando] = useState(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(null);
+  const [errorMutacion, setErrorMutacion] = useState(null);
 
   async function certificar(id) {
     setCertificando(id);
+    setErrorMutacion(null);
     try {
       await rbacApi.certificarRol(id);
       recargar();
     } catch (e) {
-      alert(e.message);
+      setErrorMutacion(e.message);
     } finally {
       setCertificando(null);
     }
@@ -32,11 +37,12 @@ export default function Roles() {
 
   async function alternarActivo(id) {
     setCambiandoEstado(id);
+    setErrorMutacion(null);
     try {
       await rbacApi.toggleActivoRol(id);
       recargar();
     } catch (e) {
-      alert(e.message);
+      setErrorMutacion(e.message);
     } finally {
       setCambiandoEstado(null);
     }
@@ -52,6 +58,8 @@ export default function Roles() {
     );
   }
 
+  const rolesFiltrados = (roles ?? []).filter((r) => !soloCertVencida || r.revision_vencida);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 16px' }}>
@@ -62,6 +70,8 @@ export default function Roles() {
           </Link>
         )}
       </div>
+
+      <BannerErrorMutacion error={errorMutacion} onCerrar={() => setErrorMutacion(null)} />
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
@@ -78,6 +88,15 @@ export default function Roles() {
             onChange={(e) => setIncluirInactivos(e.target.checked)}
           />
           Mostrar desactivados
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <input
+            type="checkbox"
+            style={{ width: 'auto' }}
+            checked={soloCertVencida}
+            onChange={(e) => setSoloCertVencida(e.target.checked)}
+          />
+          Solo certificación vencida
         </label>
       </div>
 
@@ -97,7 +116,7 @@ export default function Roles() {
             </tr>
           </thead>
           <tbody>
-            {(roles ?? []).map((r) => (
+            {(rolesFiltrados).map((r) => (
               <tr key={r.id} style={!r.activo ? { opacity: 0.55 } : undefined}>
                 <td>
                   <Link to={`/rbac/roles/${r.id}/editar`}>
@@ -141,7 +160,7 @@ export default function Roles() {
                 )}
               </tr>
             ))}
-            {!(roles ?? []).length && (
+            {!rolesFiltrados.length && (
               <tr>
                 <td colSpan={puedeEditar ? 7 : 6} className="sub">
                   Ningún rol coincide con el filtro aplicado.

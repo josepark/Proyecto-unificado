@@ -42,16 +42,20 @@ export default function UsuarioForm() {
   const navegar = useNavigate();
   const { puedeEditar } = useOutletContext() ?? {};
 
-  const { datos: usuarioExistente, cargando: cargandoUsuario, error: errorCarga } = useApi(
+  const { datos: usuarioExistente, cargando: cargandoUsuario, error: errorCarga, recargar: recargarUsuario } = useApi(
     () => (editando ? rbacApi.obtenerUsuario(id) : Promise.resolve(null)),
     [id],
   );
   const { datos: roles } = useApi(() => rbacApi.listarRoles(), []);
+  const { datos: catalogos } = useApi(() => rbacApi.catalogos(), []);
+  const { datos: sistemas } = useApi(() => rbacApi.listarSistemas(), []);
 
   const [form, setForm] = useState(editando ? null : vacio());
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [avisoMfa, setAvisoMfa] = useState(false);
+  const [excForm, setExcForm] = useState({ sistema_id: '', nivel: 'L', motivo: '', fecha_fin: '' });
+  const [guardandoExc, setGuardandoExc] = useState(null);
 
   useEffect(() => {
     if (editando && usuarioExistente) setForm(desdeUsuario(usuarioExistente));
@@ -81,6 +85,41 @@ export default function UsuarioForm() {
   }
 
   const rolElegido = (roles ?? []).find((r) => String(r.id) === form.rol_id);
+  const niveles = catalogos?.niveles_acceso ?? [];
+
+  async function agregarExcepcion(ev) {
+    ev.preventDefault();
+    setGuardandoExc('nueva');
+    setError(null);
+    try {
+      await rbacApi.crearExcepcion(id, {
+        sistema_id: Number(excForm.sistema_id),
+        nivel: excForm.nivel,
+        motivo: excForm.motivo.trim(),
+        fecha_fin: excForm.fecha_fin || null,
+      });
+      setExcForm({ sistema_id: '', nivel: 'L', motivo: '', fecha_fin: '' });
+      recargarUsuario();
+    } catch (e) {
+      setError(formatearErrorApi(e));
+    } finally {
+      setGuardandoExc(null);
+    }
+  }
+
+  async function retirarExcepcion(sistemaId) {
+    if (!confirm('¿Retirar esta excepción? El usuario volverá al nivel de su rol en ese sistema.')) return;
+    setGuardandoExc(String(sistemaId));
+    setError(null);
+    try {
+      await rbacApi.eliminarExcepcion(id, sistemaId);
+      recargarUsuario();
+    } catch (e) {
+      setError(formatearErrorApi(e));
+    } finally {
+      setGuardandoExc(null);
+    }
+  }
 
   async function guardar(ev) {
     ev.preventDefault();
@@ -234,6 +273,7 @@ export default function UsuarioForm() {
                     <th>Nivel rol</th>
                     <th>Excepción</th>
                     <th>Efectivo</th>
+                    {puedeEditar && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -246,6 +286,20 @@ export default function UsuarioForm() {
                         <td>{a.nivel_rol}</td>
                         <td>{a.nivel_exc ? `${a.nivel_exc}${a.motivo ? ` — ${a.motivo}` : ''}` : '—'}</td>
                         <td><strong>{a.nivel_efectivo}</strong></td>
+                        {puedeEditar && (
+                          <td>
+                            {a.nivel_exc ? (
+                              <button
+                                type="button"
+                                className="btn-sec"
+                                disabled={guardandoExc === String(a.sistema_id)}
+                                onClick={() => retirarExcepcion(a.sistema_id)}
+                              >
+                                {guardandoExc === String(a.sistema_id) ? '…' : 'Retirar'}
+                              </button>
+                            ) : null}
+                          </td>
+                        )}
                       </tr>
                     ))}
                 </tbody>
@@ -256,6 +310,50 @@ export default function UsuarioForm() {
               </p>
             </div>
           </div>
+        )}
+
+        {editando && puedeEditar && (
+          <form onSubmit={agregarExcepcion} className="card" style={{ marginBottom: 14 }}>
+            <h2>Nueva excepción de acceso</h2>
+            <div className="cuerpo">
+              <Fila>
+                <CampoSelect
+                  label="Sistema *"
+                  opciones={[
+                    ['', 'Seleccione…'],
+                    ...(sistemas ?? []).map((s) => [String(s.id), s.nombre]),
+                  ]}
+                  value={excForm.sistema_id}
+                  required
+                  onChange={(e) => setExcForm((f) => ({ ...f, sistema_id: e.target.value }))}
+                />
+                <CampoSelect
+                  label="Nivel *"
+                  opciones={niveles.map((n) => [n.codigo, `${n.codigo} — ${n.nombre}`])}
+                  value={excForm.nivel}
+                  required
+                  onChange={(e) => setExcForm((f) => ({ ...f, nivel: e.target.value }))}
+                />
+                <Campo
+                  label="Vigencia hasta"
+                  type="date"
+                  value={excForm.fecha_fin}
+                  onChange={(e) => setExcForm((f) => ({ ...f, fecha_fin: e.target.value }))}
+                />
+              </Fila>
+              <CampoTextarea
+                label="Motivo *"
+                required
+                maxLength={400}
+                placeholder="Justificación del acceso distinto al rol (control 5.18)"
+                value={excForm.motivo}
+                onChange={(e) => setExcForm((f) => ({ ...f, motivo: e.target.value }))}
+              />
+              <button type="submit" className="btn btn-sec" disabled={guardandoExc === 'nueva'}>
+                {guardandoExc === 'nueva' ? 'Guardando…' : 'Agregar excepción'}
+              </button>
+            </div>
+          </form>
         )}
 
         {avisoMfa && (

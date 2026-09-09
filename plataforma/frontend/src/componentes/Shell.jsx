@@ -6,7 +6,7 @@ import { consultarSesionInventario, eventosApi } from '../api/client';
 import { inventarioApi } from '../api/inventario';
 import { rbacApi } from '../api/rbac';
 import { pendientesSync } from '../lib/integracionUi';
-import { puedeVerRbac } from '../paginas/rbac/rbacUtil';
+import { puedeVerRbac, ENLACES_ALERTAS_RBAC } from '../paginas/rbac/rbacUtil';
 
 function moduloDeRuta(pathname) {
   if (pathname.startsWith('/rbac')) return 'rbac';
@@ -22,6 +22,7 @@ export default function Shell() {
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const [desgloseRbac, setDesgloseRbac] = useState(null);
+  const [rbacDisponible, setRbacDisponible] = useState(true);
   const [mostrarDesglose, setMostrarDesglose] = useState(false);
   const ubicacion = useLocation();
   const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
@@ -45,6 +46,7 @@ export default function Shell() {
     if (!verRbac || cargando) {
       setPendientesRbac(0);
       setDesgloseRbac(null);
+      setRbacDisponible(true);
       return;
     }
     let vivo = true;
@@ -52,16 +54,30 @@ export default function Shell() {
       .then((s) => {
         if (!vivo || !s.autenticado) {
           setPendientesRbac(0);
+          setRbacDisponible(true);
           return null;
         }
         return rbacApi.resumen();
       })
       .then((r) => {
-        if (!vivo || !r) return;
+        if (!vivo) return;
+        if (!r) {
+          setPendientesRbac(0);
+          setDesgloseRbac(null);
+          setRbacDisponible(false);
+          return;
+        }
+        setRbacDisponible(true);
         setPendientesRbac(r.pendientes_total || 0);
         setDesgloseRbac(r.desglose_pendientes || null);
       })
-      .catch(() => vivo && setPendientesRbac(0));
+      .catch(() => {
+        if (vivo) {
+          setPendientesRbac(0);
+          setDesgloseRbac(null);
+          setRbacDisponible(false);
+        }
+      });
     return () => {
       vivo = false;
     };
@@ -93,6 +109,7 @@ export default function Shell() {
     soloLecturaRbac,
     alertasUnificadas: alertasUni,
     recargarAlertasUnificadas: recargarAlertas,
+    rbacResumen: rbacDisponible ? { pendientes: pendientesRbac, desglose: desgloseRbac, disponible: true } : { disponible: false },
   };
 
   return (
@@ -163,7 +180,15 @@ export default function Shell() {
           <span style={{ position: 'relative', display: 'inline-block' }}>
             <NavLink to="/rbac" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
               Matriz RBAC
-              {pendientesRbac > 0 ? (
+              {!rbacDisponible ? (
+                <span
+                  className="badge-modulo"
+                  style={{ marginLeft: 6, background: 'var(--texto-suave)' }}
+                  title="Matriz RBAC no responde en este momento"
+                >
+                  !
+                </span>
+              ) : pendientesRbac > 0 ? (
                 <button
                   type="button"
                   className="badge-modulo"
@@ -189,11 +214,27 @@ export default function Shell() {
               >
                 <div className="cuerpo" style={{ fontSize: 13 }}>
                   <strong>Pendientes RBAC</strong>
-                  <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-                    <li>Vencimientos próximos (7 d): <b>{desgloseRbac.proximos_vencimientos}</b></li>
-                    <li>MFA incumplido: <b>{desgloseRbac.alertas_mfa}</b></li>
-                    <li>Certificación de rol vencida: <b>{desgloseRbac.roles_certificacion_vencida}</b></li>
-                    <li>Excepciones vencidas: <b>{desgloseRbac.excepciones_vencidas}</b></li>
+                  <ul style={{ margin: '8px 0 0', paddingLeft: 18, listStyle: 'none' }}>
+                    <li>
+                      <Link to={ENLACES_ALERTAS_RBAC.proximos_vencimientos} onClick={() => setMostrarDesglose(false)}>
+                        Vencimientos próximos (7 d): <b>{desgloseRbac.proximos_vencimientos}</b>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to={ENLACES_ALERTAS_RBAC.alertas_mfa} onClick={() => setMostrarDesglose(false)}>
+                        MFA incumplido: <b>{desgloseRbac.alertas_mfa}</b>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to={ENLACES_ALERTAS_RBAC.roles_certificacion_vencida} onClick={() => setMostrarDesglose(false)}>
+                        Certificación de rol vencida: <b>{desgloseRbac.roles_certificacion_vencida}</b>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to={ENLACES_ALERTAS_RBAC.excepciones_vencidas} onClick={() => setMostrarDesglose(false)}>
+                        Excepciones vencidas: <b>{desgloseRbac.excepciones_vencidas}</b>
+                      </Link>
+                    </li>
                   </ul>
                   <Link to="/rbac/inicio" onClick={() => setMostrarDesglose(false)} style={{ fontSize: 12 }}>
                     Ir al tablero RBAC →

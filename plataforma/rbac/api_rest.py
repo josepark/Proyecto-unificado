@@ -1093,7 +1093,11 @@ def registrar(app):
             pagina = max(1, int(request.args.get("pagina", "1")))
         except ValueError:
             pagina = 1
-        por_pagina = 50
+        try:
+            limite = int(request.args.get("limite", "50"))
+        except (TypeError, ValueError):
+            limite = 50
+        por_pagina = max(1, min(limite, 500))
 
         sql = "SELECT * FROM log_auditoria WHERE 1=1"
         p = []

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import BannerErrorMutacion from '../../componentes/BannerErrorMutacion';
 import { mensajeErrorRbac } from './rbacUtil';
 
 export default function Sistemas() {
@@ -21,14 +22,16 @@ export default function Sistemas() {
     [busqueda, categoria, clasificacion, incluirInactivos],
   );
   const [cambiandoEstado, setCambiandoEstado] = useState(null);
+  const [errorMutacion, setErrorMutacion] = useState(null);
 
   async function alternarActivo(id) {
     setCambiandoEstado(id);
+    setErrorMutacion(null);
     try {
       await rbacApi.toggleActivoSistema(id);
       recargar();
     } catch (e) {
-      alert(e.message);
+      setErrorMutacion(e.message);
     } finally {
       setCambiandoEstado(null);
     }
@@ -54,6 +57,8 @@ export default function Sistemas() {
           </Link>
         )}
       </div>
+
+      <BannerErrorMutacion error={errorMutacion} onCerrar={() => setErrorMutacion(null)} />
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input

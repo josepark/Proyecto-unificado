@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import BannerErrorMutacion from '../../componentes/BannerErrorMutacion';
 import { NIVEL_COLOR, descripcionNivel, mensajeErrorRbac } from './rbacUtil';
 
 export default function Matriz() {
@@ -13,6 +14,7 @@ export default function Matriz() {
 
   const [filtroGrupo, setFiltroGrupo] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [soloConAcceso, setSoloConAcceso] = useState(false);
   const [rolDetalle, setRolDetalle] = useState(null);
 
   const paramsMatriz = useMemo(() => {
@@ -29,21 +31,15 @@ export default function Matriz() {
 
   const [editando, setEditando] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [errorMutacion, setErrorMutacion] = useState(null);
+  const [celdasLocal, setCeldasLocal] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [resaltado, setResaltado] = useState(null);
   const columnasRef = useRef({});
 
-  function irASistema(ev) {
-    if (ev.key !== 'Enter') return;
-    ev.preventDefault();
-    const q = busqueda.trim().toLowerCase();
-    if (!q) return;
-    const encontrado = (datos?.sistemas ?? []).find((s) => s.nombre.toLowerCase().includes(q));
-    if (!encontrado) return;
-    columnasRef.current[encontrado.id]?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-    setResaltado(encontrado.id);
-    setTimeout(() => setResaltado(null), 2200);
-  }
+  useEffect(() => {
+    setCeldasLocal(null);
+  }, [datos]);
 
   if (error) {
     return (
@@ -54,19 +50,46 @@ export default function Matriz() {
   }
   if (cargando || !datos) return <p>Cargando matriz…</p>;
 
-  const { roles, sistemas, celdas, niveles } = datos;
+  const { roles, sistemas, niveles } = datos;
+  const celdas = { ...datos.celdas, ...(celdasLocal ?? {}) };
+
+  const rolesVisibles = roles.filter((r) => !rolDetalle || r.id === rolDetalle);
+  const sistemasVisibles = soloConAcceso
+    ? sistemas.filter((s) => rolesVisibles.some((r) => (celdas[`${r.id}:${s.id}`] || '—') !== '—'))
+    : sistemas;
 
   async function cambiarNivel(rolId, sistemaId, nivel) {
+    const clave = `${rolId}:${sistemaId}`;
+    const anterior = celdas[clave] || '—';
+    setCeldasLocal((prev) => ({ ...(prev ?? datos.celdas), [clave]: nivel }));
     setGuardando(true);
+    setErrorMutacion(null);
     try {
       await rbacApi.editarCeldaMatriz(rolId, sistemaId, nivel);
-      await recargar();
     } catch (e) {
-      window.alert(e.message);
+      setCeldasLocal((prev) => {
+        const next = { ...(prev ?? datos.celdas) };
+        if (anterior === '—') delete next[clave];
+        else next[clave] = anterior;
+        return next;
+      });
+      setErrorMutacion(e.message || 'No se pudo guardar el cambio.');
     } finally {
       setGuardando(false);
       setEditando(null);
     }
+  }
+
+  function irASistema(ev) {
+    if (ev.key !== 'Enter') return;
+    ev.preventDefault();
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return;
+    const encontrado = sistemasVisibles.find((s) => s.nombre.toLowerCase().includes(q));
+    if (!encontrado) return;
+    columnasRef.current[encontrado.id]?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    setResaltado(encontrado.id);
+    setTimeout(() => setResaltado(null), 2200);
   }
 
   const rolSeleccionado = rolDetalle ? roles.find((r) => r.id === rolDetalle) : null;
@@ -91,6 +114,8 @@ export default function Matriz() {
           Modo consulta (solo lectura) — rol Consultor.
         </p>
       )}
+
+      <BannerErrorMutacion error={errorMutacion} onCerrar={() => setErrorMutacion(null)} />
 
       {heatmap?.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -161,6 +186,14 @@ export default function Matriz() {
             <option key={c.id} value={c.nombre}>{c.nombre}</option>
           ))}
         </select>
+        <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={soloConAcceso}
+            onChange={(e) => setSoloConAcceso(e.target.checked)}
+          />
+          Solo columnas con acceso
+        </label>
         <Link to="/rbac/matriz/comparar" style={{ fontSize: 13 }}>Comparar dos roles →</Link>
         {puedeEditarMatriz && (
           <>
@@ -171,7 +204,8 @@ export default function Matriz() {
       </div>
 
       <p style={{ fontSize: 12, color: 'var(--texto-suave)', marginBottom: 12 }}>
-        {roles.length} roles × {sistemas.length} sistemas. Clic en abreviatura del rol para ver su fila completa.{' '}
+        {rolesVisibles.length} roles × {sistemasVisibles.length} sistemas
+        {soloConAcceso ? ` (de ${sistemas.length} totales)` : ''}. Clic en abreviatura del rol para aislar su fila.{' '}
         {niveles.map((n) => (
           <span key={n.codigo} style={{ marginRight: 10 }} title={n.descripcion}>
             <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: NIVEL_COLOR[n.codigo], marginRight: 4, verticalAlign: 'middle' }} />
@@ -193,21 +227,26 @@ export default function Matriz() {
         </div>
       )}
 
+      {guardando && (
+        <p style={{ fontSize: 12, color: 'var(--texto-suave)', margin: '0 0 8px' }}>Guardando cambio…</p>
+      )}
+
       <div style={{ overflow: 'auto', border: '1px solid var(--borde)', borderRadius: 10, maxHeight: '70vh' }}>
         <table style={{ borderRadius: 0 }}>
           <thead>
             <tr>
               <th style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--panel-solid)' }}>Rol</th>
-              {sistemas.map((s) => (
+              {sistemasVisibles.map((s) => (
                 <th
                   key={s.id}
                   ref={(el) => { columnasRef.current[s.id] = el; }}
                   title={`${s.nombre} (${s.categoria})`}
                   style={{
-                    writingMode: 'vertical-rl', textAlign: 'left', minWidth: 30,
+                    writingMode: 'vertical-rl',
+                    textAlign: 'left',
+                    minWidth: 30,
                     background: resaltado === s.id ? 'var(--resaltado)' : undefined,
                     color: resaltado === s.id ? 'var(--cric-gold-400)' : undefined,
-                    display: rolDetalle && !celdas[`${rolDetalle}:${s.id}`] && celdas[`${rolDetalle}:${s.id}`] !== '—' ? undefined : undefined,
                   }}
                 >
                   {s.nombre.length > 18 ? `${s.nombre.slice(0, 18)}…` : s.nombre}
@@ -216,77 +255,76 @@ export default function Matriz() {
             </tr>
           </thead>
           <tbody>
-            {roles
-              .filter((r) => !rolDetalle || r.id === rolDetalle)
-              .map((r) => (
-                <tr key={r.id}>
-                  <td style={{ position: 'sticky', left: 0, background: 'var(--panel-solid)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => setRolDetalle(rolDetalle === r.id ? null : r.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 'bold', padding: 0 }}
-                      title="Ver solo este rol"
+            {rolesVisibles.map((r) => (
+              <tr key={r.id}>
+                <td style={{ position: 'sticky', left: 0, background: 'var(--panel-solid)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setRolDetalle(rolDetalle === r.id ? null : r.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 'bold', padding: 0 }}
+                    title="Ver solo este rol"
+                  >
+                    {r.abreviatura}
+                  </button>
+                </td>
+                {sistemasVisibles.map((s) => {
+                  const clave = `${r.id}:${s.id}`;
+                  const nivel = celdas[clave] || '—';
+                  const esEditable = puedeEditarMatriz && editando === clave;
+                  const auditQ = encodeURIComponent(`${r.abreviatura} × ${s.nombre}`);
+                  return (
+                    <td
+                      key={s.id}
+                      onClick={() => puedeEditarMatriz && !guardando && setEditando(clave)}
+                      style={{
+                        textAlign: 'center',
+                        cursor: puedeEditarMatriz && !guardando ? 'pointer' : 'default',
+                        background: esEditable ? 'var(--panel-solid)' : resaltado === s.id ? 'var(--resaltado)' : undefined,
+                      }}
                     >
-                      {r.abreviatura}
-                    </button>
-                  </td>
-                  {sistemas.map((s) => {
-                    const clave = `${r.id}:${s.id}`;
-                    const nivel = celdas[clave] || '—';
-                    const esEditable = puedeEditarMatriz && editando === clave;
-                    const auditQ = encodeURIComponent(`${r.abreviatura} × ${s.nombre}`);
-                    return (
-                      <td
-                        key={s.id}
-                        onClick={() => puedeEditarMatriz && !guardando && setEditando(clave)}
-                        style={{
-                          textAlign: 'center',
-                          cursor: puedeEditarMatriz ? 'pointer' : 'default',
-                          background: esEditable ? 'var(--panel-solid)' : resaltado === s.id ? 'var(--resaltado)' : undefined,
-                        }}
-                      >
-                        {esEditable ? (
-                          <select
-                            autoFocus
-                            defaultValue={nivel}
-                            disabled={guardando}
-                            onBlur={() => setEditando(null)}
-                            onChange={(e) => cambiarNivel(r.id, s.id, e.target.value)}
-                            style={{ padding: '2px 4px', fontSize: 11 }}
+                      {esEditable ? (
+                        <select
+                          autoFocus
+                          defaultValue={nivel}
+                          disabled={guardando}
+                          onBlur={() => setEditando(null)}
+                          onChange={(e) => cambiarNivel(r.id, s.id, e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Escape') setEditando(null); }}
+                          style={{ padding: '2px 4px', fontSize: 11 }}
+                        >
+                          {niveles.map((n) => (
+                            <option key={n.codigo} value={n.codigo}>{n.codigo}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <>
+                          <span
+                            title={descripcionNivel(niveles, nivel)}
+                            style={{
+                              display: 'inline-block', width: 20, height: 20, lineHeight: '20px',
+                              borderRadius: 4, color: '#fff', fontSize: 11, fontWeight: 'bold',
+                              background: NIVEL_COLOR[nivel],
+                            }}
                           >
-                            {niveles.map((n) => (
-                              <option key={n.codigo} value={n.codigo}>{n.codigo}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <>
-                            <span
-                              title={descripcionNivel(niveles, nivel)}
-                              style={{
-                                display: 'inline-block', width: 20, height: 20, lineHeight: '20px',
-                                borderRadius: 4, color: '#fff', fontSize: 11, fontWeight: 'bold',
-                                background: NIVEL_COLOR[nivel],
-                              }}
+                            {nivel === '—' ? '' : nivel}
+                          </span>
+                          {nivel !== '—' && (
+                            <Link
+                              to={`/rbac/auditoria?q=${auditQ}&entidad=matriz_acceso`}
+                              title="Historial de cambios en esta celda"
+                              style={{ display: 'block', fontSize: 9, marginTop: 2, color: 'var(--texto-suave)' }}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              {nivel === '—' ? '' : nivel}
-                            </span>
-                            {nivel !== '—' && (
-                              <Link
-                                to={`/rbac/auditoria?q=${auditQ}&entidad=matriz_acceso`}
-                                title="Historial de cambios en esta celda"
-                                style={{ display: 'block', fontSize: 9, marginTop: 2, color: 'var(--texto-suave)' }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                ⏱
-                              </Link>
-                            )}
-                          </>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                              ⏱
+                            </Link>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

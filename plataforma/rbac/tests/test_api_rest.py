@@ -649,6 +649,12 @@ def test_auditoria_filtra_por_entidad(cliente):
     assert all(x["entidad"] == "rol" for x in r.get_json()["registros"])
 
 
+def test_auditoria_respeta_limite(cliente):
+    r = cliente.get("/api/auditoria?limite=3")
+    assert r.status_code == 200
+    assert len(r.get_json()["registros"]) <= 3
+
+
 def test_auditoria_verificar_cadena_integra(cliente):
     r = cliente.get("/api/auditoria/verificar")
     assert r.status_code == 200

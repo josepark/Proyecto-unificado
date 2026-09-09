@@ -5,6 +5,7 @@ import { inventarioApi } from '../../api/inventario';
 import { eventosApi } from '../../api/client';
 import PanelVinculacion from '../../componentes/PanelVinculacion';
 import { pendientesSync } from '../../lib/integracionUi';
+import { ENLACES_ALERTAS_RBAC } from '../rbac/rbacUtil';
 
 const SEV_CLASE = { crit: 't-CRIT', alto: 't-ALTO', medio: 't-MEDIO', bajo: 't-BAJO' };
 const SEV_TEXTO = { crit: 'Crítico', alto: 'Alto', medio: 'Medio', bajo: 'Bajo' };
@@ -93,10 +94,10 @@ function SeccionRbac({ rbac }) {
 
   const d = rbac.desglose_pendientes || {};
   const filas = [
-    ['Vencimientos próximos (7 d)', d.proximos_vencimientos, '/rbac/inicio'],
-    ['MFA incumplido', d.alertas_mfa, '/rbac/inicio'],
-    ['Certificación de rol vencida', d.roles_certificacion_vencida, '/rbac/inicio'],
-    ['Excepciones vencidas', d.excepciones_vencidas, '/rbac/inicio'],
+    ['Vencimientos próximos (7 d)', d.proximos_vencimientos, ENLACES_ALERTAS_RBAC.proximos_vencimientos],
+    ['MFA incumplido', d.alertas_mfa, ENLACES_ALERTAS_RBAC.alertas_mfa],
+    ['Certificación de rol vencida', d.roles_certificacion_vencida, ENLACES_ALERTAS_RBAC.roles_certificacion_vencida],
+    ['Excepciones vencidas', d.excepciones_vencidas, ENLACES_ALERTAS_RBAC.excepciones_vencidas],
   ].filter(([, n]) => n > 0);
 
   return (

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
 import { CampoSelect, Fila } from '../../componentes/CamposFormulario';
+import BannerErrorMutacion from '../../componentes/BannerErrorMutacion';
+import { mensajeErrorRbac } from './rbacUtil';
 
 export default function MatrizComparar() {
   const { datos: roles } = useApi(() => rbacApi.listarRoles(), []);
@@ -21,7 +23,7 @@ export default function MatrizComparar() {
       const r = await rbacApi.compararRoles(rolA, rolB);
       setResultado(r);
     } catch (e) {
-      setError(e.message);
+      setError(mensajeErrorRbac('la comparación de roles', e));
       setResultado(null);
     } finally {
       setComparando(false);
@@ -63,7 +65,7 @@ export default function MatrizComparar() {
         </Fila>
       </form>
 
-      {error && <p style={{ color: 'var(--crit)', fontWeight: 'bold' }}>Error: {error}</p>}
+      {error && <BannerErrorMutacion error={error} onCerrar={() => setError(null)} />}
 
       {resultado && (
         <div className="card">

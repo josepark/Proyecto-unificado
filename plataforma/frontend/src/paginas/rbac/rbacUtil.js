@@ -7,6 +7,14 @@ export function mensajeErrorRbac(pantalla, error) {
   return `No se pudo cargar ${pantalla}.`;
 }
 
+/** Rutas profundas desde el centro de alertas unificado hacia RBAC. */
+export const ENLACES_ALERTAS_RBAC = {
+  proximos_vencimientos: '/rbac/inicio#vencimientos',
+  alertas_mfa: '/rbac/inicio#mfa',
+  roles_certificacion_vencida: '/rbac/roles?cert_vencida=1',
+  excepciones_vencidas: '/rbac/excepciones?vencidas=1',
+};
+
 export function puedeVerRbac({ autenticado, puedeEditar, roles }) {
   if (puedeEditar) return true;
   return autenticado && (roles ?? []).includes('Consultor');

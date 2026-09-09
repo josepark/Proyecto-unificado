@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import BannerErrorMutacion from '../../componentes/BannerErrorMutacion';
 import { mensajeErrorRbac } from './rbacUtil';
 
 const ESTADO_CLASE = { Activo: 't-BAJO', Temporal: 't-MEDIO', Suspendido: 't-ALTO', Revocado: 't-CRIT' };
@@ -41,14 +42,16 @@ export default function Usuarios() {
   );
   const [cambiando, setCambiando] = useState(null);
   const [eliminando, setEliminando] = useState(null);
+  const [errorMutacion, setErrorMutacion] = useState(null);
 
   async function aplicarEstado(id, nuevoEstado, motivo) {
     setCambiando(id);
+    setErrorMutacion(null);
     try {
       await rbacApi.cambiarEstadoUsuario(id, nuevoEstado, motivo);
       recargar();
     } catch (e) {
-      alert(e.message);
+      setErrorMutacion(e.message);
     } finally {
       setCambiando(null);
     }
@@ -57,11 +60,12 @@ export default function Usuarios() {
   async function eliminar(u) {
     if (!confirm(`¿Eliminar el registro del usuario ${u.nombre}? La bitácora conserva sus movimientos, pero el registro no se puede recuperar.`)) return;
     setEliminando(u.id);
+    setErrorMutacion(null);
     try {
       await rbacApi.eliminarUsuario(u.id);
       recargar();
     } catch (e) {
-      alert(e.message);
+      setErrorMutacion(e.message);
     } finally {
       setEliminando(null);
     }
@@ -87,6 +91,8 @@ export default function Usuarios() {
           </Link>
         )}
       </div>
+
+      <BannerErrorMutacion error={errorMutacion} onCerrar={() => setErrorMutacion(null)} />
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
         <input
