@@ -83,7 +83,7 @@ describe('Alertas — centro unificado', () => {
       </MemoryRouter>,
     );
     await screen.findByText(/Sincronización Inventario ↔ Riesgos/i);
-    expect(screen.getByText(/sin espejo en Gestión de Riesgos/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /CSV completo/i })).toBeInTheDocument();
   });
 
   it('tiene botón de actualizar', async () => {

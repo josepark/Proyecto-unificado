@@ -449,6 +449,34 @@ def alertas(request):
 
 @api_view(["GET"])
 @permission_classes([RolPermiso])
+def integracion_vinculacion(request):
+    """Panel de sincronización Inventario ↔ Riesgos (Ola 6)."""
+    from .integracion_riesgos import detalle_vinculacion
+
+    return Response(detalle_vinculacion(Activo.objects.all().order_by("id_activo")))
+
+
+@api_view(["GET"])
+@permission_classes([RolPermiso])
+def exportar_vinculacion_csv(request):
+    """Export CSV de activos sin espejo y huérfanos en Riesgos (Ola 6)."""
+    from django.http import HttpResponse
+    from .integracion_riesgos import detalle_vinculacion, generar_csv_vinculacion
+
+    tipo = request.GET.get("tipo", "todos")
+    if tipo not in ("todos", "sin_espejo", "huerfanos"):
+        return Response({"detail": "tipo debe ser todos, sin_espejo o huerfanos."}, status=400)
+    detalle = detalle_vinculacion(Activo.objects.all().order_by("id_activo"))
+    if not detalle.get("disponible"):
+        return Response({"detail": "Módulo de Riesgos no disponible."}, status=503)
+    csv_text = generar_csv_vinculacion(detalle, tipo=tipo)
+    resp = HttpResponse(csv_text, content_type="text/csv; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename="vinculacion_inventario_riesgos_{tipo}.csv"'
+    return resp
+
+
+@api_view(["GET"])
+@permission_classes([RolPermiso])
 def alertas_unificadas(request):
     """Centro de alertas Ola 5: Inventario + RBAC + Riesgos en una sola respuesta."""
     from .integracion_rbac import resumen_rbac

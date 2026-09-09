@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { eventosApi } from '../../api/client';
+import PanelVinculacion from '../../componentes/PanelVinculacion';
 
 const SEV_CLASE = { crit: 't-CRIT', alto: 't-ALTO', medio: 't-MEDIO', bajo: 't-BAJO' };
 const SEV_TEXTO = { crit: 'Crítico', alto: 'Alto', medio: 'Medio', bajo: 'Bajo' };
@@ -170,27 +171,7 @@ function SeccionRiesgos({ riesgos, vinculacion }) {
 function SeccionVinculacion({ vinculacion }) {
   if (!vinculacion?.disponible) return null;
   if (!(vinculacion.sin_espejo_riesgos > 0 || vinculacion.huerfanos_riesgos > 0)) return null;
-
-  return (
-    <div className="card" style={{ marginBottom: 14, borderColor: 'var(--alto)' }}>
-      <h2>Sincronización Inventario ↔ Riesgos</h2>
-      <div className="cuerpo" style={{ fontSize: 13 }}>
-        {vinculacion.sin_espejo_riesgos > 0 && (
-          <p style={{ margin: '0 0 8px' }}>
-            <b>{vinculacion.sin_espejo_riesgos}</b> activo(s) del Inventario sin espejo en Gestión de Riesgos
-            ({vinculacion.vinculados}/{vinculacion.total_inventario} vinculados).
-            Ejecute <code>sincronizar_activos_inventario</code> o <code>./desplegar.sh</code>.
-          </p>
-        )}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link to="/inventario/riesgos">Valoración inherente →</Link>
-          {vinculacion.huerfanos_riesgos > 0 && (
-            <Link to="/gestion-riesgos/activos?huerfanos=1">Huérfanos en Riesgos ({vinculacion.huerfanos_riesgos}) →</Link>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return <PanelVinculacion vinculacion={vinculacion} compacto />;
 }
 
 export default function Alertas() {

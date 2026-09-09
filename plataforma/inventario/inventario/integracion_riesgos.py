@@ -102,12 +102,7 @@ def mapa_activos_por_inventario():
         return None
 
 
-def resumen_vinculacion(total_inventario):
-    """Conteos de sincronización Inventario ↔ Riesgos."""
-    mapa = mapa_activos_por_inventario()
-    if mapa is None:
-        return {"disponible": False}
-    huerfanos_riesgos = 0
+def _contar_huerfanos_riesgos():
     try:
         r = requests.get(
             f"{RIESGOS_INTERNAL_URL}/api/activos/",
@@ -115,17 +110,128 @@ def resumen_vinculacion(total_inventario):
             timeout=_TIMEOUT,
         )
         r.raise_for_status()
-        huerfanos_riesgos = r.json().get("count", 0)
+        return r.json().get("count", 0)
     except requests.RequestException:
-        pass
+        return 0
+
+
+def listar_huerfanos_riesgos():
+    """Activos en Riesgos sin inventario_id (solo lectura vía API interna)."""
+    try:
+        filas = []
+        page = 1
+        while page <= 50:
+            r = requests.get(
+                f"{RIESGOS_INTERNAL_URL}/api/activos/",
+                params={"sin_vinculo_inventario": "true", "page": page, "page_size": 200},
+                timeout=_TIMEOUT,
+            )
+            r.raise_for_status()
+            data = r.json()
+            for a in data.get("results", []):
+                filas.append({
+                    "riesgos_id": a.get("id"),
+                    "id_activo": a.get("id_activo"),
+                    "nombre": a.get("nombre"),
+                    "ip_principal": a.get("ip_principal"),
+                    "riesgo_matriz": a.get("riesgo_matriz"),
+                })
+            if not data.get("next"):
+                break
+            page += 1
+        return filas
+    except requests.RequestException:
+        return None
+
+
+def resumen_vinculacion(total_inventario):
+    """Conteos de sincronización Inventario ↔ Riesgos."""
+    mapa = mapa_activos_por_inventario()
+    if mapa is None:
+        return {"disponible": False}
     vinculados = len(mapa)
     return {
         "disponible": True,
         "total_inventario": total_inventario,
         "vinculados": vinculados,
         "sin_espejo_riesgos": max(0, total_inventario - vinculados),
-        "huerfanos_riesgos": huerfanos_riesgos,
+        "huerfanos_riesgos": _contar_huerfanos_riesgos(),
     }
+
+
+def detalle_vinculacion(activos_qs):
+    """Estado de sincronización con listados para panel operativo (Ola 6)."""
+    from .models import Activo
+
+    total = activos_qs.count() if hasattr(activos_qs, "count") else Activo.objects.count()
+    resumen = resumen_vinculacion(total)
+    if not resumen.get("disponible"):
+        return {"disponible": False, "resumen": resumen}
+
+    mapa = mapa_activos_por_inventario() or {}
+    sin_espejo = []
+    for a in activos_qs.only("id", "id_activo", "nombre", "clase", "nivel_riesgo"):
+        if a.pk not in mapa:
+            sin_espejo.append({
+                "inventario_id": a.pk,
+                "id_activo": a.id_activo,
+                "nombre": a.nombre,
+                "clase": a.clase,
+                "nivel_riesgo": a.nivel_riesgo,
+            })
+    huerfanos = listar_huerfanos_riesgos()
+    if huerfanos is None:
+        return {"disponible": False, "resumen": resumen}
+
+    pct = round(resumen["vinculados"] / total * 100, 1) if total else 100.0
+    return {
+        "disponible": True,
+        "resumen": resumen,
+        "sin_espejo": sin_espejo,
+        "huerfanos_riesgos": huerfanos,
+        "sincronizacion_ok": not sin_espejo and not huerfanos,
+        "porcentaje_vinculados": pct,
+    }
+
+
+def generar_csv_vinculacion(detalle, tipo="todos"):
+    """CSV operativo: activos sin espejo y/o huérfanos en Riesgos."""
+    import csv
+    from io import StringIO
+
+    buf = StringIO()
+    w = csv.writer(buf)
+    w.writerow([
+        "tipo", "inventario_id", "riesgos_id", "id_activo", "nombre",
+        "clase", "nivel_riesgo", "ip_principal", "riesgo_matriz",
+    ])
+    if tipo in ("todos", "sin_espejo"):
+        for row in detalle.get("sin_espejo", []):
+            w.writerow([
+                "sin_espejo",
+                row.get("inventario_id"),
+                "",
+                row.get("id_activo"),
+                row.get("nombre"),
+                row.get("clase"),
+                row.get("nivel_riesgo"),
+                "",
+                "",
+            ])
+    if tipo in ("todos", "huerfanos"):
+        for row in detalle.get("huerfanos_riesgos", []):
+            w.writerow([
+                "huerfano_riesgos",
+                "",
+                row.get("riesgos_id"),
+                row.get("id_activo"),
+                row.get("nombre"),
+                "",
+                "",
+                row.get("ip_principal"),
+                row.get("riesgo_matriz"),
+            ])
+    return buf.getvalue()
 
 
 def resumen_riesgos_panel():

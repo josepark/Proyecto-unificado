@@ -1,6 +1,7 @@
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
+import PanelVinculacion from '../../componentes/PanelVinculacion';
 
 function nivelCelda(p, i) {
   const s = p * i;
@@ -15,6 +16,7 @@ export default function Riesgos() {
   const navegar = useNavigate();
   const { datos, cargando, error, recargar } = useApi(() => inventarioApi.riesgos(), []);
   const { datos: cob, cargando: cargandoCob } = useApi(() => inventarioApi.cobertura(), []);
+  const { datos: detalleVinc } = useApi(() => inventarioApi.integracionVinculacion(), []);
 
   async function recalcular() {
     if (!window.confirm('¿Aplicar el nivel de riesgo calculado a todos los activos con valoración C-I-D? Quedará registrado en la bitácora.')) return;
@@ -44,8 +46,7 @@ export default function Riesgos() {
   });
   const maxCobertura = Math.max(...(cob?.detalle ?? []).map((x) => x.num_activos), 1);
   const filasOrdenadas = [...activos].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
-  const vinc = datos?.vinculacion;
-  const sinEspejo = vinc?.sin_espejo_riesgos ?? 0;
+  const vinc = datos?.vinculacion ?? detalleVinc?.resumen;
 
   return (
     <div>
@@ -62,16 +63,7 @@ export default function Riesgos() {
         )}
       </div>
 
-      {vinc?.disponible && sinEspejo > 0 && (
-        <div className="card" style={{ marginBottom: 14, borderColor: 'var(--alto)' }}>
-          <div className="cuerpo" style={{ fontSize: 13 }}>
-            <b>{sinEspejo}</b> activo(s) del Inventario aún no tienen espejo en{' '}
-            <Link to="/gestion-riesgos">Gestión de Riesgos</Link>
-            {' '}({vinc.vinculados}/{vinc.total_inventario} sincronizados).
-            Ejecute <code>sincronizar_activos_inventario</code> o <code>./desplegar.sh</code>.
-          </div>
-        </div>
-      )}
+      <PanelVinculacion vinculacion={vinc} detalle={detalleVinc} />
 
       <div className="detalle-grid">
         <div className="card">

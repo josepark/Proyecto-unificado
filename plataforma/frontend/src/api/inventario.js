@@ -42,6 +42,8 @@ export const inventarioApi = {
   panelEjecutivo: () => api.get('/dashboard-ejecutivo/'),
   alertas: () => api.get('/alertas/'),
   alertasUnificadas: () => api.get('/alertas/unificadas/'),
+  integracionVinculacion: () => api.get('/integracion/vinculacion/'),
+  exportarVinculacionCsv: (tipo = 'todos') => `/api/integracion/vinculacion.csv?tipo=${tipo}`,
   bitacora: (params) => api.get('/bitacora/', params),
   accesos: () => api.get('/accesos/'),
   accesosUnificado: (params) => api.get('/accesos/unificado/', params),

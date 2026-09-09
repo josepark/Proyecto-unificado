@@ -1834,3 +1834,100 @@ class IntegracionRiesgosOla5Test(TestCase):
         self.assertEqual(fila["riesgos_id"], 99)
         self.assertEqual(data["vinculacion"]["vinculados"], 1)
 
+
+class IntegracionRiesgosOla6Test(TestCase):
+    """Ola 6 — panel de sincronización, detalle y export CSV."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from .models import Activo
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.consultor = User.objects.create_user("ola6_vinc_test", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+        cls.vinculado = Activo.objects.create(
+            nombre="Con espejo", clase="INFRA", clasificacion_si="CONF",
+            estado="ACT", nivel_riesgo="MED",
+        )
+        cls.sin_espejo = Activo.objects.create(
+            nombre="Sin espejo", clase="SIST", clasificacion_si="INT",
+            estado="ACT", nivel_riesgo="BAJO",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.consultor)
+
+    def test_integracion_vinculacion_detalle(self):
+        from unittest.mock import patch
+
+        mapa = {
+            self.vinculado.pk: {
+                "id": 10,
+                "id_activo": "INFRA-001",
+                "total_vulnerabilidades": 0,
+                "vulnerabilidades_criticas": 0,
+                "riesgo_matriz": "MED",
+            },
+        }
+        huerfanos = [{
+            "riesgos_id": 99,
+            "id_activo": "HUER-01",
+            "nombre": "Huérfano",
+            "ip_principal": "10.0.0.1",
+            "riesgo_matriz": "ALTO",
+        }]
+        with patch("inventario.integracion_riesgos.mapa_activos_por_inventario", return_value=mapa), \
+             patch("inventario.integracion_riesgos._contar_huerfanos_riesgos", return_value=1), \
+             patch("inventario.integracion_riesgos.listar_huerfanos_riesgos", return_value=huerfanos):
+            r = self.client.get("/api/integracion/vinculacion/")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertTrue(data["disponible"])
+        self.assertFalse(data["sincronizacion_ok"])
+        self.assertEqual(data["resumen"]["vinculados"], 1)
+        self.assertEqual(data["resumen"]["sin_espejo_riesgos"], 1)
+        self.assertEqual(len(data["sin_espejo"]), 1)
+        self.assertEqual(data["sin_espejo"][0]["inventario_id"], self.sin_espejo.pk)
+        self.assertEqual(len(data["huerfanos_riesgos"]), 1)
+
+    def test_export_csv_vinculacion(self):
+        from unittest.mock import patch
+
+        detalle_falso = {
+            "disponible": True,
+            "sin_espejo": [{
+                "inventario_id": self.sin_espejo.pk,
+                "id_activo": self.sin_espejo.id_activo,
+                "nombre": self.sin_espejo.nombre,
+                "clase": "SIST",
+                "nivel_riesgo": "BAJO",
+            }],
+            "huerfanos_riesgos": [],
+        }
+        with patch("inventario.integracion_riesgos.detalle_vinculacion", return_value=detalle_falso):
+            r = self.client.get("/api/integracion/vinculacion.csv?tipo=sin_espejo")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("text/csv", r["Content-Type"])
+        cuerpo = r.content.decode("utf-8")
+        self.assertIn("sin_espejo", cuerpo)
+        self.assertIn(self.sin_espejo.id_activo, cuerpo)
+
+    def test_export_csv_tipo_invalido(self):
+        r = self.client.get("/api/integracion/vinculacion.csv?tipo=invalido")
+        self.assertEqual(r.status_code, 400)
+
+    def test_generar_csv_vinculacion_huerfanos(self):
+        from inventario.integracion_riesgos import generar_csv_vinculacion
+
+        csv_text = generar_csv_vinculacion({
+            "sin_espejo": [],
+            "huerfanos_riesgos": [{
+                "riesgos_id": 5,
+                "id_activo": "X-01",
+                "nombre": "Test",
+                "ip_principal": "1.2.3.4",
+                "riesgo_matriz": "CRIT",
+            }],
+        }, tipo="huerfanos")
+        self.assertIn("huerfano_riesgos", csv_text)
+        self.assertIn("X-01", csv_text)
+
