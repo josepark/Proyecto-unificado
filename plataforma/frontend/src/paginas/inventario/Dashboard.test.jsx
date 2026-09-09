@@ -30,8 +30,8 @@ beforeEach(() => {
     if (u.includes('/activos/')) {
       return ok({
         results: [
-          { id: 1, id_activo: 'SIS-001', nombre: 'Portal', clase: 'SIST', nivel_riesgo: 'MED', nivel_riesgo_display: 'Medio', propietario: 'TI' },
-          { id: 2, id_activo: 'RED-003', nombre: 'Firewall', clase: 'INFRA', nivel_riesgo: 'CRIT', nivel_riesgo_display: 'Crítico', propietario: 'Redes' },
+          { id: 1, id_activo: 'SIS-001', nombre: 'Portal', clase: 'SIST', nivel_riesgo: 'MED', nivel_riesgo_display: 'Medio', propietario: 'TI', vinculado_riesgos: true, riesgos_id: 10 },
+          { id: 2, id_activo: 'RED-003', nombre: 'Firewall', clase: 'INFRA', nivel_riesgo: 'CRIT', nivel_riesgo_display: 'Crítico', propietario: 'Redes', vinculado_riesgos: false, riesgos_id: null },
         ],
       });
     }
@@ -68,5 +68,13 @@ describe('Dashboard — exportación y etiquetas', () => {
     screen.getByLabelText('Seleccionar SIS-001').click();
     const enlace = await screen.findByRole('link', { name: /Etiquetas \(1\)/i });
     expect(enlace).toHaveAttribute('href', '/api/etiquetas/lote.pdf?ids=1');
+  });
+
+  it('muestra columna de vinculación con Riesgos y filtro sin espejo', async () => {
+    renderDashboard({ puedeEditar: true, alertasUnificadas: { vinculacion: { disponible: true } } });
+    await screen.findByText('SIS-001');
+    expect(screen.getByRole('columnheader', { name: 'Riesgos' })).toBeInTheDocument();
+    expect(screen.getByTitle('Sin espejo — ejecute sincronizar_activos_inventario')).toBeInTheDocument();
+    expect(screen.getByLabelText('Solo sin espejo en Riesgos')).toBeInTheDocument();
   });
 });

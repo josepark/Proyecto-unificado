@@ -72,6 +72,8 @@ export default function Shell() {
   );
   const totalAlertas = alertasUni?.total_consolidado ?? 0;
   const pendientesRiesgos = alertasUni?.resumen?.riesgos ?? 0;
+  const vinc = alertasUni?.vinculacion;
+  const pendientesSync = (vinc?.sin_espejo_riesgos ?? 0) + (vinc?.huerfanos_riesgos ?? 0);
 
   useEffect(() => {
     function actualizarAlertas() {
@@ -145,6 +147,15 @@ export default function Shell() {
             {totalAlertas > 0 ? (
               <span className="badge-modulo" style={{ marginLeft: 6 }} title="Señales en centro de alertas">
                 {totalAlertas}
+              </span>
+            ) : null}
+            {pendientesSync > 0 ? (
+              <span
+                className="badge-modulo"
+                style={{ marginLeft: 4, background: 'var(--alto)' }}
+                title="Activos pendientes de sincronizar con Gestión de Riesgos"
+              >
+                ↻{pendientesSync}
               </span>
             ) : null}
           </NavLink>

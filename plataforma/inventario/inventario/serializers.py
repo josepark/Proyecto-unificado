@@ -114,6 +114,8 @@ class ActivoListSerializer(serializers.ModelSerializer):
     clase_display = serializers.SerializerMethodField()
     nivel_riesgo_display = serializers.CharField(source="get_nivel_riesgo_display", read_only=True)
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
+    vinculado_riesgos = serializers.SerializerMethodField()
+    riesgos_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Activo
@@ -121,10 +123,27 @@ class ActivoListSerializer(serializers.ModelSerializer):
                   "clasificacion_si", "confidencialidad", "integridad",
                   "disponibilidad", "valor", "nivel_riesgo",
                   "nivel_riesgo_display", "estado", "estado_display",
-                  "propietario", "procesa_datos_personales")
+                  "propietario", "procesa_datos_personales",
+                  "vinculado_riesgos", "riesgos_id")
 
     def get_clase_display(self, obj):
         return obj.nombre_clase()
+
+    def _espejo(self, obj):
+        mapa = self.context.get("mapa_riesgos")
+        if mapa is None:
+            return None
+        return mapa.get(obj.pk)
+
+    def get_vinculado_riesgos(self, obj):
+        espejo = self._espejo(obj)
+        if espejo is None and self.context.get("mapa_riesgos") is None:
+            return None
+        return bool(espejo)
+
+    def get_riesgos_id(self, obj):
+        espejo = self._espejo(obj)
+        return espejo.get("id") if espejo else None
 
 
 class ActivoDetailSerializer(serializers.ModelSerializer):

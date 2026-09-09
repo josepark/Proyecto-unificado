@@ -1997,3 +1997,64 @@ class IntegracionRiesgosOla6Test(TestCase):
         self.assertIn("huerfano_riesgos", csv_text)
         self.assertIn("X-01", csv_text)
 
+
+class IntegracionRiesgosOla8Test(TestCase):
+    """Ola 8 — vinculación en listado de activos y filtro operativo."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.consultor = User.objects.create_user("ola8_list_test", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+        from .models import Activo
+        cls.vinculado = Activo.objects.create(
+            nombre="Con espejo", clase="INFRA", clasificacion_si="CONF",
+            estado="ACT", nivel_riesgo="MED",
+        )
+        cls.sin_espejo = Activo.objects.create(
+            nombre="Sin espejo", clase="SIST", clasificacion_si="INT",
+            estado="ACT", nivel_riesgo="BAJO",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.consultor)
+
+    def test_listado_incluye_vinculado_riesgos(self):
+        from unittest.mock import patch
+
+        mapa = {
+            self.vinculado.pk: {
+                "id": 42,
+                "id_activo": "INFRA-001",
+                "total_vulnerabilidades": 0,
+                "vulnerabilidades_criticas": 0,
+                "riesgo_matriz": "MED",
+            },
+        }
+        with patch("inventario.integracion_riesgos.mapa_activos_por_inventario", return_value=mapa):
+            r = self.client.get("/api/activos/")
+        self.assertEqual(r.status_code, 200)
+        filas = {a["id"]: a for a in r.json()["results"]}
+        self.assertTrue(filas[self.vinculado.pk]["vinculado_riesgos"])
+        self.assertEqual(filas[self.vinculado.pk]["riesgos_id"], 42)
+        self.assertFalse(filas[self.sin_espejo.pk]["vinculado_riesgos"])
+        self.assertIsNone(filas[self.sin_espejo.pk]["riesgos_id"])
+
+    def test_filtro_sin_espejo_riesgos(self):
+        from unittest.mock import patch
+
+        mapa = {self.vinculado.pk: {"id": 42, "id_activo": "X", "vulnerabilidades_criticas": 0}}
+        with patch("inventario.integracion_riesgos.mapa_activos_por_inventario", return_value=mapa):
+            r = self.client.get("/api/activos/", {"sin_espejo_riesgos": "true"})
+        ids = [a["id"] for a in r.json()["results"]]
+        self.assertIn(self.sin_espejo.pk, ids)
+        self.assertNotIn(self.vinculado.pk, ids)
+
+    def test_listado_vinculado_null_si_riesgos_caido(self):
+        from unittest.mock import patch
+
+        with patch("inventario.integracion_riesgos.mapa_activos_por_inventario", return_value=None):
+            r = self.client.get("/api/activos/")
+        fila = r.json()["results"][0]
+        self.assertIsNone(fila["vinculado_riesgos"])
+

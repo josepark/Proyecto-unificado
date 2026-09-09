@@ -56,6 +56,7 @@ beforeEach(() => {
   vi.mocked(inventarioApi.alertasUnificadas).mockResolvedValue({
     total_consolidado: 8,
     resumen: { inventario: 4, rbac: 3, riesgos: 2, inventario_criticas: 1 },
+    vinculacion: { disponible: true, sin_espejo_riesgos: 2, huerfanos_riesgos: 1 },
   });
   vi.mocked(consultarSesionInventario).mockResolvedValue({
     autenticado: true,
@@ -126,5 +127,19 @@ describe('Shell — pestañas de módulo', () => {
     expect(badges.some((el) => el.classList.contains('badge-modulo'))).toBe(true);
     expect(await screen.findByText('2')).toHaveClass('badge-modulo');
     expect(inventarioApi.alertasUnificadas).toHaveBeenCalled();
+  });
+
+  it('muestra badge de sincronización en Inventario cuando hay pendientes', async () => {
+    vi.mocked(useSesion).mockReturnValue({
+      autenticado: true,
+      usuario: 'dinamizador',
+      puedeEditar: true,
+      puedeEliminar: false,
+      cargando: false,
+      roles: ['Dinamizador'],
+      recargar: vi.fn(),
+    });
+    renderShell();
+    expect(await screen.findByText('↻3')).toHaveClass('badge-modulo');
   });
 });

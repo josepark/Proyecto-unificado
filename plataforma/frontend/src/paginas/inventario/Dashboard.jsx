@@ -12,14 +12,16 @@ export default function Dashboard() {
   const { datos: stats, cargando: cargandoStats } = useApi(() => inventarioApi.estadisticas(), []);
   const [busqueda, setBusqueda] = useState('');
   const [filtroClase, setFiltroClase] = useState('');
+  const [soloSinEspejo, setSoloSinEspejo] = useState(false);
   const [seleccionados, setSeleccionados] = useState(() => new Set());
   const { datos: activos, cargando: cargandoLista } = useApi(
     () => inventarioApi.listarActivos({
       search: busqueda,
       page_size: 50,
       ...(filtroClase ? { clase: filtroClase } : {}),
+      ...(soloSinEspejo ? { sin_espejo_riesgos: 'true' } : {}),
     }),
-    [busqueda, filtroClase],
+    [busqueda, filtroClase, soloSinEspejo],
   );
 
   const clasesCatalogo = stats?.clases ?? [];
@@ -151,7 +153,7 @@ export default function Dashboard() {
         <p>No se pudieron cargar los indicadores.</p>
       )}
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           placeholder="Buscar por ID, nombre, propietario, notas…"
           value={busqueda}
@@ -164,6 +166,14 @@ export default function Dashboard() {
             <option key={c.codigo} value={c.codigo}>{c.nombre}</option>
           ))}
         </select>
+        <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={soloSinEspejo}
+            onChange={(e) => setSoloSinEspejo(e.target.checked)}
+          />
+          Solo sin espejo en Riesgos
+        </label>
       </div>
 
       {cargandoLista ? (
@@ -184,6 +194,7 @@ export default function Dashboard() {
               <th>Activo</th>
               <th>Clase</th>
               <th>Riesgo</th>
+              <th>Riesgos</th>
               <th>Propietario</th>
             </tr>
           </thead>
@@ -214,6 +225,23 @@ export default function Dashboard() {
                 </td>
                 <td onClick={() => navegar(`/inventario/activos/${a.id}`)} style={{ cursor: 'pointer' }}>
                   <span className={`tag t-${a.nivel_riesgo}`}>{a.nivel_riesgo_display}</span>
+                </td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  {a.vinculado_riesgos === null ? (
+                    <span style={{ color: 'var(--texto-suave)', fontSize: 11 }} title="Riesgos no disponible">—</span>
+                  ) : a.vinculado_riesgos ? (
+                    <Link
+                      to={`/gestion-riesgos/activos/${a.riesgos_id}`}
+                      title="Ver en Gestión de Riesgos"
+                      style={{ fontSize: 12 }}
+                    >
+                      ↗
+                    </Link>
+                  ) : (
+                    <span style={{ color: 'var(--alto)', fontSize: 11 }} title="Sin espejo — ejecute sincronizar_activos_inventario">
+                      ⚠
+                    </span>
+                  )}
                 </td>
                 <td onClick={() => navegar(`/inventario/activos/${a.id}`)} style={{ cursor: 'pointer' }}>
                   {a.propietario || '—'}

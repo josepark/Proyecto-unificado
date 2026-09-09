@@ -40,6 +40,27 @@ class ActivoViewSet(viewsets.ModelViewSet):
                      "propietario", "custodio"]
     ordering_fields = ["id_activo", "valor", "nivel_riesgo"]
 
+    def _mapa_riesgos(self):
+        """Mapa inventario_id → espejo en Riesgos (una sola llamada por petición list)."""
+        if not hasattr(self, "_mapa_riesgos_cache"):
+            from .integracion_riesgos import mapa_activos_por_inventario
+            self._mapa_riesgos_cache = mapa_activos_por_inventario()
+        return self._mapa_riesgos_cache
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.query_params.get("sin_espejo_riesgos", "").lower() in ("1", "true", "yes"):
+            mapa = self._mapa_riesgos()
+            if mapa is not None:
+                qs = qs.exclude(pk__in=mapa.keys())
+        return qs
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        if self.action == "list":
+            ctx["mapa_riesgos"] = self._mapa_riesgos()
+        return ctx
+
     def get_serializer_class(self):
         if self.action == "list":
             return ActivoListSerializer
