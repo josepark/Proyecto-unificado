@@ -70,8 +70,9 @@ export default function Matriz() {
   }
 
   const rolSeleccionado = rolDetalle ? roles.find((r) => r.id === rolDetalle) : null;
-  const maxAdminHeat = Math.max(...(heatmap ?? []).map((h) => h.n_admin), 1);
-  const maxElevHeat = Math.max(...(heatmap ?? []).map((h) => h.n_elevados), 1);
+  const heatmapOrdenado = [...(heatmap ?? [])].sort((a, b) => b.n_admin - a.n_admin || b.n_elevados - a.n_elevados);
+  const maxAdminHeat = Math.max(...heatmapOrdenado.map((h) => h.n_admin), 1);
+  const maxElevHeat = Math.max(...heatmapOrdenado.map((h) => h.n_elevados), 1);
 
   function intensidadHeat(valor, maximo) {
     if (!valor) return 'transparent';
@@ -98,7 +99,7 @@ export default function Matriz() {
             <p style={{ fontSize: 12, color: 'var(--texto-suave)', marginTop: 0 }}>
               Intensidad proporcional al número de celdas con nivel Admin (A) y accesos elevados por categoría de sistema.
             </p>
-            {heatmap.map((h) => (
+            {heatmapOrdenado.map((h) => (
               <div key={h.categoria} style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
                   <strong>{h.categoria}</strong>

@@ -5,6 +5,26 @@ import { inventarioApi } from '../../api/inventario';
 const SEV_CLASE = { crit: 't-CRIT', alto: 't-ALTO', medio: 't-MEDIO', bajo: 't-BAJO' };
 const SEV_TEXTO = { crit: 'Crítico', alto: 'Alto', medio: 'Medio', bajo: 'Bajo' };
 
+function KpiResumen({ valor, etiqueta, critico }) {
+  return (
+    <div
+      className="card"
+      style={{
+        margin: 0,
+        textAlign: 'center',
+        borderColor: critico && valor > 0 ? 'var(--crit)' : undefined,
+      }}
+    >
+      <div className="cuerpo" style={{ padding: '12px 10px' }}>
+        <div style={{ fontSize: 22, fontWeight: 'bold', color: critico && valor > 0 ? 'var(--crit)' : 'var(--verde-profundo)' }}>
+          {valor}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--texto-suave)', marginTop: 4 }}>{etiqueta}</div>
+      </div>
+    </div>
+  );
+}
+
 function GrupoInventario({ grupo }) {
   if (!grupo.items.length) return null;
   return (
@@ -15,7 +35,7 @@ function GrupoInventario({ grupo }) {
       <div className="cuerpo">
         {grupo.items.map((it, i) => (
           <div
-            key={i}
+            key={`${it.id}-${it.detalle}`}
             style={{
               display: 'flex',
               gap: 10,
@@ -24,7 +44,13 @@ function GrupoInventario({ grupo }) {
               borderTop: i > 0 ? '1px solid var(--borde)' : 'none',
             }}
           >
-            <b style={{ minWidth: 78 }}>{it.id_activo}</b>
+            {it.id ? (
+              <Link to={`/inventario/activos/${it.id}`} style={{ minWidth: 78, fontWeight: 'bold' }}>
+                {it.id_activo}
+              </Link>
+            ) : (
+              <b style={{ minWidth: 78 }}>{it.id_activo}</b>
+            )}
             <span style={{ flex: 1, color: '#444' }}>{it.nombre} — {it.detalle}</span>
             <span
               className={`tag ${SEV_CLASE[it.severidad] || ''}`}
@@ -44,12 +70,14 @@ function SeccionRbac({ rbac }) {
     return (
       <div className="card" style={{ marginBottom: 14 }}>
         <h2>Matriz RBAC</h2>
-        <div className="cuerpo" style={{ color: 'var(--texto-suave)' }}>
+        <div className="cuerpo" style={{ color: 'var(--texto-suave)', fontSize: 13 }}>
           Módulo RBAC no disponible en este momento.
         </div>
       </div>
     );
   }
+  if (!(rbac.pendientes_total > 0)) return null;
+
   const d = rbac.desglose_pendientes || {};
   const filas = [
     ['Vencimientos próximos (7 d)', d.proximos_vencimientos],
@@ -57,22 +85,19 @@ function SeccionRbac({ rbac }) {
     ['Certificación de rol vencida', d.roles_certificacion_vencida],
     ['Excepciones vencidas', d.excepciones_vencidas],
   ].filter(([, n]) => n > 0);
+
   return (
     <div className="card" style={{ marginBottom: 14 }}>
       <h2>
         Matriz RBAC <span style={{ float: 'right' }}>{rbac.pendientes_total}</span>
       </h2>
       <div className="cuerpo">
-        {filas.length === 0 ? (
-          <p style={{ margin: 0 }}>Sin pendientes operativos en RBAC.</p>
-        ) : (
-          filas.map(([titulo, n]) => (
-            <div key={titulo} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-              <span>{titulo}</span>
-              <b>{n}</b>
-            </div>
-          ))
-        )}
+        {filas.map(([titulo, n]) => (
+          <div key={titulo} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+            <span>{titulo}</span>
+            <b>{n}</b>
+          </div>
+        ))}
         <Link to="/rbac/inicio" style={{ fontSize: 12 }}>Ir al tablero RBAC →</Link>
       </div>
     </div>
@@ -84,12 +109,13 @@ function SeccionRiesgos({ riesgos }) {
     return (
       <div className="card" style={{ marginBottom: 14 }}>
         <h2>Gestión de Riesgos</h2>
-        <div className="cuerpo" style={{ color: 'var(--texto-suave)' }}>
+        <div className="cuerpo" style={{ color: 'var(--texto-suave)', fontSize: 13 }}>
           Módulo de Riesgos no disponible en este momento.
         </div>
       </div>
     );
   }
+
   const filas = [
     ['Acciones PTR vencidas', riesgos.total_vencidas],
     ['Acciones PTR por vencer', riesgos.total_por_vencer],
@@ -97,6 +123,9 @@ function SeccionRiesgos({ riesgos }) {
     ['Vulnerabilidades críticas', riesgos.vulnerabilidades_criticas],
     ['Activos comprometidos (Red Team)', riesgos.activos_comprometidos],
   ].filter(([, n]) => n > 0);
+
+  if (!filas.length) return null;
+
   const total = filas.reduce((s, [, n]) => s + n, 0);
   return (
     <div className="card" style={{ marginBottom: 14 }}>
@@ -104,16 +133,12 @@ function SeccionRiesgos({ riesgos }) {
         Gestión de Riesgos <span style={{ float: 'right' }}>{total}</span>
       </h2>
       <div className="cuerpo">
-        {filas.length === 0 ? (
-          <p style={{ margin: 0 }}>Sin alertas operativas en Riesgos.</p>
-        ) : (
-          filas.map(([titulo, n]) => (
-            <div key={titulo} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-              <span>{titulo}</span>
-              <b>{n}</b>
-            </div>
-          ))
-        )}
+        {filas.map(([titulo, n]) => (
+          <div key={titulo} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+            <span>{titulo}</span>
+            <b>{n}</b>
+          </div>
+        ))}
         <Link to="/gestion-riesgos" style={{ fontSize: 12 }}>Ir a Gestión de Riesgos →</Link>
       </div>
     </div>
@@ -133,44 +158,74 @@ export default function Alertas() {
   }
 
   const inv = datos?.inventario ?? {};
+  const res = datos?.resumen ?? {};
   const gruposInv = (inv.grupos ?? []).filter((g) => g.items.length > 0);
-  const vacio = gruposInv.length === 0
-    && !(datos?.rbac?.pendientes_total > 0)
-    && !(datos?.riesgos?.disponible && (
-      (datos.riesgos.total_vencidas || 0)
-      + (datos.riesgos.total_por_vencer || 0)
-      + (datos.riesgos.activos_sin_cobertura || 0)
-      + (datos.riesgos.vulnerabilidades_criticas || 0)
-      + (datos.riesgos.activos_comprometidos || 0)
-    ) > 0);
+  const rbac = datos?.rbac;
+  const riesgos = datos?.riesgos;
+  const hayIntegracion = (
+    !rbac?.disponible
+    || rbac.pendientes_total > 0
+    || !riesgos?.disponible
+    || (riesgos?.total_vencidas || 0)
+      + (riesgos?.total_por_vencer || 0)
+      + (riesgos?.activos_sin_cobertura || 0)
+      + (riesgos?.vulnerabilidades_criticas || 0)
+      + (riesgos?.activos_comprometidos || 0) > 0
+  );
+  const vacio = (datos?.total_consolidado ?? 0) === 0 && rbac?.disponible && riesgos?.disponible;
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, margin: '4px 0 16px', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Centro de alertas</h2>
         <span style={{ fontSize: 13, color: 'var(--texto-suave)' }}>
-          Inventario · RBAC · Riesgos — {datos?.total_consolidado ?? 0} señales
+          Inventario · RBAC · Riesgos
         </span>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: 10,
+          marginBottom: 18,
+        }}
+      >
+        <KpiResumen valor={datos?.total_consolidado ?? 0} etiqueta="Total señales" critico />
+        <KpiResumen valor={res.inventario ?? 0} etiqueta="Inventario" critico={res.inventario_criticas > 0} />
+        <KpiResumen valor={res.rbac ?? 0} etiqueta="RBAC" critico={res.rbac > 0} />
+        <KpiResumen valor={res.riesgos ?? 0} etiqueta="Riesgos" critico={res.riesgos > 0} />
       </div>
 
       {vacio && (
         <div className="card" style={{ marginBottom: 14 }}>
-          <div className="cuerpo">Sin alertas activas en ningún módulo.</div>
+          <div className="cuerpo">Sin alertas activas en ningún módulo. Todos los indicadores operativos están en verde.</div>
         </div>
       )}
 
       {gruposInv.length > 0 && (
         <>
-          <h3 style={{ fontSize: 14, color: 'var(--verde-profundo)', margin: '0 0 8px' }}>Inventario</h3>
+          <h3 style={{ fontSize: 14, color: 'var(--verde-profundo)', margin: '0 0 8px' }}>
+            Inventario
+            {res.inventario_criticas > 0 && (
+              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--crit)' }}>
+                ({res.inventario_criticas} críticas)
+              </span>
+            )}
+          </h3>
           {gruposInv.map((g) => (
             <GrupoInventario key={g.clave} grupo={g} />
           ))}
         </>
       )}
 
-      <h3 style={{ fontSize: 14, color: 'var(--verde-profundo)', margin: '16px 0 8px' }}>Integración</h3>
-      <SeccionRbac rbac={datos?.rbac} />
-      <SeccionRiesgos riesgos={datos?.riesgos} />
+      {hayIntegracion && (
+        <>
+          <h3 style={{ fontSize: 14, color: 'var(--verde-profundo)', margin: '16px 0 8px' }}>Integración</h3>
+          <SeccionRbac rbac={rbac} />
+          <SeccionRiesgos riesgos={riesgos} />
+        </>
+      )}
     </div>
   );
 }

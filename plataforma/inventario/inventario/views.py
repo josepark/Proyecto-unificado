@@ -86,8 +86,10 @@ class ActivoViewSet(viewsets.ModelViewSet):
             })
         return Response({
             "vinculado": True,
+            "inventario_id": activo.pk,
             **data,
             "url_gestion": f"/gestion-riesgos/activos/{data['id']}",
+            "url_inventario": f"/inventario/activos/{activo.pk}",
         })
 
     @action(detail=True, methods=["get"])
@@ -456,6 +458,14 @@ def alertas_unificadas(request):
     rbac = resumen_rbac() or {}
     ries_alertas = alertas_riesgos_resumen()
     ries_kpis = kpis_riesgos_dashboard()
+    ries_ops = 0
+    if ries_alertas.get("disponible"):
+        ries_ops += ries_alertas.get("total_vencidas", 0)
+        ries_ops += ries_alertas.get("total_por_vencer", 0)
+    if ries_kpis.get("disponible"):
+        ries_ops += ries_kpis.get("activos_sin_cobertura", 0)
+        ries_ops += ries_kpis.get("vulnerabilidades_criticas", 0)
+        ries_ops += ries_kpis.get("activos_comprometidos", 0)
     return Response({
         "inventario": inv,
         "rbac": {
@@ -467,11 +477,16 @@ def alertas_unificadas(request):
             **ries_alertas,
             **ries_kpis,
         },
+        "resumen": {
+            "inventario": inv.get("total_alertas", 0),
+            "inventario_criticas": inv.get("alertas_criticas", 0),
+            "rbac": rbac.get("pendientes_total", 0) if rbac else 0,
+            "riesgos": ries_ops,
+        },
         "total_consolidado": (
             inv.get("total_alertas", 0)
             + (rbac.get("pendientes_total") or 0)
-            + ries_alertas.get("total_vencidas", 0)
-            + ries_alertas.get("total_por_vencer", 0)
+            + ries_ops
         ),
     })
 

@@ -1734,10 +1734,13 @@ class IntegracionRiesgosOla5Test(TestCase):
         self.assertIn("inventario", data)
         self.assertIn("rbac", data)
         self.assertIn("riesgos", data)
+        self.assertIn("resumen", data)
         self.assertTrue(data["rbac"]["disponible"])
         self.assertTrue(data["riesgos"]["disponible"])
         self.assertEqual(data["riesgos"]["total_vencidas"], 2)
         self.assertEqual(data["riesgos"]["activos_sin_cobertura"], 4)
+        self.assertEqual(data["resumen"]["inventario"], data["inventario"]["total_alertas"])
+        self.assertEqual(data["resumen"]["riesgos"], 10)  # 2+3+4+1+0
         self.assertGreaterEqual(data["total_consolidado"], 5)
 
     def test_alertas_unificadas_degrada_si_riesgos_no_responde(self):
@@ -1777,5 +1780,7 @@ class IntegracionRiesgosOla5Test(TestCase):
         data = r.json()
         self.assertTrue(data["vinculado"])
         self.assertEqual(data["total_vulnerabilidades"], 7)
+        self.assertEqual(data["inventario_id"], self.activo.pk)
         self.assertEqual(data["url_gestion"], "/gestion-riesgos/activos/99")
+        self.assertEqual(data["url_inventario"], f"/inventario/activos/{self.activo.pk}")
 

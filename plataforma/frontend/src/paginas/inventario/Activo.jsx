@@ -5,6 +5,13 @@ import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import HojaVidaActivo from './HojaVidaActivo';
 import { useInventarioMeta } from '../../hooks/useInventarioMeta';
+import { claseTagRiesgoMatriz, etiquetaCobertura } from '../../lib/integracionUi';
+
+const CAMPOS_DETALLE_OCULTOS = new Set([
+  'id', 'activo', 'accesos', 'accesos_rbac', 'sistema_rbac_nombre',
+  'zona_id', 'vlan_id', 'rack_fk', 'rack_codigo', 'rack_datacenter',
+  'unidad_inicio', 'unidad_fin',
+]);
 
 /** Convierte una clave tecnica del modelo ("fin_soporte_eol") en una
  * etiqueta legible ("Fin soporte eol") sin necesitar un mapa exhaustivo
@@ -28,7 +35,7 @@ function formatearValor(v) {
 function BloqueDetalleClase({ titulo, datos }) {
   if (!datos) return null;
   const entradas = Object.entries(datos).filter(
-    ([clave, valor]) => !['id', 'activo', 'accesos', 'accesos_rbac', 'sistema_rbac_nombre'].includes(clave)
+    ([clave, valor]) => !CAMPOS_DETALLE_OCULTOS.has(clave)
       && valor !== null && valor !== '',
   );
   if (!entradas.length) return null;
@@ -83,6 +90,58 @@ function AccesosSistema({ sistema }) {
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function TarjetaIntegracionRiesgos({ resumen }) {
+  if (!resumen) return null;
+
+  if (!resumen.vinculado) {
+    return (
+      <div className="card">
+        <h2>Gestión de Riesgos</h2>
+        <div className="cuerpo">
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--texto-suave)' }}>
+            {resumen.mensaje}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const url = resumen.url_gestion || `/gestion-riesgos/activos/${resumen.id}`;
+  return (
+    <div className="card">
+      <h2>Gestión de Riesgos</h2>
+      <div className="cuerpo">
+        <dl className="def">
+          <dt>Vulnerabilidades (OpenVAS / Nmap)</dt>
+          <dd>
+            {resumen.total_vulnerabilidades ?? 0}
+            {resumen.vulnerabilidades_criticas > 0 && (
+              <span style={{ color: 'var(--crit)', marginLeft: 6 }}>
+                ({resumen.vulnerabilidades_criticas} críticas)
+              </span>
+            )}
+          </dd>
+          <dt>Cobertura técnica</dt>
+          <dd>{etiquetaCobertura(resumen.cobertura_display || resumen.cobertura)}</dd>
+          <dt>Riesgo matriz</dt>
+          <dd>
+            {resumen.riesgo_matriz ? (
+              <span className={claseTagRiesgoMatriz(resumen.riesgo_matriz)}>{resumen.riesgo_matriz}</span>
+            ) : '—'}
+          </dd>
+          <dt>Red Team</dt>
+          <dd style={{ color: resumen.afectado_red_team ? 'var(--crit)' : undefined }}>
+            {resumen.afectado_red_team ? 'Comprometido en campaña' : 'Sin evidencia de compromiso'}
+          </dd>
+        </dl>
+        <Link to={url} className="btn btn-sec" style={{ marginTop: 10, display: 'inline-block' }}>
+          Ver ficha en Gestión de Riesgos →
+        </Link>
       </div>
     </div>
   );
@@ -149,13 +208,20 @@ export default function Activo() {
             to={resumenRiesgos.url_gestion || `/gestion-riesgos/activos/${resumenRiesgos.id}`}
             className="chip enlace"
             style={{ marginLeft: 8 }}
-            title="Ver vulnerabilidades, cobertura y riesgo en Gestión de Riesgos"
+            title="Ver vulnerabilidades, cobertura y PTR en Gestión de Riesgos"
           >
-            Riesgos: {resumenRiesgos.total_vulnerabilidades ?? 0} vulns
+            {resumenRiesgos.total_vulnerabilidades ?? 0} vulns
             {resumenRiesgos.vulnerabilidades_criticas > 0
-              ? ` (${resumenRiesgos.vulnerabilidades_criticas} crít.)`
+              ? ` · ${resumenRiesgos.vulnerabilidades_criticas} crít.`
               : ''}
-            {resumenRiesgos.riesgo_matriz ? ` · ${resumenRiesgos.riesgo_matriz}` : ''}
+            {resumenRiesgos.riesgo_matriz ? (
+              <>
+                {' · '}
+                <span className={claseTagRiesgoMatriz(resumenRiesgos.riesgo_matriz)} style={{ padding: '1px 6px' }}>
+                  {resumenRiesgos.riesgo_matriz}
+                </span>
+              </>
+            ) : null}
           </Link>
         )}
       </div>
@@ -196,11 +262,6 @@ export default function Activo() {
           </Link>
         )}
       </div>
-      {!resumenRiesgos?.vinculado && resumenRiesgos?.mensaje && (
-        <p style={{ fontSize: 13, color: 'var(--texto-suave)', marginTop: -8, marginBottom: 16 }}>
-          {resumenRiesgos.mensaje}
-        </p>
-      )}
       {errorEliminar && (
         <p style={{ color: 'var(--crit)', fontWeight: 'bold', marginTop: -12, marginBottom: 16 }}>
           Error al eliminar: {errorEliminar}
@@ -208,6 +269,8 @@ export default function Activo() {
       )}
 
       <div className="detalle-grid">
+        <TarjetaIntegracionRiesgos resumen={resumenRiesgos} />
+
         <div className="card">
           <h2>Valoración y riesgo</h2>
           <div className="cuerpo">

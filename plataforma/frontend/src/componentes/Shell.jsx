@@ -153,6 +153,10 @@ export default function Shell() {
                   <Link to="/rbac/inicio" onClick={() => setMostrarDesglose(false)} style={{ fontSize: 12 }}>
                     Ir al tablero RBAC →
                   </Link>
+                  {' · '}
+                  <Link to="/inventario/alertas" onClick={() => setMostrarDesglose(false)} style={{ fontSize: 12 }}>
+                    Centro de alertas unificado →
+                  </Link>
                 </div>
               </div>
             )}

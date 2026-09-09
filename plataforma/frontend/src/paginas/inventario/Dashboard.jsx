@@ -9,6 +9,7 @@ export default function Dashboard() {
   const { puedeEditar } = useOutletContext() ?? {};
   const { coloresClase } = useInventarioMeta();
   const { datos: stats, cargando: cargandoStats } = useApi(() => inventarioApi.estadisticas(), []);
+  const { datos: alertasRes } = useApi(() => inventarioApi.alertasUnificadas(), []);
   const [busqueda, setBusqueda] = useState('');
   const [filtroClase, setFiltroClase] = useState('');
   const [seleccionados, setSeleccionados] = useState(() => new Set());
@@ -66,6 +67,14 @@ export default function Dashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 16px', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Dashboard</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link
+            className="btn btn-sec"
+            to="/inventario/alertas"
+            style={{ textDecoration: 'none' }}
+          >
+            🔔 Centro de alertas
+            {(alertasRes?.total_consolidado ?? 0) > 0 ? ` (${alertasRes.total_consolidado})` : ''}
+          </Link>
           <a className="btn btn-sec" href={inventarioApi.exportarInventarioXlsx()} style={{ textDecoration: 'none' }}>
             ⬇ Exportar Excel
           </a>

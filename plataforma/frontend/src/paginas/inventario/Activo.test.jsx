@@ -23,6 +23,9 @@ beforeEach(() => {
   global.fetch = vi.fn(async (url) => {
     const u = String(url);
     if (u.includes('/historial/')) return ok([]);
+    if (u.includes('/resumen-riesgos/')) {
+      return ok({ vinculado: false, mensaje: 'Este activo aún no está sincronizado en Gestión de Riesgos.' });
+    }
     if (u.includes('/hojavida/')) {
       return ok([
         {
@@ -134,5 +137,43 @@ describe('Activo — cruce Inventario ↔ RBAC', () => {
     renderConContexto({ puedeEditar: false, puedeEliminar: false });
     await screen.findByText('SIS-002');
     expect(screen.getByText(/No se pudo verificar contra la Matriz RBAC/i)).toBeInTheDocument();
+  });
+});
+
+describe('Activo — cruce Inventario ↔ Riesgos', () => {
+  it('muestra tarjeta de integración cuando el activo está sincronizado', async () => {
+    global.fetch = vi.fn(async (url) => {
+      const u = String(url);
+      if (u.includes('/historial/')) return ok([]);
+      if (u.includes('/resumen-riesgos/')) {
+        return ok({
+          vinculado: true,
+          id: 42,
+          total_vulnerabilidades: 5,
+          vulnerabilidades_criticas: 2,
+          riesgo_matriz: 'ALTO',
+          cobertura: 'PARCIAL',
+          cobertura_display: 'Parcial',
+          afectado_red_team: false,
+          url_gestion: '/gestion-riesgos/activos/42',
+        });
+      }
+      return ok(ACTIVO_FIXTURE);
+    });
+
+    renderConContexto({ puedeEditar: false, puedeEliminar: false });
+    await screen.findByText('RED-003');
+    expect(screen.getByRole('heading', { name: 'Gestión de Riesgos' })).toBeInTheDocument();
+    expect(screen.getByText(/2 críticas/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Ver ficha en Gestión de Riesgos/i })).toHaveAttribute(
+      'href',
+      '/gestion-riesgos/activos/42',
+    );
+  });
+
+  it('avisa cuando el activo no está sincronizado en Riesgos', async () => {
+    renderConContexto({ puedeEditar: false, puedeEliminar: false });
+    await screen.findByText('RED-003');
+    expect(screen.getByText(/aún no está sincronizado/i)).toBeInTheDocument();
   });
 });

@@ -32,6 +32,7 @@ def resumen_activo_por_inventario(inventario_id):
             "total_vulnerabilidades": a.get("total_vulnerabilidades", 0),
             "vulnerabilidades_criticas": a.get("vulnerabilidades_criticas", 0),
             "cobertura": a.get("cobertura"),
+            "cobertura_display": a.get("cobertura_display"),
             "afectado_red_team": a.get("afectado_red_team", False),
         }
     except requests.RequestException:

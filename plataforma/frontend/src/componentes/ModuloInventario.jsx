@@ -1,4 +1,6 @@
 import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
+import { useApi } from '../hooks/useApi';
+import { inventarioApi } from '../api/inventario';
 
 const PESTANAS = [
   { to: 'dashboard', etiqueta: 'Dashboard' },
@@ -11,16 +13,21 @@ const PESTANAS = [
 ];
 
 export default function ModuloInventario() {
-  // Mismo motivo que ModuloRBAC.jsx: el contexto de Shell (puedeEditar,
-  // puedeEliminar) no pasa automáticamente a las rutas anidadas — hay que
-  // leerlo aquí y reenviarlo al propio <Outlet>.
   const contexto = useOutletContext();
+  const { datos: alertas } = useApi(() => inventarioApi.alertasUnificadas(), []);
+  const totalAlertas = alertas?.total_consolidado ?? 0;
+
   return (
     <div>
       <div className="tabs">
         {PESTANAS.map((p) => (
           <NavLink key={p.to} to={p.to} className={({ isActive }) => `tab${isActive ? ' activa' : ''}`}>
             {p.etiqueta}
+            {p.to === 'alertas' && totalAlertas > 0 ? (
+              <span className="badge-modulo" style={{ marginLeft: 6, verticalAlign: 'middle' }}>
+                {totalAlertas}
+              </span>
+            ) : null}
           </NavLink>
         ))}
       </div>
