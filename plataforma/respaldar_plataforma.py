@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Plataforma SUIIN-SGSI — Respaldo único de las dos aplicaciones.
+"""Plataforma SUIIN-SGSI — Respaldo único de las tres aplicaciones.
 
 Antes de la unificación, cada app tenía su propia rutina de respaldo
 (rbac/respaldar.py, y una copia manual del db.sqlite3/media del
 Inventario). Este script las reemplaza con una sola rutina que respalda
-ambas bases de datos (con el método de "online backup" de SQLite, seguro
-de correr aunque la aplicación esté en uso) más los archivos multimedia
-del Inventario (diagramas, documentos de hoja de vida), todo en un único
-.tar.gz fechado.
+las tres bases de datos (Inventario, RBAC y Riesgos — con el método de
+"online backup" de SQLite, seguro de correr aunque la aplicación esté
+en uso) más los archivos multimedia del Inventario y de Riesgos, todo en
+un único .tar.gz fechado.
 
 Uso manual:
     python3 respaldar_plataforma.py
@@ -50,7 +50,9 @@ def respaldar():
 
     db_inventario = os.path.join(BASE, "inventario", "db.sqlite3")
     db_rbac = os.path.join(BASE, "rbac", "rbac.db")
+    db_riesgos = os.path.join(BASE, "riesgos", "backend", "db.sqlite3")
     media_inventario = os.path.join(BASE, "inventario", "media")
+    media_riesgos = os.path.join(BASE, "riesgos", "backend", "media")
 
     if os.path.exists(db_inventario):
         _copia_consistente_sqlite(db_inventario, os.path.join(tmp, "inventario_db.sqlite3"))
@@ -62,8 +64,16 @@ def respaldar():
     else:
         print(f"AVISO: no se encontró {db_rbac}, se omite.")
 
+    if os.path.exists(db_riesgos):
+        _copia_consistente_sqlite(db_riesgos, os.path.join(tmp, "riesgos_db.sqlite3"))
+    else:
+        print(f"AVISO: no se encontró {db_riesgos}, se omite.")
+
     if os.path.isdir(media_inventario):
-        shutil.copytree(media_inventario, os.path.join(tmp, "media"))
+        shutil.copytree(media_inventario, os.path.join(tmp, "media_inventario"))
+
+    if os.path.isdir(media_riesgos):
+        shutil.copytree(media_riesgos, os.path.join(tmp, "media_riesgos"))
 
     destino = os.path.join(DIR_RESPALDOS, f"suiin_plataforma_{marca}.tar.gz")
     with tarfile.open(destino, "w:gz") as tar:

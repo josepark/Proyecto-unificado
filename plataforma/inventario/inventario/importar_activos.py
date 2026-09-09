@@ -72,10 +72,11 @@ def generar_plantilla():
     ref = wb.create_sheet("Valores válidos")
     ref.append(["Campo", "Valores aceptados"])
     from .models import Activo, ClaseActivo
-    ref.append(["clase", " / ".join(
-        ClaseActivo.objects.filter(activo=True).order_by("orden", "codigo").values_list(
-            "codigo", flat=True)
-    ) or [c[0] for c in Activo.Clase.choices])])
+    codigos = list(ClaseActivo.objects.filter(activo=True).order_by("orden", "codigo")
+                   .values_list("codigo", flat=True))
+    if not codigos:
+        codigos = [c[0] for c in Activo.Clase.choices]
+    ref.append(["clase", " / ".join(codigos)])
     ref.append(["clasificacion_si", " / ".join(c[0] for c in Activo.Clasificacion.choices)])
     ref.append(["nivel_riesgo", " / ".join(c[0] for c in Activo.NivelRiesgo.choices)])
     ref.append(["estado", " / ".join(c[0] for c in Activo.Estado.choices)])
@@ -117,6 +118,24 @@ def _mapear_encabezados(fila_encabezados):
                     mapa[i] = clave
                     break
     return mapa
+
+
+def _completar_bloque_detalle(cuerpo):
+    """La plantilla Excel no trae bloques anidados (infra/sistema/equipo);
+    los completa vacíos según el catálogo ClaseActivo para pasar la misma
+    validación que el formulario web."""
+    from .models import ClaseActivo
+
+    clase = (cuerpo.get("clase") or "").strip()
+    if not clase:
+        return cuerpo
+    cat = ClaseActivo.objects.filter(codigo=clase, activo=True).first()
+    if not cat or cat.modelo_detalle in ("generico", "ninguno"):
+        return cuerpo
+    if cat.modelo_detalle not in cuerpo or cuerpo[cat.modelo_detalle] is None:
+        cuerpo = dict(cuerpo)
+        cuerpo[cat.modelo_detalle] = {}
+    return cuerpo
 
 
 def _normalizar_valor(campo, valor):
@@ -190,6 +209,7 @@ def analizar_archivo(archivo_django):
         else:
             cuerpo.pop("id_activo", None)
 
+        cuerpo = _completar_bloque_detalle(cuerpo)
         ser = ActivoWriteSerializer(data=cuerpo)
         if ser.is_valid():
             resultados.append({"fila": num_fila, "estado": "ok",
@@ -213,7 +233,8 @@ def aplicar_filas(filas, usuario):
 
     creados, fallidos = [], []
     for f in filas:
-        ser = ActivoWriteSerializer(data=f.get("datos", {}))
+        datos = _completar_bloque_detalle(dict(f.get("datos", {})))
+        ser = ActivoWriteSerializer(data=datos)
         if ser.is_valid():
             activo = ser.save()
             creados.append({"fila": f.get("fila"), "id": activo.id,

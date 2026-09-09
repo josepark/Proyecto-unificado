@@ -630,7 +630,9 @@ class CookieCSRFSeguraSegunTLSTest(TestCase):
             "print(repr(m['secure']) if m else 'SIN_COOKIE')"
         )
         entorno = dict(os.environ, DJANGO_ALLOWED_HOSTS="testserver,localhost,127.0.0.1",
-                       DJANGO_DEBUG="False", DJANGO_SSL_REDIRECT=ssl_redirect)
+                       DJANGO_DEBUG="False", DJANGO_SSL_REDIRECT=ssl_redirect,
+                       DJANGO_SECRET_KEY="clave-de-prueba-solo-para-este-subproceso",
+                       JWT_SHARED_SECRET="jwt-de-prueba-solo-para-este-subproceso")
         resultado = subprocess.run(
             ["python3", "-c", codigo], env=entorno, capture_output=True, text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -860,10 +862,20 @@ class IntegridadCadenaTest(TestCase):
     def setUp(self):
         self.client.force_login(self.dinamizador)
 
+    def _payload_infra(self, nombre, **extra):
+        body = {"nombre": nombre, "clase": "INFRA", "infraestructura": {}}
+        body.update(extra)
+        return body
+
+    def _payload_sist(self, nombre, **extra):
+        body = {"nombre": nombre, "clase": "SIST", "sistema": {}}
+        body.update(extra)
+        return body
+
     def test_crear_activo_agrega_una_fila_a_la_cadena(self):
         from .models import RegistroIntegridad
         r = self.client.post("/api/activos/",
-                             {"nombre": "Activo de prueba integridad", "clase": "INFRA"},
+                             self._payload_infra("Activo de prueba integridad"),
                              content_type="application/json")
         self.assertEqual(r.status_code, 201)
         fila = RegistroIntegridad.objects.get(entidad="Activo", accion="ALTA")
@@ -873,7 +885,7 @@ class IntegridadCadenaTest(TestCase):
     def test_editar_activo_registra_los_campos_modificados(self):
         from .models import RegistroIntegridad
         creado = self.client.post(
-            "/api/activos/", {"nombre": "Original", "clase": "INFRA"},
+            "/api/activos/", self._payload_infra("Original"),
             content_type="application/json").json()
         self.client.patch(f"/api/activos/{creado['id']}/",
                           {"nombre": "Renombrado"}, content_type="application/json")
@@ -883,7 +895,7 @@ class IntegridadCadenaTest(TestCase):
     def test_eliminar_activo_registra_la_eliminacion(self):
         from .models import RegistroIntegridad
         creado = self.client.post(
-            "/api/activos/", {"nombre": "Para borrar", "clase": "INFRA"},
+            "/api/activos/", self._payload_infra("Para borrar"),
             content_type="application/json").json()
         self.client.force_login(self.administrador)  # DELETE exige Administrador
         r = self.client.delete(f"/api/activos/{creado['id']}/")
@@ -893,7 +905,7 @@ class IntegridadCadenaTest(TestCase):
 
     def test_cadena_intacta_tras_varios_cambios(self):
         creado = self.client.post(
-            "/api/activos/", {"nombre": "Activo con historia", "clase": "SIST"},
+            "/api/activos/", self._payload_sist("Activo con historia"),
             content_type="application/json").json()
         self.client.patch(f"/api/activos/{creado['id']}/",
                           {"nombre": "Con historia (v2)"}, content_type="application/json")
@@ -905,9 +917,9 @@ class IntegridadCadenaTest(TestCase):
 
     def test_verificar_detecta_una_fila_alterada_por_fuera_de_la_app(self):
         from .models import RegistroIntegridad
-        self.client.post("/api/activos/", {"nombre": "Activo A", "clase": "INFRA"},
+        self.client.post("/api/activos/", self._payload_infra("Activo A"),
                          content_type="application/json")
-        self.client.post("/api/activos/", {"nombre": "Activo B", "clase": "INFRA"},
+        self.client.post("/api/activos/", self._payload_infra("Activo B"),
                          content_type="application/json")
         primera = RegistroIntegridad.objects.order_by("id").first()
         primera.detalle = "detalle alterado a mano, sin pasar por la app"
@@ -925,7 +937,7 @@ class IntegridadCadenaTest(TestCase):
 
     def test_lista_respeta_el_limite(self):
         for i in range(5):
-            self.client.post("/api/activos/", {"nombre": f"Activo {i}", "clase": "INFRA"},
+            self.client.post("/api/activos/", self._payload_infra(f"Activo {i}"),
                              content_type="application/json")
         r = self.client.get("/api/integridad/?limite=3")
         self.assertEqual(r.status_code, 200)

@@ -14,8 +14,8 @@
 #                                          #   build anterior; NO borra sus bases de datos,
 #                                          #   son archivos del host, no volúmenes)
 #   ./desplegar.sh --desbloquear admin    # además desbloquea esa cuenta al final
-#   ./desplegar.sh --sincronizar          # además sincroniza activos desde el Inventario
-#   ./desplegar.sh --purgar --desbloquear admin --sincronizar   # todo junto
+#   ./desplegar.sh --no-sincronizar          # omite la sincronización de activos al final
+#   ./desplegar.sh --purgar --desbloquear admin   # todo junto (sync activos va por defecto)
 #
 # Requiere: docker, el plugin "docker compose" (v2.17+, para --wait), y correrse
 # desde la raíz de la plataforma (donde está este script y docker-compose.yml).
@@ -24,7 +24,7 @@ set -euo pipefail
 
 PURGAR=false
 DESBLOQUEAR_USUARIO=""
-SINCRONIZAR=false
+SINCRONIZAR=true
 
 mostrar_ayuda() {
     sed -n '2,21p' "$0" | sed 's/^# \?//'
@@ -37,6 +37,7 @@ while [[ $# -gt 0 ]]; do
             if [[ $# -lt 2 ]]; then echo "--desbloquear necesita un usuario" >&2; exit 1; fi
             DESBLOQUEAR_USUARIO="$2"; shift 2 ;;
         --sincronizar) SINCRONIZAR=true; shift ;;
+        --no-sincronizar) SINCRONIZAR=false; shift ;;
         -h|--help) mostrar_ayuda; exit 0 ;;
         *) echo "Argumento desconocido: $1 (use --help)" >&2; exit 1 ;;
     esac
@@ -109,8 +110,10 @@ else
 fi
 
 if $SINCRONIZAR; then
-    paso "Sincronizando catálogo de activos desde el Inventario"
+    paso "7/7 · Sincronizando catálogo de activos desde el Inventario"
     docker compose exec -T riesgos-backend python manage.py sincronizar_activos_inventario
+else
+    paso "7/7 · (sin sincronización de activos — use sin --no-sincronizar para habilitarla)"
 fi
 
 paso "Listo"
