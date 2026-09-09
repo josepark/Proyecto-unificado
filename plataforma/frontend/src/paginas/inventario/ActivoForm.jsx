@@ -76,8 +76,7 @@ function vacio() {
     amenazas: '', controles: '',
     infra: { tipo: '', ip_segmento: '', modelo: '', serial_placa: '',
       fabricante_proveedor: '', version_so_firmware: '',
-      fin_soporte_eol: '', hallazgos_abiertos: '', rack_fk: '', unidad_inicio: '', unidad_fin: '',
-      rack: '', unidad_rack: '' },
+      fin_soporte_eol: '', hallazgos_abiertos: '', rack_fk: '', unidad_inicio: '', unidad_fin: '' },
     sist: { estado_operativo: 'SD', priorizar_analisis: 'SIN', backend: '',
       frontend: '', schema_bd: '', servidor_virtual: '',
       sistema_mca_equivalente: '', sistema_rbac_id: '', version: '', integracion_gateway: '', url: '' },
@@ -459,11 +458,6 @@ export default function ActivoForm() {
                   min="1"
                   value={form.infra.unidad_fin ?? ''}
                   onChange={(e) => setSub('infra', 'unidad_fin', e.target.value)}
-                />
-                <Campo
-                  label="Rack (texto legacy)"
-                  value={form.infra.rack}
-                  onChange={(e) => setSub('infra', 'rack', e.target.value)}
                 />
               </Fila>
               <Fila>

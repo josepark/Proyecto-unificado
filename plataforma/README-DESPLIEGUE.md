@@ -376,6 +376,24 @@ como próximo paso en la sección 10, con `django-otp` como opción evaluada.
 0 2 * * *  cd /ruta/suiin-plataforma && python3 respaldar_plataforma.py >> respaldos/respaldar.log 2>&1
 ```
 
+Ver también la plantilla completa con alertas y sincronizaciones en
+`cron/suiin-sgsi.cron.example` (Ola 4).
+
+### 8.10bis Escalado: PostgreSQL y media en object storage (referencia)
+
+Hoy los tres módulos usan SQLite en el host (`inventario/db.sqlite3`,
+`rbac/rbac.db`, `riesgos/backend/db.sqlite3`). Es adecuado para un
+despliegue unificado con pocos editores concurrentes. Si crece la carga:
+
+| Componente | Cuándo migrar | Notas |
+|------------|---------------|-------|
+| Inventario / Riesgos | Varios analistas editando a la vez | `DATABASE_URL` PostgreSQL en settings; ejecutar migraciones Django |
+| RBAC | Alta concurrencia en excepciones | Mismo patrón; hoy SQLite basta para la matriz |
+| Media (`inventario/media`, diagramas) | Disco del host limitado | S3/MinIO con `django-storages`; nginx puede servir `/media/` vía proxy o URL firmada |
+
+No hay automatización en este repo todavía — planifique ventana de
+mantenimiento, respaldo con `respaldar_plataforma.py` y prueba en staging.
+
 ### 8.11 Detección automática de activos al subir un diagrama
 
 El formulario para subir un diagrama/topología ya tenía un campo para
@@ -1189,6 +1207,9 @@ entre el Inventario y Riesgos.
 - Programar `sincronizar_activos_inventario` en un cron/systemd timer
   periódico, igual que ya se sugiere para `enviar_alertas_vencimiento` en el
   README de Riesgos.
+- **Plantilla cron lista para usar:** `cron/suiin-sgsi.cron.example` (respaldo
+  diario, alertas semanales, sync activos cada 6 h, MITRE dominical). Copíela
+  a `/etc/cron.d/suiin-sgsi` ajustando la ruta del proyecto.
 - Archivos estáticos del admin de Django de Riesgos: a diferencia del
   Inventario, este Dockerfile no corre `collectstatic` todavía (el admin
   funciona, pero sin su hoja de estilos — no afecta al frontend React, que

@@ -3,8 +3,7 @@ from django.db.models import JSONField
 from django.forms import Textarea
 from simple_history.admin import SimpleHistoryAdmin
 from .models import (Activo, ActivoInfraestructura, SistemaInformacion,
-                     EquipoComputo, ClaseActivo, Zona, VLAN, AmenazaMITRE, ControlISO,
-                     RolMCA, Rack)
+                     EquipoComputo, ClaseActivo, Zona, VLAN, AmenazaMITRE, ControlISO, Rack)
 
 
 class InfraInline(admin.StackedInline):
@@ -112,7 +111,7 @@ class ControlAdmin(admin.ModelAdmin):
     search_fields = ("codigo", "descripcion")
 
 
-admin.site.register([Zona, VLAN, RolMCA])
+admin.site.register([Zona, VLAN])
 admin.site.site_header = "SUIIN - Inventario de Activos SGSI (SUIIN-SGSI-INV-001)"
 admin.site.site_title = "Inventario SGSI SUIIN"
 admin.site.index_title = "Gestion del inventario de activos"

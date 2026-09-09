@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 
 from inventario.models import (
     Activo, ActivoInfraestructura, SistemaInformacion,
-    Zona, VLAN, AmenazaMITRE, ControlISO, RolMCA, AccesoRol)
+    Zona, VLAN, AmenazaMITRE, ControlISO)
 
 # Diccionario de descripciones legibles para tacticas/tecnicas MITRE frecuentes
 MITRE_DESC = {
@@ -241,13 +241,9 @@ class Command(BaseCommand):
                     priorizar_analisis=prioridad,
                 ))
 
-            # Roles MCA: "CM(C), DOS(C), DAO(C)"
-            roles_txt = norm(row[11])
-            for match in re.finditer(r"([A-Z]{2,5})\(([CML])\)", roles_txt):
-                sigla, nivel = match.group(1), match.group(2)
-                rol, _ = RolMCA.objects.get_or_create(sigla=sigla)
-                AccesoRol.objects.update_or_create(
-                    sistema=sis, rol=rol, defaults={"nivel": nivel})
+            # Accesos por rol: deprecado (Ola 4) — la Matriz RBAC es la fuente canónica.
+            # La columna de roles MCA del Excel ya no se importa al Inventario.
+
             n_sist += 1
 
         # ---- Seccion 2: requisitos API Gateway ----
@@ -275,5 +271,4 @@ class Command(BaseCommand):
             f"{n_sist} sistemas de informacion."))
         self.stdout.write(
             f"Amenazas MITRE: {AmenazaMITRE.objects.count()} | "
-            f"Controles ISO/POL: {ControlISO.objects.count()} | "
-            f"Roles MCA: {RolMCA.objects.count()}")
+            f"Controles ISO/POL: {ControlISO.objects.count()}")

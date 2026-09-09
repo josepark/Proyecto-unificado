@@ -459,6 +459,50 @@ class Ola2ArquitecturaDatosTest(TestCase):
         self.assertIn("A01", codigos)
 
 
+class Ola4RacksLegacyTest(TestCase):
+    """Ola 4: migración texto → rack_fk y utilidades de parsing."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from inventario.models import Activo, ActivoInfraestructura, Datacenter, Rack
+        cls.dc = Datacenter.objects.create(codigo="TST1", nombre="Test DC")
+        cls.rack = Rack.objects.create(datacenter=cls.dc, codigo="2", capacidad_u=42)
+        cls.activo = Activo.objects.create(
+            nombre="Switch legacy", clase="INFRA", datacenter=cls.dc, estado="ACT")
+        cls.inf = ActivoInfraestructura.objects.create(
+            activo=cls.activo, tipo="Switch", rack="Rack 2", unidad_rack="U10-U11")
+
+    def test_parse_unidad_rack(self):
+        from inventario.rack_utils import parse_unidad_rack
+        self.assertEqual(parse_unidad_rack("U20-U21"), (20, 21))
+        self.assertEqual(parse_unidad_rack("U40"), (40, 40))
+
+    def test_migrar_racks_legacy_vincula_por_texto(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from inventario.models import ActivoInfraestructura
+
+        call_command("migrar_racks_legacy", stdout=StringIO())
+        inf = ActivoInfraestructura.objects.get(pk=self.inf.pk)
+        self.assertEqual(inf.rack_fk_id, self.rack.id)
+        self.assertEqual(inf.unidad_inicio, 10)
+        self.assertEqual(inf.unidad_fin, 11)
+
+    def test_migrar_crea_rack_con_flag(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from inventario.models import Activo, ActivoInfraestructura, Rack
+
+        a2 = Activo.objects.create(
+            nombre="Otro", clase="INFRA", datacenter=self.dc, estado="ACT")
+        ActivoInfraestructura.objects.create(
+            activo=a2, rack="Rack NUEVO", unidad_rack="U5")
+        call_command("migrar_racks_legacy", crear_faltantes=True, stdout=StringIO())
+        inf = ActivoInfraestructura.objects.get(activo=a2)
+        self.assertIsNotNone(inf.rack_fk_id)
+        self.assertTrue(Rack.objects.filter(datacenter=self.dc, codigo="NUEVO").exists())
+
+
 class RiesgoCruzadoTest(TestCase):
     """Correlación de riesgo cruzado (Alertas): un activo con riesgo
     Crítico/Alto que además tiene excepciones de acceso vigentes en RBAC

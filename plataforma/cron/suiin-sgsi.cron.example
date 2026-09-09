@@ -1,0 +1,21 @@
+# SUIIN-SGSI — tareas periódicas recomendadas (cron del host)
+# Copie a /etc/cron.d/suiin-sgsi o al crontab del operador.
+# Ajuste /ruta/suiin-plataforma al directorio real del proyecto.
+#
+# SHELL=/bin/bash
+# PATH=/usr/local/bin:/usr/bin:/bin
+
+# Respaldo unificado (02:00 diario) — no requiere contenedores arriba
+0 2 * * *  root  cd /ruta/suiin-plataforma && python3 respaldar_plataforma.py >> respaldos/respaldar.log 2>&1
+
+# Resumen semanal de alertas Inventario + RBAC (lunes 07:00)
+0 7 * * 1  root  cd /ruta/suiin-plataforma && docker compose exec -T inventario python manage.py enviar_resumen_alertas --solo-si-hay-criticas >> respaldos/alertas.log 2>&1
+
+# Vencimientos y MFA en Riesgos (lunes 07:30)
+30 7 * * 1  root  cd /ruta/suiin-plataforma && docker compose exec -T riesgos-backend python manage.py enviar_alertas_vencimiento >> respaldos/alertas_riesgos.log 2>&1
+
+# Sincronización catálogo activos Inventario → Riesgos (cada 6 h)
+0 */6 * * *  root  cd /ruta/suiin-plataforma && docker compose exec -T riesgos-backend python manage.py sincronizar_activos_inventario >> respaldos/sync_activos.log 2>&1
+
+# Catálogo MITRE Inventario → Riesgos + RBAC (domingo 03:00)
+0 3 * * 0  root  cd /ruta/suiin-plataforma && ./sincronizar_catalogos_mitre.sh >> respaldos/sync_mitre.log 2>&1

@@ -3,7 +3,7 @@ from datetime import date
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from inventario.models import (Activo, ActivoInfraestructura, Datacenter,
-                               Diagrama, EventoHojaVida)
+                               Diagrama, EventoHojaVida, Rack)
 
 
 class Command(BaseCommand):
@@ -29,11 +29,17 @@ class Command(BaseCommand):
                 responsable="Coordinacion SUIIN",
                 descripcion="Mini-datacenter propuesto para respaldo y continuidad (DRP)."))
 
-        # 2. Asignar activos de infraestructura al datacenter de Popayan + rack/U
+        # 2. Racks de ejemplo + asignación a infraestructura
+        rack1, _ = Rack.objects.update_or_create(
+            datacenter=popayan, codigo="1",
+            defaults={"capacidad_u": 42, "ubicacion": "Fila principal"})
+        rack2, _ = Rack.objects.update_or_create(
+            datacenter=popayan, codigo="2",
+            defaults={"capacidad_u": 42, "ubicacion": "Fila secundaria"})
         rack_map = {
-            "RED-012": ("Rack 2", "U20-U21"), "RED-013": ("Rack 2", "U18-U19"),
-            "RED-014": ("Rack 1", "U16-U17"), "RED-019": ("Rack 1", "U10-U13"),
-            "RED-020": ("Rack 1", "U6-U9"),   "RED-003": ("Rack 2", "U40"),
+            "RED-012": (rack2, 20, 21), "RED-013": (rack2, 18, 19),
+            "RED-014": (rack1, 16, 17), "RED-019": (rack1, 10, 13),
+            "RED-020": (rack1, 6, 9),   "RED-003": (rack2, 40, 40),
         }
         n = 0
         for a in Activo.objects.filter(clase="INFRA"):
@@ -42,7 +48,10 @@ class Command(BaseCommand):
             n += 1
             if a.id_activo in rack_map and hasattr(a, "infraestructura"):
                 inf = a.infraestructura
-                inf.rack, inf.unidad_rack = rack_map[a.id_activo]
+                rack, u_ini, u_fin = rack_map[a.id_activo]
+                inf.rack_fk = rack
+                inf.unidad_inicio = u_ini
+                inf.unidad_fin = u_fin
                 inf.save()
         # Sistemas tambien residen en Popayan
         for a in Activo.objects.filter(clase="SIST"):

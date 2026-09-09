@@ -763,8 +763,10 @@ def _dibujar_etiqueta(c, activo, ancho, alto, base_url):
     if activo.datacenter_id:
         ubic.append(activo.datacenter.codigo)
     inf = getattr(activo, "infraestructura", None)
-    if inf and inf.rack:
-        ubic.append(f"Rack {inf.rack}" + (f" U{inf.unidad_rack}" if inf.unidad_rack else ""))
+    from .rack_utils import texto_ubicacion_rack
+    texto_rack = texto_ubicacion_rack(inf)
+    if texto_rack:
+        ubic.append(texto_rack)
 
     filas = [("SUIIN · CRIC", "Helvetica-Bold", 6, dorado, 1.5)]
     filas.append((codigo, "Helvetica-Bold", fuente_cod, verde, 1.25))
@@ -793,7 +795,9 @@ def etiqueta_activo(request, pk):
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas
 
-    activo = Activo.objects.select_related("datacenter", "infraestructura").get(pk=pk)
+    activo = Activo.objects.select_related(
+        "datacenter", "infraestructura", "infraestructura__rack_fk",
+    ).get(pk=pk)
     base = request.build_absolute_uri("/")[:-1]
     ancho, alto = 70 * mm, 40 * mm
 
