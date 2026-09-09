@@ -58,3 +58,23 @@ def user_es_admin(user):
     if user.is_superuser:
         return True
     return ROL_ADMIN in roles_de(user)
+
+
+def es_peticion_servicio_interno(request):
+    """True si la petición trae X-Plataforma-Secret válido (backends Riesgos/RBAC)."""
+    from django.conf import settings
+    secreto = request.headers.get("X-Plataforma-Secret", "")
+    return bool(settings.JWT_SHARED_SECRET and secreto == settings.JWT_SHARED_SECRET)
+
+
+class RolPermisoOServicioInterno(BasePermission):
+    """
+    Lectura: sesión autenticada (RolPermiso) O secreto interno compartido.
+    Escritura: solo sesión con rol Dinamizador/Administrador (nunca solo secreto).
+    Usado por /api/activos/ y /api/amenazas/ para sincronización contenedor a contenedor.
+    """
+
+    def has_permission(self, request, view):
+        if es_peticion_servicio_interno(request):
+            return request.method in SAFE_METHODS
+        return RolPermiso().has_permission(request, view)

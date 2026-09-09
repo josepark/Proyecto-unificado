@@ -38,6 +38,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from riesgos.inventario_cliente import get as inventario_get
 from riesgos.models import Activo
 from riesgos.sincronizacion import ProtectorSincronizacion
 
@@ -141,7 +142,7 @@ class Command(BaseCommand):
         url = f"{base_url}/activos/"
         params = {"page_size": 100}
         while url:
-            resp = requests.get(url, params=params, timeout=timeout)
+            resp = inventario_get(url, params=params, timeout=timeout)
             resp.raise_for_status()
             data = resp.json()
             # DRF pagination o, si el endpoint no pagina, una lista directa.
@@ -151,7 +152,7 @@ class Command(BaseCommand):
         return activos
 
     def _obtener_detalle(self, base_url, inventario_id, timeout):
-        resp = requests.get(f"{base_url}/activos/{inventario_id}/", timeout=timeout)
+        resp = inventario_get(f"{base_url}/activos/{inventario_id}/", timeout=timeout)
         resp.raise_for_status()
         return resp.json()
 

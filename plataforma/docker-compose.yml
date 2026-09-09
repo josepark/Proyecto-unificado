@@ -58,9 +58,11 @@ services:
   rbac:
     build: ./rbac
     container_name: suiin-rbac
+    env_file: .env
     environment:
       # Obligatorio en .env — sin default débil en producción (Ola 1).
       SUIIN_RBAC_SECRET: ${SUIIN_RBAC_SECRET:?Defina SUIIN_RBAC_SECRET en .env}
+      INVENTARIO_URL: ${INVENTARIO_URL:-http://inventario:8000}
     volumes:
       - ./rbac/rbac.db:/app/rbac.db
     expose:

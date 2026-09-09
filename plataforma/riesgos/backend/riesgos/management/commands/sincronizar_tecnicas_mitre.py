@@ -16,6 +16,7 @@ import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
+from riesgos.inventario_cliente import get as inventario_get
 from riesgos.models import TecnicaMitre
 
 
@@ -30,6 +31,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         base_url = (options.get("url") or settings.INVENTARIO_API_URL).rstrip("/")
         timeout = options["timeout"]
+
+        if not settings.JWT_SHARED_SECRET:
+            self.stderr.write(self.style.WARNING(
+                "JWT_SHARED_SECRET no está configurado — la sync puede fallar con 403 "
+                "(ejecute python3 generar_secretos.py y reinicie los contenedores)."))
 
         try:
             tecnicas = self._obtener_todas(base_url, timeout)
@@ -67,7 +73,7 @@ class Command(BaseCommand):
         url = f"{base_url}/amenazas/"
         params = {"page_size": 200}
         while url:
-            resp = requests.get(url, params=params, timeout=timeout)
+            resp = inventario_get(url, params=params, timeout=timeout)
             resp.raise_for_status()
             data = resp.json()
             tecnicas.extend(data["results"] if isinstance(data, dict) and "results" in data else data)

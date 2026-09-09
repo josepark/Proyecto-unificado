@@ -1475,6 +1475,23 @@ class TokenJWTTest(TestCase):
         self.assertEqual(r_final.status_code, 200)
 
 
+class ServicioInternoCatalogoTest(TestCase):
+    """Sync Riesgos/RBAC usa X-Plataforma-Secret (= JWT_SHARED_SECRET)."""
+
+    @override_settings(JWT_SHARED_SECRET="secreto-sync-interno-test")
+    def test_amenazas_accesible_con_secreto_sin_sesion(self):
+        r = self.client.get(
+            "/api/amenazas/?page_size=5",
+            HTTP_X_PLATAFORMA_SECRET="secreto-sync-interno-test",
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-sync-interno-test")
+    def test_amenazas_anonimo_sigue_prohibido(self):
+        r = self.client.get("/api/amenazas/?page_size=5")
+        self.assertEqual(r.status_code, 403)
+
+
 class AllowedHostsInternoTest(TestCase):
     """
     Cubre el hallazgo real de un despliegue: sincronizar_activos_inventario

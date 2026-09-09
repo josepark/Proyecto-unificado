@@ -10,7 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .permisos import RolPermiso, SoloAdministrador
+from .permisos import RolPermiso, RolPermisoOServicioInterno, SoloAdministrador
 
 
 class CatalogoPagination(PageNumberPagination):
@@ -30,6 +30,7 @@ from .meta_inventario import meta_inventario, catalogo_clases_activo
 
 class ActivoViewSet(viewsets.ModelViewSet):
     """CRUD completo de activos. Lectura libre; escritura requiere sesion."""
+    permission_classes = [RolPermisoOServicioInterno]
     queryset = Activo.objects.all().prefetch_related(
         "amenazas", "controles", "dependencias").select_related(
         "infraestructura", "sistema")
@@ -80,6 +81,7 @@ class ActivoViewSet(viewsets.ModelViewSet):
 
 
 class AmenazaViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [RolPermisoOServicioInterno]
     queryset = AmenazaMITRE.objects.annotate(num_activos=Count("activos"))
     serializer_class = AmenazaMITRESerializer
     filterset_fields = ["tipo"]
@@ -89,6 +91,7 @@ class AmenazaViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ControlViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [RolPermisoOServicioInterno]
     queryset = ControlISO.objects.annotate(num_activos=Count("activos"))
     serializer_class = ControlISOSerializer
     search_fields = ["codigo", "descripcion"]

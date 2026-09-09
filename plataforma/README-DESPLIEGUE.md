@@ -302,6 +302,19 @@ en vez de requerir el Excel de MITRE otra vez — probado de extremo a
 extremo contra una instancia real del Inventario. Uso:
 
 ```bash
+cd plataforma
+./sincronizar_catalogos_mitre.sh
+```
+
+**Requisito:** `JWT_SHARED_SECRET` debe estar definido en `.env` (mismo valor
+en Inventario, Riesgos y RBAC). Los scripts internos envían la cabecera
+`X-Plataforma-Secret` con ese valor; sin ella, `/api/amenazas/` responde
+403 desde Ola 1. Si aún tiene placeholders, ejecute `python3 generar_secretos.py`
+y reconstruya los contenedores (`./desplegar.sh --purgar`).
+
+Uso manual (equivalente al script):
+
+```bash
 cd rbac
 INVENTARIO_URL=http://inventario:8000 python3 catalogo_attack_desde_inventario.py
 python3 migrar_v2_1.py   # recarga el catálogo en rbac.db, como ya documentaba el flujo original

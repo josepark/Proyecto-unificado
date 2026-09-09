@@ -39,10 +39,15 @@ INVENTARIO_URL = os.environ.get("INVENTARIO_URL", "http://127.0.0.1:8000")
 def generar():
     import requests  # pip install requests --break-system-packages
 
+    headers = {}
+    secret = os.environ.get("JWT_SHARED_SECRET", "")
+    if secret:
+        headers["X-Plataforma-Secret"] = secret
+
     tecnicas = []
     url = f"{INVENTARIO_URL}/api/amenazas/?page_size=2000&ordering=codigo"
     while url:
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, headers=headers, timeout=10)
         r.raise_for_status()
         data = r.json()
         resultados = data.get("results", data) if isinstance(data, dict) else data
