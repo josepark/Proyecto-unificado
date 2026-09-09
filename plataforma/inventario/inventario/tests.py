@@ -360,6 +360,105 @@ class ClaseActivoDinamicaTest(TestCase):
         self.assertEqual(r.status_code, 400)
 
 
+class Ola2ArquitecturaDatosTest(TestCase):
+    """Ola 2: racks, esquema dinámico, vínculo RBAC por ID."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from inventario.models import ClaseActivo, Datacenter, Rack
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.dinamizador = User.objects.create_user("ola2_test_dinam", password="x")
+        cls.dinamizador.groups.add(cls.grupo_dinamizador)
+        cls.dc_a = Datacenter.objects.create(codigo="BOG1", nombre="Bogotá principal")
+        cls.dc_b = Datacenter.objects.create(codigo="MED1", nombre="Medellín")
+        cls.rack_a = Rack.objects.create(datacenter=cls.dc_a, codigo="A01", capacidad_u=42)
+        cls.rack_b = Rack.objects.create(datacenter=cls.dc_b, codigo="B01", capacidad_u=42)
+        ClaseActivo.objects.filter(codigo="SERV").delete()
+        ClaseActivo.objects.create(
+            codigo="SERV", nombre="Servicio", prefijo_id="SRV", modelo_detalle="generico",
+            detalle_schema={"campos": [
+                {"nombre": "proveedor", "tipo": "texto", "requerido": True},
+                {"nombre": "region", "tipo": "opciones", "opciones": ["us-east-1", "sa-east-1"]},
+            ]},
+        )
+
+    def setUp(self):
+        self.client.force_login(self.dinamizador)
+
+    def test_valida_detalle_extra_contra_esquema(self):
+        r = self.client.post("/api/activos/", {
+            "nombre": "Bucket",
+            "clase": "SERV",
+            "detalle_extra": {"region": "us-east-1"},
+        }, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("proveedor", str(r.json()))
+
+        r2 = self.client.post("/api/activos/", {
+            "nombre": "Bucket OK",
+            "clase": "SERV",
+            "detalle_extra": {"proveedor": "AWS", "region": "us-east-1"},
+        }, content_type="application/json")
+        self.assertEqual(r2.status_code, 201, r2.content)
+
+    def test_rechaza_rack_de_otro_datacenter(self):
+        r = self.client.post("/api/activos/", {
+            "nombre": "Switch core",
+            "clase": "INFRA",
+            "datacenter": self.dc_a.id,
+            "infraestructura": {
+                "tipo": "Switch",
+                "rack_fk": self.rack_b.id,
+                "unidad_inicio": 10,
+                "unidad_fin": 11,
+            },
+        }, content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("rack_fk", str(r.json()))
+
+    def test_accesos_rbac_por_sistema_rbac_id(self):
+        from inventario.models import Activo, SistemaInformacion
+        from unittest.mock import patch, MagicMock
+
+        activo = Activo.objects.create(
+            nombre="Portal", clase="SIST", clasificacion_si="CONF", estado="ACT")
+        SistemaInformacion.objects.create(
+            activo=activo, sistema_rbac_id=42, sistema_mca_equivalente="Nombre distinto")
+
+        catalogo = [
+            {"id": 42, "nombre": "Portal académico", "categoria": "X",
+             "clasificacion": "Interna",
+             "accesos": [{"rol": "DTG", "denominacion": "Dinamizador", "nivel": "C"}]},
+        ]
+        respuesta = MagicMock()
+        respuesta.json.return_value = catalogo
+        respuesta.raise_for_status.return_value = None
+
+        with patch("inventario.integracion_rbac.requests.get", return_value=respuesta):
+            r = self.client.get(f"/api/activos/{activo.id}/")
+        self.assertEqual(r.status_code, 200)
+        sis = r.json()["sistema"]
+        self.assertEqual(sis["accesos_rbac"], catalogo[0]["accesos"])
+        self.assertEqual(sis["sistema_rbac_nombre"], "Portal académico")
+
+    def test_infra_sin_rack_genera_alerta(self):
+        from inventario.models import Activo, ActivoInfraestructura
+        a = Activo.objects.create(
+            nombre="Router borde", clase="INFRA", datacenter=self.dc_a, estado="ACT")
+        ActivoInfraestructura.objects.create(activo=a, tipo="Router")
+        r = self.client.get("/api/alertas/")
+        self.assertEqual(r.status_code, 200)
+        grupos = {g["clave"]: g for g in r.json()["grupos"]}
+        ids = [i["id_activo"] for i in grupos["sin_rack"]["items"]]
+        self.assertIn(a.id_activo, ids)
+
+    def test_datacenter_expone_racks(self):
+        r = self.client.get(f"/api/datacenters/{self.dc_a.id}/racks/")
+        self.assertEqual(r.status_code, 200)
+        codigos = [x["codigo"] for x in r.json()]
+        self.assertIn("A01", codigos)
+
+
 class RiesgoCruzadoTest(TestCase):
     """Correlación de riesgo cruzado (Alertas): un activo con riesgo
     Crítico/Alto que además tiene excepciones de acceso vigentes en RBAC

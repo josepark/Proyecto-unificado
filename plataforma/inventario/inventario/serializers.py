@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (Activo, ActivoInfraestructura, SistemaInformacion,
                      EquipoComputo, ClaseActivo, Zona, VLAN, AmenazaMITRE, ControlISO,
-                     RolMCA, AccesoRol)
+                     Rack, Datacenter)
+from .detalle_schema import validar_detalle_extra
 
 
 class AmenazaMITRESerializer(serializers.ModelSerializer):
@@ -22,6 +23,8 @@ class ControlISOSerializer(serializers.ModelSerializer):
 class InfraestructuraSerializer(serializers.ModelSerializer):
     zona = serializers.StringRelatedField()
     vlan = serializers.StringRelatedField()
+    rack_codigo = serializers.CharField(source="rack_fk.codigo", read_only=True, default=None)
+    rack_datacenter = serializers.CharField(source="rack_fk.datacenter.codigo", read_only=True, default=None)
 
     class Meta:
         model = ActivoInfraestructura
@@ -36,34 +39,31 @@ class EquipoSerializer(serializers.ModelSerializer):
         exclude = ("activo",)
 
 
-class AccesoRolSerializer(serializers.ModelSerializer):
-    rol = serializers.StringRelatedField()
-
-    class Meta:
-        model = AccesoRol
-        fields = ("rol", "nivel")
-
-
 class SistemaSerializer(serializers.ModelSerializer):
-    accesos = serializers.SerializerMethodField()
     accesos_rbac = serializers.SerializerMethodField()
+    sistema_rbac_nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = SistemaInformacion
         exclude = ("activo", "roles")
 
-    def get_accesos(self, obj):
-        return AccesoRolSerializer(
-            AccesoRol.objects.filter(sistema=obj), many=True).data
-
     def get_accesos_rbac(self, obj):
-        """Despliegue integrado: accesos reales según la Matriz RBAC
-        (fuente canónica, SUIIN-SGSI-MCA-001), cruzados en vivo por nombre
-        contra `sistema_mca_equivalente`. None si no hay ese campo
-        capturado, si RBAC no respondió, o si el nombre no coincide con
-        ningún sistema de la matriz — ver integracion_rbac.py."""
+        """Accesos reales según la Matriz RBAC (fuente canónica)."""
         from .integracion_rbac import accesos_rbac_por_sistema
-        return accesos_rbac_por_sistema(obj.sistema_mca_equivalente)
+        if not obj.sistema_rbac_id and not (obj.sistema_mca_equivalente or "").strip():
+            return None
+        return accesos_rbac_por_sistema(
+            nombre_sistema=obj.sistema_mca_equivalente,
+            sistema_rbac_id=obj.sistema_rbac_id,
+        )
+
+    def get_sistema_rbac_nombre(self, obj):
+        from .integracion_rbac import sistema_rbac_resumen
+        s = sistema_rbac_resumen(
+            nombre_sistema=obj.sistema_mca_equivalente,
+            sistema_rbac_id=obj.sistema_rbac_id,
+        )
+        return s["nombre"] if s else None
 
 
 class ClaseActivoSerializer(serializers.ModelSerializer):
@@ -85,6 +85,15 @@ class ClaseActivoSerializer(serializers.ModelSerializer):
 
     def validate_prefijo_id(self, value):
         return value.strip().upper()
+
+    def validate_detalle_schema(self, value):
+        if value in (None, ""):
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Debe ser un objeto JSON.")
+        if "campos" in value and not isinstance(value.get("campos"), list):
+            raise serializers.ValidationError("La clave «campos» debe ser una lista.")
+        return value
 
 
 class ActivoListSerializer(serializers.ModelSerializer):
@@ -147,6 +156,22 @@ class InfraestructuraWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivoInfraestructura
         exclude = ("activo",)
+
+    def validate(self, attrs):
+        rack_fk = attrs.get("rack_fk")
+        activo = self.context.get("activo")
+        if rack_fk and activo and activo.datacenter_id:
+            if rack_fk.datacenter_id != activo.datacenter_id:
+                raise serializers.ValidationError({
+                    "rack_fk": f"El rack {rack_fk.codigo} pertenece a "
+                               f"{rack_fk.datacenter.codigo}, no al DC del activo.",
+                })
+        ini = attrs.get("unidad_inicio")
+        fin = attrs.get("unidad_fin")
+        if ini and fin and fin < ini:
+            raise serializers.ValidationError(
+                {"unidad_fin": "Debe ser ≥ unidad_inicio."})
+        return attrs
 
 
 class EquipoWriteSerializer(serializers.ModelSerializer):
@@ -234,6 +259,14 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
             if not bloques.get(esperado):
                 raise serializers.ValidationError(
                     f"La clase {clase} requiere el bloque de detalle «{esperado}».")
+
+        if cat.modelo_detalle == "generico" and "detalle_extra" in attrs:
+            normalizado, errores = validar_detalle_extra(
+                cat.detalle_schema, attrs.get("detalle_extra"))
+            if errores:
+                raise serializers.ValidationError({"detalle_extra": errores})
+            attrs["detalle_extra"] = normalizado
+
         return attrs
 
     def _sync_m2m(self, activo, validated):
@@ -263,7 +296,10 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
                if k in validated}
         activo = Activo.objects.create(**validated)
         if infra:
-            ActivoInfraestructura.objects.create(activo=activo, **infra)
+            ser = InfraestructuraWriteSerializer(
+                data=infra, context={"activo": activo})
+            ser.is_valid(raise_exception=True)
+            ActivoInfraestructura.objects.create(activo=activo, **ser.validated_data)
         if sist:
             SistemaInformacion.objects.create(activo=activo, **sist)
         if equipo:
@@ -282,8 +318,11 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
             setattr(instance, k, v)
         instance.save()
         if infra is not None:
+            ser = InfraestructuraWriteSerializer(
+                data=infra, context={"activo": instance})
+            ser.is_valid(raise_exception=True)
             ActivoInfraestructura.objects.update_or_create(
-                activo=instance, defaults=infra)
+                activo=instance, defaults=ser.validated_data)
         if sist is not None:
             SistemaInformacion.objects.update_or_create(
                 activo=instance, defaults=sist)
@@ -369,9 +408,22 @@ class HistorialSerializer(serializers.Serializer):
 
 
 # ---------------------------------------------------------------------------
-# v3 - Datacenter, Diagrama, Hoja de vida
+# v3 - Datacenter, Rack, Diagrama, Hoja de vida
 # ---------------------------------------------------------------------------
 from .models import Datacenter, Diagrama, EventoHojaVida
+
+
+class RackSerializer(serializers.ModelSerializer):
+    datacenter_codigo = serializers.CharField(source="datacenter.codigo", read_only=True)
+    ocupacion_u = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Rack
+        fields = ("id", "datacenter", "datacenter_codigo", "codigo",
+                  "capacidad_u", "ubicacion", "ocupacion_u")
+
+    def validate_codigo(self, value):
+        return value.strip().upper()
 
 
 class DatacenterSerializer(serializers.ModelSerializer):

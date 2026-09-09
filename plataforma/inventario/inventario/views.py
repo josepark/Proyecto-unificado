@@ -151,9 +151,9 @@ def dashboard(request):
 # ---------------------------------------------------------------------------
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from . import deteccion_diagramas
-from .models import Datacenter, Diagrama, EventoHojaVida
+from .models import Datacenter, Diagrama, EventoHojaVida, Rack
 from .serializers import (DatacenterSerializer, DiagramaSerializer,
-                          EventoHojaVidaSerializer)
+                          EventoHojaVidaSerializer, RackSerializer)
 
 
 class DatacenterViewSet(viewsets.ModelViewSet):
@@ -178,6 +178,19 @@ class DatacenterViewSet(viewsets.ModelViewSet):
         dc = self.get_object()
         data = ActivoListSerializer(dc.activos.all(), many=True).data
         return Response(data)
+
+    @action(detail=True)
+    def racks(self, request, pk=None):
+        dc = self.get_object()
+        qs = dc.racks.all()
+        return Response(RackSerializer(qs, many=True).data)
+
+
+class RackViewSet(viewsets.ModelViewSet):
+    queryset = Rack.objects.select_related("datacenter").all()
+    serializer_class = RackSerializer
+    filterset_fields = ["datacenter"]
+    search_fields = ["codigo", "ubicacion"]
 
 
 class DiagramaViewSet(viewsets.ModelViewSet):
@@ -269,7 +282,7 @@ def calcular_alertas():
                 "detalle": detalle, "severidad": sev}
 
     eol, garantia, mantenimiento, escaneo = [], [], [], []
-    hallazgos, sin_propietario, sin_cid, sin_dc = [], [], [], []
+    hallazgos, sin_propietario, sin_cid, sin_dc, sin_rack = [], [], [], [], []
 
     infra = ActivoInfraestructura.objects.select_related("activo").all()
     for inf in infra:
@@ -330,8 +343,14 @@ def calcular_alertas():
             sin_cid.append(item(a, "Sin valoracion C-I-D completa", "medio"))
         if a.datacenter_id is None:
             sin_dc.append(item(a, "Sin centro de datos asignado", "bajo"))
+        if a.clase == "INFRA" and a.datacenter_id:
+            inf = getattr(a, "infraestructura", None)
+            if inf and not inf.rack_fk_id and not (inf.rack or "").strip():
+                sin_rack.append(item(
+                    a, f"Infraestructura en {a.datacenter.codigo} sin rack/U asignados",
+                    "medio"))
 
-    # Correlacion de riesgo cruzado (despliegue integrado): un activo ya
+    # Correlacion de riesgo cruzado
     # riesgoso por si solo, que ademas tiene excepciones de acceso vigentes
     # en RBAC, es una senal compuesta que ninguna de las dos apps ve por
     # separado. Se cruza por sistema_mca_equivalente contra el catalogo
@@ -347,11 +366,16 @@ def calcular_alertas():
         for a in activos_riesgo:
             if not hasattr(a, "sistema"):
                 continue
-            nombre_mca = (a.sistema.sistema_mca_equivalente or "").strip()
-            if not nombre_mca:
-                continue
-            coincidencia = mapa_rbac.get(nombre_mca.lower())
-            if coincidencia and coincidencia["excepciones_vigentes"] > 0:
+            sis = a.sistema
+            coincidencia = None
+            if sis.sistema_rbac_id:
+                coincidencia = next(
+                    (s for s in catalogo_rbac if s.get("id") == sis.sistema_rbac_id), None)
+            if not coincidencia:
+                nombre_mca = (sis.sistema_mca_equivalente or "").strip()
+                if nombre_mca:
+                    coincidencia = mapa_rbac.get(nombre_mca.lower())
+            if coincidencia and coincidencia.get("excepciones_vigentes", 0) > 0:
                 n = coincidencia["excepciones_vigentes"]
                 sev = "crit" if a.nivel_riesgo == "CRIT" else "alto"
                 riesgo_cruzado.append(item(
@@ -368,6 +392,7 @@ def calcular_alertas():
         {"clave": "sin_propietario", "titulo": "Activos criticos sin propietario", "items": sin_propietario},
         {"clave": "sin_cid", "titulo": "Sin valoracion C-I-D", "items": sin_cid},
         {"clave": "sin_dc", "titulo": "Sin centro de datos", "items": sin_dc},
+        {"clave": "sin_rack", "titulo": "Infra en DC sin rack/U", "items": sin_rack},
         {"clave": "riesgo_cruzado", "titulo": "Riesgo cruzado (activo riesgoso + excepciones RBAC vigentes)", "items": riesgo_cruzado},
     ]
     total = sum(len(g["items"]) for g in grupos)
@@ -497,6 +522,7 @@ def calcular_panel_ejecutivo():
             criticos=Count("activos", filter=Q(activos__nivel_riesgo="CRIT")),
             sin_rack=Count("activos", filter=Q(
                 activos__clase="INFRA",
+                activos__infraestructura__rack_fk__isnull=True,
                 activos__infraestructura__rack="",
             )),
         ).order_by("codigo").values(
@@ -1088,6 +1114,26 @@ def auth_check_rbac(request):
         resp["X-Usuario-Autorizado"] = user.get_username()
         return resp
     return Response(status=401, headers={"Cache-Control": "no-store"})
+
+
+@api_view(["GET"])
+@permission_classes([RolPermiso])
+def catalogo_sistemas_rbac_view(request):
+    """Catálogo de sistemas RBAC para vincular activos SIST (Ola 2)."""
+    from .integracion_rbac import catalogo_sistemas_rbac
+    data = catalogo_sistemas_rbac()
+    if data is None:
+        return Response({"disponible": False, "sistemas": []})
+    return Response({
+        "disponible": True,
+        "sistemas": [{
+            "id": s.get("id"),
+            "nombre": s.get("nombre"),
+            "categoria": s.get("categoria"),
+            "clasificacion": s.get("clasificacion"),
+            "excepciones_vigentes": s.get("excepciones_vigentes", 0),
+        } for s in data],
+    })
 
 
 # ---------------------------------------------------------------------------

@@ -88,7 +88,7 @@ describe('Activo — guardas de rol', () => {
 });
 
 describe('Activo — cruce Inventario ↔ RBAC', () => {
-  it('muestra accesos locales y RBAC en vivo para sistemas', async () => {
+  it('muestra accesos RBAC en vivo para sistemas', async () => {
     global.fetch = vi.fn(async (url) => {
       const u = String(url);
       if (u.includes('/historial/')) return ok([]);
@@ -101,7 +101,7 @@ describe('Activo — cruce Inventario ↔ RBAC', () => {
         sistema: {
           estado_operativo: 'Producción',
           sistema_mca_equivalente: 'Portal',
-          accesos: [{ rol: 'DTG', nivel: 'A' }],
+          sistema_rbac_nombre: 'Portal académico',
           accesos_rbac: [{ rol: 'DTG', denominacion: 'Dinamizador', nivel: 'C' }],
         },
       });
@@ -109,9 +109,8 @@ describe('Activo — cruce Inventario ↔ RBAC', () => {
 
     renderConContexto({ puedeEditar: false, puedeEliminar: false });
     await screen.findByText('SIS-001');
-    expect(screen.getByText(/registrado en el Inventario/i)).toBeInTheDocument();
-    expect(screen.getByText(/según Matriz RBAC/i)).toBeInTheDocument();
-    expect(screen.getByText('DTG (A)')).toBeInTheDocument();
+    expect(screen.getByText(/Matriz RBAC/i)).toBeInTheDocument();
+    expect(screen.queryByText(/registrado en el Inventario/i)).not.toBeInTheDocument();
     expect(screen.getByText('DTG (C)')).toBeInTheDocument();
   });
 

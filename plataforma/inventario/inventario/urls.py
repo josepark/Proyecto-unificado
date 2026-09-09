@@ -9,6 +9,7 @@ router.register(r"activos", views.ActivoViewSet)
 router.register(r"amenazas", views.AmenazaViewSet)
 router.register(r"controles", views.ControlViewSet)
 router.register(r"datacenters", views.DatacenterViewSet)
+router.register(r"racks", views.RackViewSet)
 router.register(r"diagramas", views.DiagramaViewSet)
 router.register(r"hojavida", views.HojaVidaViewSet)
 
@@ -27,7 +28,7 @@ urlpatterns = [
     path("api/cobertura/", views.cobertura_controles, name="cobertura"),
     path("api/dashboard-ejecutivo/", views.dashboard_ejecutivo, name="dashboard_ejecutivo"),
     path("api/reporte-consolidado.pdf", views.reporte_consolidado_pdf, name="reporte_consolidado"),
-    path("api/accesos/", views.accesos, name="accesos"),
+    path("api/catalogo/sistemas-rbac/", views.catalogo_sistemas_rbac_view, name="catalogo_sistemas_rbac"),
     path("api/accesos/unificado/", views.accesos_unificado, name="accesos_unificado"),
     path("api/auth/jwt-version/<str:username>/", views.jwt_version_usuario, name="jwt_version"),
     path("api/integridad/", views.integridad_lista, name="integridad"),

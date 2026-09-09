@@ -72,24 +72,40 @@ def auditoria_rbac(limite=80):
         return None
 
 
-def accesos_rbac_por_sistema(nombre_sistema):
-    """Busca en el catálogo canónico de RBAC los accesos reales del sistema
-    cuyo nombre coincide (sin distinguir mayúsculas ni espacios sobrantes)
-    con el `sistema_mca_equivalente` capturado en el Inventario.
-
-    Devuelve:
-      - la lista de accesos (puede estar vacía) si RBAC respondió y hubo coincidencia,
-      - None si RBAC no respondió, si no se indicó nombre, o si no hubo
-        coincidencia (para poder distinguir "no hay accesos" de "no se
-        pudo verificar / no está vinculado" en la interfaz).
-    """
-    if not nombre_sistema:
+def accesos_rbac_por_sistema(nombre_sistema=None, sistema_rbac_id=None):
+    """Busca accesos en el catálogo canónico de RBAC por ID (prioritario) o
+    por nombre normalizado de `sistema_mca_equivalente`."""
+    if not sistema_rbac_id and not nombre_sistema:
         return None
     catalogo = catalogo_sistemas_rbac()
     if catalogo is None:
         return None
-    objetivo = nombre_sistema.strip().lower()
-    for s in catalogo:
-        if s["nombre"].strip().lower() == objetivo:
-            return s["accesos"]
+    if sistema_rbac_id:
+        for s in catalogo:
+            if s.get("id") == sistema_rbac_id:
+                return s.get("accesos") or []
+    if nombre_sistema:
+        objetivo = nombre_sistema.strip().lower()
+        for s in catalogo:
+            if s["nombre"].strip().lower() == objetivo:
+                return s.get("accesos") or []
+    return None
+
+
+def sistema_rbac_resumen(nombre_sistema=None, sistema_rbac_id=None):
+    """Metadatos del sistema RBAC vinculado (excepciones, nombre canónico)."""
+    if not sistema_rbac_id and not nombre_sistema:
+        return None
+    catalogo = catalogo_sistemas_rbac()
+    if catalogo is None:
+        return None
+    if sistema_rbac_id:
+        for s in catalogo:
+            if s.get("id") == sistema_rbac_id:
+                return s
+    if nombre_sistema:
+        objetivo = nombre_sistema.strip().lower()
+        for s in catalogo:
+            if s["nombre"].strip().lower() == objetivo:
+                return s
     return None

@@ -17,7 +17,7 @@ const OPC_MODELO = [
 function vacio() {
   return {
     codigo: '', nombre: '', prefijo_id: '', color: '#6b7280', orden: '10',
-    activo: true, modelo_detalle: 'ninguno',
+    activo: true, modelo_detalle: 'ninguno', detalle_schema_json: '{\n  "campos": []\n}',
   };
 }
 
@@ -44,6 +44,7 @@ export default function ClasesActivos() {
       orden: String(c.orden ?? 0),
       activo: c.activo,
       modelo_detalle: c.modelo_detalle,
+      detalle_schema_json: JSON.stringify(c.detalle_schema || { campos: [] }, null, 2),
     });
     setMsgError(null);
   }
@@ -61,6 +62,17 @@ export default function ClasesActivos() {
       activo: form.activo,
       modelo_detalle: form.modelo_detalle,
     };
+    if (form.modelo_detalle === 'generico') {
+      try {
+        body.detalle_schema = JSON.parse(form.detalle_schema_json || '{}');
+      } catch {
+        setMsgError('El esquema JSON no es válido.');
+        setGuardando(false);
+        return;
+      }
+    } else {
+      body.detalle_schema = {};
+    }
     try {
       if (form.id) {
         await inventarioApi.editarClaseActivo(form.id, body);
@@ -129,6 +141,23 @@ export default function ClasesActivos() {
               <input type="checkbox" checked={form.activo}
                 onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))} /> Clase activa (visible en formularios)
             </label>
+            {form.modelo_detalle === 'generico' && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                  Esquema de campos (JSON)
+                </label>
+                <textarea
+                  value={form.detalle_schema_json}
+                  onChange={(e) => setForm((f) => ({ ...f, detalle_schema_json: e.target.value }))}
+                  rows={8}
+                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+                  placeholder={'{\n  "campos": [\n    {"nombre": "proveedor", "tipo": "texto", "requerido": true}\n  ]\n}'}
+                />
+                <p style={{ fontSize: 12, color: 'var(--texto-suave)', margin: '6px 0 0' }}>
+                  Tipos: texto, entero, decimal, booleano, fecha, opciones (con lista «opciones»).
+                </p>
+              </div>
+            )}
             {msgError && <p style={{ color: 'var(--crit)' }}>{msgError}</p>}
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" className="btn btn-primary" disabled={guardando}>

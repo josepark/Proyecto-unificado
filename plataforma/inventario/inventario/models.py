@@ -225,8 +225,7 @@ class Activo(models.Model):
         verbose_name_plural = "Activos"
         ordering = ["id_activo"]
 
-    # Prefijo de codigo por clase de activo
-    PREFIJO = {"INFRA": "RED", "SIST": "SIS", "EQUI": "PC"}
+    # Prefijo legacy retirado (Ola 2) — solo ClaseActivo.prefijo_id.
 
     def nombre_clase(self):
         """Etiqueta legible desde el catálogo dinámico o el enum legacy."""
@@ -243,8 +242,10 @@ class Activo(models.Model):
     def siguiente_codigo(cls, clase):
         """Calcula el proximo codigo secuencial (ej. RED-023) para la clase."""
         import re
-        cat = ClaseActivo.objects.filter(codigo=clase).first()
-        pref = cat.prefijo_id if cat else cls.PREFIJO.get(clase, "ACT")
+        cat = ClaseActivo.objects.filter(codigo=clase, activo=True).first()
+        if not cat:
+            raise ValueError(f"No hay ClaseActivo activa con código «{clase}».")
+        pref = cat.prefijo_id
         maximo = 0
         for c in cls.objects.filter(id_activo__startswith=pref + "-").values_list("id_activo", flat=True):
             m = re.search(r"-(\d+)$", c)
@@ -335,7 +336,12 @@ class ActivoInfraestructura(models.Model):
                                              null=True, blank=True)
 
     # --- v3: Ubicacion fisica granular en el rack ---
-    rack = models.CharField("Rack", max_length=40, blank=True)
+    rack_fk = models.ForeignKey(
+        "Rack", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="equipos", verbose_name="Rack (catálogo)")
+    unidad_inicio = models.PositiveSmallIntegerField("U inicio", null=True, blank=True)
+    unidad_fin = models.PositiveSmallIntegerField("U fin", null=True, blank=True)
+    rack = models.CharField("Rack (texto legacy)", max_length=40, blank=True)
     unidad_rack = models.CharField("Unidad de rack (U)", max_length=20, blank=True,
                                    help_text="Ej: U12-U14")
 
@@ -344,6 +350,15 @@ class ActivoInfraestructura(models.Model):
     class Meta:
         verbose_name = "Activo de infraestructura"
         verbose_name_plural = "Activos de infraestructura"
+
+    def save(self, *args, **kwargs):
+        if self.rack_fk_id:
+            self.rack = self.rack_fk.codigo
+            if self.unidad_inicio and self.unidad_fin:
+                self.unidad_rack = f"U{self.unidad_inicio}-U{self.unidad_fin}"
+            elif self.unidad_inicio:
+                self.unidad_rack = f"U{self.unidad_inicio}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"[INFRA] {self.activo.id_activo}"
@@ -426,6 +441,9 @@ class SistemaInformacion(models.Model):
     integracion_gateway = models.CharField(max_length=120, blank=True)
     estado_documentacion = models.CharField(max_length=255, blank=True)
     sistema_mca_equivalente = models.CharField("Sistema MCA equivalente", max_length=120, blank=True)
+    sistema_rbac_id = models.PositiveIntegerField(
+        "ID sistema en Matriz RBAC", null=True, blank=True,
+        help_text="Vínculo explícito al catálogo RBAC (prioritario sobre el nombre).")
     roles = models.ManyToManyField(RolMCA, blank=True, through="AccesoRol", related_name="sistemas")
     servidor_virtual = models.CharField(max_length=40, blank=True)
     url = models.CharField(max_length=255, blank=True)
@@ -514,6 +532,41 @@ class Datacenter(models.Model):
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
+
+
+class Rack(models.Model):
+    """Rack físico dentro de un centro de datos (Ola 2)."""
+    datacenter = models.ForeignKey(
+        "Datacenter", on_delete=models.CASCADE, related_name="racks")
+    codigo = models.CharField(max_length=40, help_text="Ej: A01, RACK-NORTE-03")
+    capacidad_u = models.PositiveSmallIntegerField(default=42)
+    ubicacion = models.CharField(
+        "Ubicación en sala", max_length=120, blank=True,
+        help_text="Ej: Fila 2, pasillo B")
+    history = HistoricalRecords()
+
+    class Meta:
+        verbose_name = "Rack"
+        verbose_name_plural = "Racks"
+        ordering = ["datacenter__codigo", "codigo"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["datacenter", "codigo"], name="uniq_rack_por_datacenter"),
+        ]
+
+    def __str__(self):
+        return f"{self.datacenter.codigo}/{self.codigo}"
+
+    @property
+    def ocupacion_u(self):
+        qs = ActivoInfraestructura.objects.filter(rack_fk=self)
+        total = 0
+        for inf in qs.only("unidad_inicio", "unidad_fin"):
+            if inf.unidad_inicio and inf.unidad_fin:
+                total += max(0, inf.unidad_fin - inf.unidad_inicio + 1)
+            elif inf.unidad_inicio:
+                total += 1
+        return total
 
 
 class Diagrama(models.Model):

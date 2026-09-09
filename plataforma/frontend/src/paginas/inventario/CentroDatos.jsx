@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
+import { formatearErrorApi } from '../../api/client';
 import { useInventarioMeta } from '../../hooks/useInventarioMeta';
 
 const COLOR_TIPO_FALLBACK = { PRIN: '#3fa87f', MINI: '#c9a94e', DR: '#8b5cf6', CLOUD: '#0ea5e9' };
@@ -60,6 +61,97 @@ function Mapa({ datacenters, coloresTipo }) {
   }, [datacenters, coloresTipo]);
 
   return <div ref={contenedorRef} style={{ height: 360, borderRadius: 10, border: '1px solid var(--borde)', marginBottom: 16 }} />;
+}
+
+function TarjetaRacks({ dc, puedeEditar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [form, setForm] = useState(null);
+  const [error, setError] = useState(null);
+  const { datos: racks, cargando, recargar } = useApi(
+    () => (abierto ? inventarioApi.racksDatacenter(dc.id) : Promise.resolve(null)),
+    [abierto, dc.id],
+  );
+  const lista = racks ?? [];
+
+  async function guardar(ev) {
+    ev.preventDefault();
+    setError(null);
+    try {
+      await inventarioApi.crearRack({
+        datacenter: dc.id,
+        codigo: form.codigo.trim(),
+        capacidad_u: Number(form.capacidad_u) || 42,
+        ubicacion: form.ubicacion.trim(),
+      });
+      setForm(null);
+      recargar();
+    } catch (e) {
+      setError(formatearErrorApi(e));
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 10, borderTop: '1px solid var(--borde)', paddingTop: 10 }}>
+      <button type="button" className="btn btn-sec" onClick={() => setAbierto((a) => !a)}>
+        {abierto ? 'Ocultar racks' : 'Ver racks'}
+      </button>
+      {abierto && (
+        <div style={{ marginTop: 10 }}>
+          {cargando ? (
+            <p style={{ fontSize: 13 }}>Cargando racks…</p>
+          ) : (
+            <>
+              {!lista.length ? (
+                <p style={{ fontSize: 13, color: 'var(--texto-suave)' }}>Sin racks registrados en este centro.</p>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th className="num">Capacidad</th>
+                      <th className="num">Ocupación</th>
+                      <th>Ubicación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lista.map((r) => (
+                      <tr key={r.id}>
+                        <td><b>{r.codigo}</b></td>
+                        <td className="num">{r.capacidad_u} U</td>
+                        <td className="num">{r.ocupacion_u ?? 0} U</td>
+                        <td>{r.ubicacion || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {puedeEditar && (
+                <div style={{ marginTop: 10 }}>
+                  {!form ? (
+                    <button type="button" className="btn btn-sec" onClick={() => setForm({ codigo: '', capacidad_u: '42', ubicacion: '' })}>
+                      + Nuevo rack
+                    </button>
+                  ) : (
+                    <form onSubmit={guardar} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <input placeholder="Código (A01)" value={form.codigo} required
+                        onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))} />
+                      <input type="number" placeholder="U" value={form.capacidad_u} min="1"
+                        onChange={(e) => setForm((f) => ({ ...f, capacidad_u: e.target.value }))} style={{ width: 70 }} />
+                      <input placeholder="Ubicación en sala" value={form.ubicacion}
+                        onChange={(e) => setForm((f) => ({ ...f, ubicacion: e.target.value }))} style={{ flex: 1, minWidth: 140 }} />
+                      <button type="submit" className="btn btn-primary">Guardar</button>
+                      <button type="button" className="btn btn-sec" onClick={() => setForm(null)}>Cancelar</button>
+                    </form>
+                  )}
+                  {error && <p style={{ color: 'var(--crit)', fontSize: 13 }}>{error}</p>}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function TarjetaDatacenter({ dc, puedeEditar, coloresClase }) {
@@ -139,6 +231,7 @@ function TarjetaDatacenter({ dc, puedeEditar, coloresClase }) {
             )}
           </div>
         )}
+        <TarjetaRacks dc={dc} puedeEditar={puedeEditar} />
       </div>
     </div>
   );

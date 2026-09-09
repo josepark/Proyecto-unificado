@@ -76,15 +76,17 @@ function vacio() {
     amenazas: '', controles: '',
     infra: { tipo: '', ip_segmento: '', modelo: '', serial_placa: '',
       fabricante_proveedor: '', version_so_firmware: '',
-      fin_soporte_eol: '', hallazgos_abiertos: '', rack: '', unidad_rack: '' },
+      fin_soporte_eol: '', hallazgos_abiertos: '', rack_fk: '', unidad_inicio: '', unidad_fin: '',
+      rack: '', unidad_rack: '' },
     sist: { estado_operativo: 'SD', priorizar_analisis: 'SIN', backend: '',
       frontend: '', schema_bd: '', servidor_virtual: '',
-      sistema_mca_equivalente: '', version: '', integracion_gateway: '', url: '' },
+      sistema_mca_equivalente: '', sistema_rbac_id: '', version: '', integracion_gateway: '', url: '' },
     equipo: { tipo_equipo: 'ESC', usuario_asignado: '', marca: '', modelo: '',
       serial: '', mac_address: '', ubicacion_fisica: '', sistema_operativo: '',
       ram_gb: '', almacenamiento: '', antivirus_edr: '', ultima_actualizacion_so: '',
       cifrado_disco: false, unido_a_dominio: false, fecha_adquisicion: '', fin_garantia: '' },
     detalle_extra_json: '{}',
+    detalle_extra: {},
   };
 }
 
@@ -108,10 +110,21 @@ function desdeActivo(a) {
     notas_seguridad: a.notas_seguridad || '',
     amenazas: (a.amenazas || []).map((m) => m.codigo).join(', '),
     controles: (a.controles || []).map((c) => c.codigo).join(', '),
-    infra: a.infraestructura ? { ...base.infra, ...a.infraestructura } : base.infra,
-    sist: a.sistema ? { ...base.sist, ...a.sistema } : base.sist,
+    infra: a.infraestructura ? {
+      ...base.infra,
+      ...a.infraestructura,
+      rack_fk: a.infraestructura.rack_fk ?? '',
+      unidad_inicio: a.infraestructura.unidad_inicio ?? '',
+      unidad_fin: a.infraestructura.unidad_fin ?? '',
+    } : base.infra,
+    sist: a.sistema ? {
+      ...base.sist,
+      ...a.sistema,
+      sistema_rbac_id: a.sistema.sistema_rbac_id ?? '',
+    } : base.sist,
     equipo: a.equipo ? { ...base.equipo, ...a.equipo } : base.equipo,
     detalle_extra_json: JSON.stringify(a.detalle_extra || {}, null, 2),
+    detalle_extra: { ...(a.detalle_extra || {}) },
   };
 }
 
@@ -130,6 +143,7 @@ export default function ActivoForm() {
     [id],
   );
   const { datos: datacenters } = useApi(() => inventarioApi.datacenters(), []);
+  const { datos: catalogoRbac } = useApi(() => inventarioApi.catalogoSistemasRbac(), []);
   const { meta, clases } = useInventarioMeta();
 
   const [form, setForm] = useState(editando ? null : vacio());
@@ -140,7 +154,16 @@ export default function ActivoForm() {
     () => clases.map((c) => [c.codigo, c.nombre]),
     [clases],
   );
-  const modeloDetalle = claseMeta(meta, form?.clase)?.modelo_detalle;
+  const claseActual = claseMeta(meta, form?.clase);
+  const modeloDetalle = claseActual?.modelo_detalle;
+  const schemaCampos = claseActual?.detalle_schema?.campos ?? [];
+
+  const { datos: racksDc } = useApi(
+    () => (form?.datacenter ? inventarioApi.racksDatacenter(form.datacenter) : Promise.resolve([])),
+    [form?.datacenter],
+  );
+  const racks = racksDc?.results ?? racksDc ?? [];
+  const sistemasRbac = catalogoRbac?.sistemas ?? [];
 
   useEffect(() => {
     if (editando && activoExistente) setForm(desdeActivo(activoExistente));
@@ -149,6 +172,8 @@ export default function ActivoForm() {
   const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
   const setSub = (bloque, campo, valor) =>
     setForm((f) => ({ ...f, [bloque]: { ...f[bloque], [campo]: valor } }));
+  const setDetalleExtra = (campo, valor) =>
+    setForm((f) => ({ ...f, detalle_extra: { ...f.detalle_extra, [campo]: valor } }));
 
   if (editando && (cargandoActivo || !form)) return <p>Cargando activo…</p>;
   if (editando && errorCarga) {
@@ -203,9 +228,15 @@ export default function ActivoForm() {
         ...form.infra,
         fin_soporte_eol: form.infra.fin_soporte_eol || null,
         hallazgos_abiertos: numOrNull(form.infra.hallazgos_abiertos),
+        rack_fk: form.infra.rack_fk ? Number(form.infra.rack_fk) : null,
+        unidad_inicio: numOrNull(form.infra.unidad_inicio),
+        unidad_fin: numOrNull(form.infra.unidad_fin),
       };
     } else if (modeloDetalle === 'sistema') {
-      body.sistema = { ...form.sist };
+      body.sistema = {
+        ...form.sist,
+        sistema_rbac_id: form.sist.sistema_rbac_id ? Number(form.sist.sistema_rbac_id) : null,
+      };
     } else if (modeloDetalle === 'equipo') {
       body.equipo = {
         ...form.equipo,
@@ -215,12 +246,16 @@ export default function ActivoForm() {
         ultima_actualizacion_so: form.equipo.ultima_actualizacion_so || null,
       };
     } else if (modeloDetalle === 'generico') {
-      try {
-        body.detalle_extra = JSON.parse(form.detalle_extra_json || '{}');
-      } catch {
-        setError('El JSON de detalle adicional no es válido.');
-        setGuardando(false);
-        return;
+      if (schemaCampos.length) {
+        body.detalle_extra = { ...form.detalle_extra };
+      } else {
+        try {
+          body.detalle_extra = JSON.parse(form.detalle_extra_json || '{}');
+        } catch {
+          setError('El JSON de detalle adicional no es válido.');
+          setGuardando(false);
+          return;
+        }
       }
     }
 
@@ -400,11 +435,35 @@ export default function ActivoForm() {
                 />
               </Fila>
               <Fila>
-                <Campo label="Rack" value={form.infra.rack} onChange={(e) => setSub('infra', 'rack', e.target.value)} />
+                <CampoSelect
+                  label="Rack (catálogo)"
+                  value={String(form.infra.rack_fk ?? '')}
+                  onChange={(e) => setSub('infra', 'rack_fk', e.target.value)}
+                  opciones={[
+                    ['', form.datacenter ? '— Sin rack —' : '— Asigne un centro de datos primero —'],
+                    ...racks.map((r) => [String(r.id), `${r.codigo} (${r.ocupacion_u ?? 0}/${r.capacidad_u} U)`]),
+                  ]}
+                />
                 <Campo
-                  label="Unidad de rack (U)"
-                  value={form.infra.unidad_rack}
-                  onChange={(e) => setSub('infra', 'unidad_rack', e.target.value)}
+                  label="U inicio"
+                  type="number"
+                  min="1"
+                  value={form.infra.unidad_inicio ?? ''}
+                  onChange={(e) => setSub('infra', 'unidad_inicio', e.target.value)}
+                />
+              </Fila>
+              <Fila>
+                <Campo
+                  label="U fin"
+                  type="number"
+                  min="1"
+                  value={form.infra.unidad_fin ?? ''}
+                  onChange={(e) => setSub('infra', 'unidad_fin', e.target.value)}
+                />
+                <Campo
+                  label="Rack (texto legacy)"
+                  value={form.infra.rack}
+                  onChange={(e) => setSub('infra', 'rack', e.target.value)}
                 />
               </Fila>
               <Fila>
@@ -456,6 +515,33 @@ export default function ActivoForm() {
                 />
               </Fila>
               <Fila>
+                <CampoSelect
+                  label="Sistema en Matriz RBAC"
+                  value={String(form.sist.sistema_rbac_id ?? '')}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    const sel = sistemasRbac.find((s) => String(s.id) === id);
+                    setForm((f) => ({
+                      ...f,
+                      sist: {
+                        ...f.sist,
+                        sistema_rbac_id: id,
+                        sistema_mca_equivalente: sel?.nombre || f.sist.sistema_mca_equivalente,
+                      },
+                    }));
+                  }}
+                  opciones={[
+                    ['', '— Sin vínculo RBAC —'],
+                    ...sistemasRbac.map((s) => [String(s.id), s.nombre]),
+                  ]}
+                />
+                <Campo
+                  label="Sistema MCA equivalente (fallback)"
+                  value={form.sist.sistema_mca_equivalente}
+                  onChange={(e) => setSub('sist', 'sistema_mca_equivalente', e.target.value)}
+                />
+              </Fila>
+              <Fila>
                 <Campo
                   label="Backend (framework)"
                   placeholder="Ej: Django REST Framework"
@@ -483,30 +569,25 @@ export default function ActivoForm() {
               </Fila>
               <Fila>
                 <Campo
-                  label="Sistema MCA equivalente"
-                  value={form.sist.sistema_mca_equivalente}
-                  onChange={(e) => setSub('sist', 'sistema_mca_equivalente', e.target.value)}
-                />
-                <Campo
                   label="Versión del sistema"
                   value={form.sist.version}
                   onChange={(e) => setSub('sist', 'version', e.target.value)}
                 />
-              </Fila>
-              <div style={{ marginBottom: 12 }}>
                 <Campo
                   label="Integración con Gateway"
                   placeholder="Ej: REST nativo → Gateway directo"
                   value={form.sist.integracion_gateway}
                   onChange={(e) => setSub('sist', 'integracion_gateway', e.target.value)}
                 />
+              </Fila>
+              <div style={{ marginBottom: 12 }}>
+                <Campo
+                  label="URL"
+                  placeholder="https://…"
+                  value={form.sist.url}
+                  onChange={(e) => setSub('sist', 'url', e.target.value)}
+                />
               </div>
-              <Campo
-                label="URL"
-                placeholder="https://…"
-                value={form.sist.url}
-                onChange={(e) => setSub('sist', 'url', e.target.value)}
-              />
             </div>
           </div>
         )}
@@ -621,17 +702,66 @@ export default function ActivoForm() {
 
         {modeloDetalle === 'generico' && (
           <div className="card" style={{ marginBottom: 14 }}>
-            <h2>Detalle adicional (JSON)</h2>
+            <h2>Detalle adicional{schemaCampos.length ? '' : ' (JSON)'}</h2>
             <div className="cuerpo">
-              <CampoTextarea
-                label="Campos personalizados"
-                value={form.detalle_extra_json}
-                onChange={(e) => set('detalle_extra_json', e.target.value)}
-                placeholder='{"proveedor": "AWS", "region": "us-east-1"}'
-              />
-              <p style={{ fontSize: 12, color: 'var(--texto-suave)', margin: 0 }}>
-                Clase genérica: defina atributos libres en formato JSON válido.
-              </p>
+              {schemaCampos.length ? (
+                schemaCampos.map((spec) => {
+                  const nombre = spec.nombre;
+                  if (!nombre) return null;
+                  const valor = form.detalle_extra?.[nombre] ?? '';
+                  const tipo = (spec.tipo || 'texto').toLowerCase();
+                  if (tipo === 'booleano') {
+                    return (
+                      <label key={nombre} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        <input
+                          type="checkbox"
+                          style={{ width: 'auto' }}
+                          checked={!!valor}
+                          onChange={(e) => setDetalleExtra(nombre, e.target.checked)}
+                        />
+                        {nombre}{spec.requerido ? ' *' : ''}
+                      </label>
+                    );
+                  }
+                  if (tipo === 'opciones') {
+                    return (
+                      <div key={nombre} style={{ marginBottom: 12 }}>
+                        <CampoSelect
+                          label={`${nombre}${spec.requerido ? ' *' : ''}`}
+                          value={String(valor)}
+                          onChange={(e) => setDetalleExtra(nombre, e.target.value)}
+                          opciones={[
+                            ['', '—'],
+                            ...(spec.opciones || []).map((o) => [String(o), String(o)]),
+                          ]}
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={nombre} style={{ marginBottom: 12 }}>
+                      <Campo
+                        label={`${nombre}${spec.requerido ? ' *' : ''}`}
+                        type={tipo === 'fecha' ? 'date' : tipo === 'entero' || tipo === 'decimal' ? 'number' : 'text'}
+                        value={valor}
+                        onChange={(e) => setDetalleExtra(nombre, e.target.value)}
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  <CampoTextarea
+                    label="Campos personalizados"
+                    value={form.detalle_extra_json}
+                    onChange={(e) => set('detalle_extra_json', e.target.value)}
+                    placeholder='{"proveedor": "AWS", "region": "us-east-1"}'
+                  />
+                  <p style={{ fontSize: 12, color: 'var(--texto-suave)', margin: 0 }}>
+                    Clase genérica sin esquema: defina atributos libres en formato JSON válido.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         )}
