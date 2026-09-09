@@ -18,7 +18,8 @@ import datetime
 import jwt
 from django.conf import settings
 
-from .permisos import roles_de
+from .permisos import roles_de, ROL_DINAMIZADOR, ROL_ADMIN
+from .signals import jwt_version_de
 
 
 class JWTNoConfigurado(Exception):
@@ -37,6 +38,7 @@ def emitir_jwt(user):
         "sub": str(user.pk),
         "username": user.get_username(),
         "roles": sorted(roles_de(user)),
+        "ver": jwt_version_de(user),
         "iat": ahora,
         "exp": ahora + datetime.timedelta(minutes=settings.JWT_EXPIRACION_MINUTOS),
     }

@@ -10,7 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .permisos import RolPermiso
+from .permisos import RolPermiso, SoloAdministrador
 
 
 class CatalogoPagination(PageNumberPagination):
@@ -113,7 +113,7 @@ class ClaseActivoViewSet(viewsets.ModelViewSet):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def bitacora_global(request):
     """Bitacora consolidada de los ultimos cambios en todo el inventario."""
     limite = int(request.GET.get("limite", 60))
@@ -379,7 +379,7 @@ def calcular_alertas():
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def alertas(request):
     return Response(calcular_alertas())
 
@@ -427,7 +427,7 @@ def calcular_riesgos():
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def riesgos(request):
     return Response(calcular_riesgos())
 
@@ -464,7 +464,7 @@ def calcular_cobertura():
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def cobertura_controles(request):
     return Response(calcular_cobertura())
 
@@ -530,7 +530,7 @@ def dashboard_ejecutivo(request):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def reporte_consolidado_pdf(request):
     """PDF único con SoA, riesgos, alertas y cumplimiento RBAC — antes,
     esto significaba combinar a mano varias exportaciones parciales para
@@ -555,7 +555,7 @@ def _xlsx_response(wb, nombre):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def exportar_inventario_xlsx(request):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
@@ -584,7 +584,7 @@ def exportar_inventario_xlsx(request):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def importar_plantilla_xlsx(request):
     """Plantilla descargable para la importación masiva: encabezados,
     una fila de ejemplo y una hoja de referencia con los valores válidos
@@ -633,7 +633,7 @@ def importar_activos_confirmar(request):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def exportar_hojavida_pdf(request, pk):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import cm
@@ -688,7 +688,7 @@ def exportar_hojavida_pdf(request, pk):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def qr_activo(request, pk):
     """Genera un codigo QR PNG con el enlace a la ficha del activo."""
     import qrcode
@@ -782,7 +782,7 @@ def _dibujar_etiqueta(c, activo, ancho, alto, base_url):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def etiqueta_activo(request, pk):
     """Etiqueta adhesiva individual (70x40mm) lista para imprimir y pegar
     en el activo fisico: codigo, nombre, ubicacion y QR a la ficha."""
@@ -806,7 +806,7 @@ def etiqueta_activo(request, pk):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def etiquetas_lote(request):
     """Impresion masiva: una etiqueta de 70x40mm por pagina, una pagina por
     cada activo indicado en ?ids=1,2,3 (ids internos, como ya usa el QR
@@ -846,17 +846,51 @@ def etiquetas_lote(request):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def accesos(request):
     """Auditoria de accesos recientes."""
     regs = RegistroAcceso.objects.all()[:80]
     return Response([{"usuario": r.usuario, "tipo": r.get_accion_display(),
                       "recurso": r.recurso, "detalle": r.detalle,
-                      "ip": r.ip, "fecha": r.fecha} for r in regs])
+                      "ip": r.ip, "fecha": r.fecha, "modulo": "Inventario"}
+                     for r in regs])
+
+
+def _serializar_acceso_inventario(r):
+    return {"usuario": r.usuario, "tipo": r.get_accion_display(),
+            "recurso": r.recurso, "detalle": r.detalle,
+            "ip": r.ip, "fecha": r.fecha.isoformat(), "modulo": "Inventario"}
+
+
+def _serializar_acceso_rbac(fila):
+    return {
+        "usuario": fila.get("responsable") or fila.get("usuario") or "",
+        "tipo": fila.get("accion") or "",
+        "recurso": fila.get("entidad") or "",
+        "detalle": fila.get("detalle") or "",
+        "ip": "",
+        "fecha": fila.get("fecha") or "",
+        "modulo": "RBAC",
+    }
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([SoloAdministrador])
+def accesos_unificado(request):
+    """Panel de auditoría entre módulos — Inventario + RBAC (ISO 8.15)."""
+    from .integracion_rbac import auditoria_rbac
+
+    limite = min(int(request.GET.get("limite", 80)), 200)
+    inv = [_serializar_acceso_inventario(r) for r in RegistroAcceso.objects.all()[:limite]]
+    rbac_filas = auditoria_rbac(limite=limite) or []
+    rbac = [_serializar_acceso_rbac(f) for f in rbac_filas]
+    combinado = inv + rbac
+    combinado.sort(key=lambda x: x.get("fecha") or "", reverse=True)
+    return Response(combinado[:limite])
+
+
+@api_view(["GET"])
+@permission_classes([RolPermiso])
 def integridad_lista(request):
     """Bitácora encadenada del Inventario (mismo esquema que RBAC) — las
     últimas N filas, más recientes primero."""
@@ -869,7 +903,7 @@ def integridad_lista(request):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([RolPermiso])
 def integridad_verificar(request):
     """Recorre toda la cadena y confirma que nadie la alteró por fuera de
     la aplicación — mismo endpoint en espíritu que
@@ -1061,6 +1095,23 @@ def auth_check_rbac(request):
 # ---------------------------------------------------------------------------
 from django.contrib.auth import authenticate as _authenticate
 from .jwt_plataforma import emitir_jwt, JWTNoConfigurado
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def jwt_version_usuario(request, username):
+    """Versión vigente del JWT para un usuario — solo backends internos
+    (Riesgos) con el secreto compartido; invalida tokens emitidos antes de
+    un cambio de rol."""
+    secreto = request.headers.get("X-Plataforma-Secret", "")
+    if not settings.JWT_SHARED_SECRET or secreto != settings.JWT_SHARED_SECRET:
+        return Response(status=403)
+    from .models import PerfilPlataforma
+    try:
+        ver = PerfilPlataforma.objects.get(user__username=username).jwt_version
+    except PerfilPlataforma.DoesNotExist:
+        ver = 1
+    return Response({"username": username, "ver": ver})
 
 
 @api_view(["GET", "POST"])

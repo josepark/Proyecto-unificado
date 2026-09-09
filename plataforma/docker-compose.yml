@@ -59,7 +59,8 @@ services:
     build: ./rbac
     container_name: suiin-rbac
     environment:
-      SUIIN_RBAC_SECRET: ${SUIIN_RBAC_SECRET:-cambiar-este-valor-en-produccion}
+      # Obligatorio en .env — sin default débil en producción (Ola 1).
+      SUIIN_RBAC_SECRET: ${SUIIN_RBAC_SECRET:?Defina SUIIN_RBAC_SECRET en .env}
     volumes:
       - ./rbac/rbac.db:/app/rbac.db
     expose:

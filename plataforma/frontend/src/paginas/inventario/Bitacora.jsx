@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 
@@ -30,13 +31,16 @@ function BitaItem({ r }) {
 }
 
 export default function Bitacora() {
+  const { roles, puedeEliminar } = useOutletContext() ?? {};
+  const esAdmin = puedeEliminar || (roles ?? []).includes('Administrador');
+
   const { datos: cambios, cargando: cargandoCambios } = useApi(
     () => inventarioApi.bitacora({ limite: 80 }),
     [],
   );
   const { datos: accesos, cargando: cargandoAccesos, error: errorAccesos } = useApi(
-    () => inventarioApi.accesos(),
-    [],
+    () => (esAdmin ? inventarioApi.accesosUnificado({ limite: 80 }) : inventarioApi.accesos()),
+    [esAdmin],
   );
   const [verificando, setVerificando] = useState(false);
   const [resultadoVerif, setResultadoVerif] = useState(null);
@@ -84,7 +88,7 @@ export default function Bitacora() {
       </div>
 
       <div className="card">
-        <h2>Auditoría de accesos</h2>
+        <h2>{esAdmin ? 'Auditoría de accesos (Inventario + RBAC)' : 'Auditoría de accesos'}</h2>
         <div className="cuerpo">
           {cargandoAccesos ? (
             <p>Cargando…</p>
@@ -97,6 +101,7 @@ export default function Bitacora() {
               <thead>
                 <tr>
                   <th>Fecha</th>
+                  {esAdmin ? <th>Módulo</th> : null}
                   <th>Usuario</th>
                   <th>Acción</th>
                   <th>Recurso</th>
@@ -107,6 +112,7 @@ export default function Bitacora() {
                 {accesos.map((a, i) => (
                   <tr key={i}>
                     <td>{new Date(a.fecha).toLocaleString('es-CO')}</td>
+                    {esAdmin ? <td>{a.modulo || '—'}</td> : null}
                     <td>
                       <b>{a.usuario}</b>
                     </td>

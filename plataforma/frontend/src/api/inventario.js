@@ -42,6 +42,7 @@ export const inventarioApi = {
   alertas: () => api.get('/alertas/'),
   bitacora: (params) => api.get('/bitacora/', params),
   accesos: () => api.get('/accesos/'),
+  accesosUnificado: (params) => api.get('/accesos/unificado/', params),
   verificarIntegridad: () => api.get('/integridad/verificar/'),
 
   // --- Riesgos ---

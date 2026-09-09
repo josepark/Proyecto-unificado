@@ -647,3 +647,18 @@ class RegistroIntegridad(models.Model):
 
     def __str__(self):
         return f"{self.fecha} {self.entidad} {self.accion}"
+
+
+class PerfilPlataforma(models.Model):
+    """Metadatos de plataforma por usuario — versión de JWT para invalidar
+    tokens emitidos antes de un cambio de rol (Ola 1, revocación JWT)."""
+    user = models.OneToOneField(
+        "auth.User", on_delete=models.CASCADE, related_name="perfil_plataforma")
+    jwt_version = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        verbose_name = "Perfil de plataforma"
+        verbose_name_plural = "Perfiles de plataforma"
+
+    def __str__(self):
+        return f"{self.user.get_username()} (JWT v{self.jwt_version})"

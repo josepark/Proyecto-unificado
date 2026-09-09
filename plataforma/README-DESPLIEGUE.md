@@ -164,13 +164,27 @@ docker compose exec inventario python manage.py changepassword consultor
 ## 6. TLS / producción real
 
 Este `nginx.conf` sirve en HTTP plano (puerto 80) para simplificar el primer
-despliegue. Para producción, tal como ya recomendaban los README de ambos
-proyectos originales (nginx con TLS en la VLAN de gestión), agregue un
-bloque `server { listen 443 ssl; ... }` con sus certificados (por ejemplo,
-emitidos internamente o vía Certbot) y redirija el 80 a 443. Si termina TLS
-en un balanceador/firewall (pfSense) delante de este stack en vez de en este
-nginx, deje `DJANGO_SSL_REDIRECT=False` en `.env` para evitar bucles de
-redirección, y añada ese dominio a `DJANGO_CSRF_TRUSTED`.
+despliegue. **En producción expuesta a red, TLS es obligatorio** (Ola 1 —
+seguridad): sin HTTPS, las cookies de sesión y el JWT de plataforma viajan en
+texto claro.
+
+Opciones:
+
+1. **Certbot en el mismo host** (Let's Encrypt), añadiendo un bloque
+   `server { listen 443 ssl http2; ... }` con `ssl_certificate` y
+   `ssl_certificate_key`, y redirigiendo el puerto 80 a 443. Tras activar
+   TLS real, ponga `DJANGO_SSL_REDIRECT=True` en `.env` para que Django y
+   las cookies `Secure` queden alineadas (ver prueba
+   `CookieCSRFSeguraSegunTLSTest`).
+
+2. **TLS terminado en balanceador/firewall** (pfSense, ALB, etc.) delante de
+   este stack: deje `DJANGO_SSL_REDIRECT=False` en `.env` para evitar bucles
+   de redirección, configure `DJANGO_CSRF_TRUSTED_ORIGINS` con el dominio
+   HTTPS público, y asegure que el proxy envíe `X-Forwarded-Proto: https`.
+
+**RBAC (puerto 5000)** no debe publicarse sin nginx: en `docker-compose.yml`
+solo está en `expose`, no en `ports` — el acceso desde fuera debe pasar
+siempre por el gateway en el puerto 80/443 con `auth_request`.
 
 ## 7. Respaldo
 

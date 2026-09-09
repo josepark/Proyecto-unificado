@@ -1,8 +1,11 @@
+from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.db.models import F
+from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
-from .models import RegistroAcceso
+from .models import RegistroAcceso, PerfilPlataforma
 from . import integridad
 
 _ENTIDADES_CON_INTEGRIDAD = (
@@ -81,3 +84,23 @@ def log_logout(sender, request, user, **kwargs):
     if user:
         RegistroAcceso.objects.create(usuario=user.get_username(),
                                       accion="LOGOUT", ip=_ip(request))
+
+
+@receiver(post_save, sender=User)
+def crear_perfil_plataforma(sender, instance, created, **kwargs):
+    if created:
+        PerfilPlataforma.objects.get_or_create(user=instance)
+
+
+@receiver(m2m_changed, sender=User.groups.through)
+def invalidar_jwt_por_cambio_rol(sender, instance, action, **kwargs):
+    """Incrementa jwt_version cuando cambian los grupos/roles del usuario."""
+    if action not in ("post_add", "post_remove", "post_clear"):
+        return
+    PerfilPlataforma.objects.get_or_create(user=instance)
+    PerfilPlataforma.objects.filter(user=instance).update(jwt_version=F("jwt_version") + 1)
+
+
+def jwt_version_de(user):
+    perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
+    return perfil.jwt_version

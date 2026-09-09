@@ -20,10 +20,11 @@ def jwt_habilitado(settings):
 
 
 def _token(username="analista_plataforma", roles=("Dinamizador",), issuer="suiin-inventario",
-           secreto=SECRETO, expira_en_minutos=30, sub="7"):
+           secreto=SECRETO, expira_en_minutos=30, sub="7", ver=1):
     ahora = dt.datetime.now(dt.timezone.utc)
     payload = {
         "iss": issuer, "sub": sub, "username": username, "roles": list(roles),
+        "ver": ver,
         "iat": ahora, "exp": ahora + dt.timedelta(minutes=expira_en_minutos),
     }
     return jwt.encode(payload, secreto, algorithm="HS256")
@@ -126,6 +127,20 @@ class TestPermisosPorRolDePlataforma:
 
         _cliente_con_jwt(_token(username="ex_admin", roles=["Consultor"])).get("/api/activos/")
         assert User.objects.get(username="ex_admin").is_staff is False
+
+    def test_token_con_version_obsoleta_es_rechazado(self, monkeypatch):
+        """Ola 1: si el inventario incrementó jwt_version, un token anterior debe fallar."""
+        monkeypatch.setattr(
+            "riesgos.auth_jwt.jwt_version_vigente",
+            lambda username: 99,
+        )
+        token = _token(username="usuario_revocado", roles=["Dinamizador"], expira_en_minutos=30)
+        import jwt as pyjwt
+        payload = pyjwt.decode(token, SECRETO, algorithms=["HS256"], issuer="suiin-inventario")
+        payload["ver"] = 1
+        token_viejo = pyjwt.encode(payload, SECRETO, algorithm="HS256")
+        resp = _cliente_con_jwt(token_viejo).get("/api/activos/")
+        assert resp.status_code == 401
 
 
 class TestCompatibilidadConTokenPropio:

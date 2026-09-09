@@ -171,9 +171,15 @@ class CruceRBACSistemaTest(TestCase):
         cls.activo = Activo.objects.create(
             nombre="Sistema de Nómina", clase="SIST",
             clasificacion_si="CONF", estado="ACT")
-        cls.sistema = SistemaInformacion.objects.create(
+        cls.sistema =         SistemaInformacion.objects.create(
             activo=cls.activo, estado_operativo="OP",
             sistema_mca_equivalente="Nómina y Contratación")
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.consultor = User.objects.create_user("cruce_rbac_test", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+
+    def setUp(self):
+        self.client.force_login(self.consultor)
 
     def _detalle(self):
         return self.client.get(f"/api/activos/{self.activo.id}/")
@@ -379,6 +385,12 @@ class RiesgoCruzadoTest(TestCase):
         SistemaInformacion.objects.create(
             activo=cls.activo_bajo, estado_operativo="OP",
             sistema_mca_equivalente="Portal Público")
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.consultor = User.objects.create_user("riesgo_cruzado_test", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+
+    def setUp(self):
+        self.client.force_login(self.consultor)
 
     def _catalogo_falso(self):
         return [
@@ -655,6 +667,15 @@ class ActivoDetailDisplayTest(TestCase):
     etiquetas legibles que ya trae el listado — la ficha de React (Fase 1
     de la migración) las muestra directamente, sin traducir códigos."""
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.consultor = User.objects.create_user("detalle_test_cons", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+
+    def setUp(self):
+        self.client.force_login(self.consultor)
+
     def test_detalle_incluye_etiquetas_legibles(self):
         from .models import Activo
         a = Activo.objects.create(
@@ -677,12 +698,18 @@ class EtiquetaActivoTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         from .models import Activo
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.dinamizador = User.objects.create_user("etiqueta_test_dinam", password="x")
+        cls.dinamizador.groups.add(cls.grupo_dinamizador)
         cls.a1 = Activo.objects.create(
             nombre="Servidor de prueba para etiqueta", clase="INFRA",
             clasificacion_si="INT")
         cls.a2 = Activo.objects.create(
             nombre="Segundo activo de prueba", clase="SIST",
             clasificacion_si="INT")
+
+    def setUp(self):
+        self.client.force_login(self.dinamizador)
 
     def test_etiqueta_individual_devuelve_un_pdf(self):
         r = self.client.get(f"/api/activos/{self.a1.pk}/etiqueta.pdf")
@@ -1109,6 +1136,12 @@ class ReporteConsolidadoTest(TestCase):
         ctrl = ControlISO.objects.create(codigo="8.20", descripcion="Redes")
         a.controles.add(ctrl)
         cls.activo = a
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.dinamizador = User.objects.create_user("reporte_test_dinam", password="x")
+        cls.dinamizador.groups.add(cls.grupo_dinamizador)
+
+    def setUp(self):
+        self.client.force_login(self.dinamizador)
 
     def test_devuelve_un_pdf_valido(self):
         r = self.client.get("/api/reporte-consolidado.pdf")
@@ -1204,6 +1237,15 @@ class TokenJWTTest(TestCase):
         self.client.force_login(self.usuario)
         r = self.client.get(self.URL)
         self.assertEqual(r.status_code, 503)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-de-prueba-jwt", JWT_EXPIRACION_MINUTOS=30)
+    def test_token_incluye_version_y_roles(self):
+        self.client.force_login(self.usuario)
+        r = self.client.get(self.URL)
+        payload = self._decodificar(r.json()["token"])
+        self.assertIn("ver", payload)
+        self.assertGreaterEqual(payload["ver"], 1)
+        self.assertEqual(payload["roles"], ["Dinamizador"])
 
     @override_settings(JWT_SHARED_SECRET="secreto-de-prueba-jwt", JWT_EXPIRACION_MINUTOS=30)
     def test_token_incluye_expiracion_coherente_con_la_configuracion(self):
@@ -1344,4 +1386,91 @@ class XFrameOptionsTest(TestCase):
     def test_la_raiz_redirige_a_la_spa(self):
         """Tras el corte final, Django ya no sirve dashboard.html en /."""
         self.assertEqual(self._x_frame_options_con_debug_false("/"), "SAMEORIGIN")
+
+
+class PoliticaSeguridadAPITest(TestCase):
+    """Ola 1 — opción C: KPIs agregados públicos; detalle y exportaciones con sesión."""
+
+    URL_KPI = "/api/dashboard-ejecutivo/"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.grupo_admin, _ = Group.objects.get_or_create(name="Administrador")
+        cls.consultor = User.objects.create_user("politica_cons", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+        cls.admin = User.objects.create_user("politica_admin", password="x")
+        cls.admin.groups.add(cls.grupo_admin)
+
+    def test_kpi_ejecutivo_sigue_publico(self):
+        r = self.client.get(self.URL_KPI)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("total_activos", r.json())
+
+    def test_anonimo_no_accede_a_detalle_de_activos(self):
+        from .models import Activo
+        a = Activo.objects.create(nombre="Privado", clase="INFRA")
+        r = self.client.get(f"/api/activos/{a.pk}/")
+        self.assertIn(r.status_code, (401, 403))
+
+    def test_anonimo_no_descarga_exportaciones(self):
+        for url in (
+            "/api/exportar/inventario.xlsx",
+            "/api/reporte-consolidado.pdf",
+            "/api/activos/importar/plantilla.xlsx",
+        ):
+            r = self.client.get(url)
+            self.assertIn(r.status_code, (401, 403), url)
+
+    def test_consultor_si_accede_a_detalle(self):
+        from .models import Activo
+        a = Activo.objects.create(nombre="Visible autenticado", clase="INFRA")
+        self.client.force_login(self.consultor)
+        r = self.client.get(f"/api/activos/{a.pk}/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_accesos_unificado_solo_administrador(self):
+        self.client.force_login(self.consultor)
+        r = self.client.get("/api/accesos/unificado/")
+        self.assertEqual(r.status_code, 403)
+        self.client.force_login(self.admin)
+        r = self.client.get("/api/accesos/unificado/")
+        self.assertEqual(r.status_code, 200)
+
+
+class JWTRevocacionTest(TestCase):
+    """Ola 1 — jwt_version invalida tokens emitidos antes de un cambio de rol."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.usuario = User.objects.create_user("jwt_revoc_test", password="x")
+        cls.usuario.groups.add(cls.grupo_dinamizador)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-jwt-revocacion-test")
+    def test_cambio_de_rol_incrementa_version_y_token_antiguo_queda_obsoleto(self):
+        from .signals import jwt_version_de
+        self.client.force_login(self.usuario)
+        r1 = self.client.get("/api/token-jwt/")
+        self.assertEqual(r1.status_code, 200)
+        token_viejo = r1.json()["token"]
+        ver_inicial = jwt_version_de(self.usuario)
+
+        self.usuario.groups.remove(self.grupo_dinamizador)
+        self.usuario.groups.add(self.grupo_consultor)
+        ver_nueva = jwt_version_de(self.usuario)
+        self.assertGreater(ver_nueva, ver_inicial)
+
+        r2 = self.client.get(
+            f"/api/auth/jwt-version/{self.usuario.username}/",
+            HTTP_X_PLATAFORMA_SECRET="secreto-jwt-revocacion-test",
+        )
+        self.assertEqual(r2.status_code, 200)
+        self.assertEqual(r2.json()["ver"], ver_nueva)
+
+        import jwt
+        payload = jwt.decode(token_viejo, "secreto-jwt-revocacion-test",
+                             algorithms=["HS256"], issuer="suiin-inventario")
+        self.assertLess(payload["ver"], ver_nueva)
 

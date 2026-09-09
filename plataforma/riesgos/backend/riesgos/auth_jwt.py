@@ -24,6 +24,8 @@ from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+from .jwt_version_inventario import jwt_version_vigente
+
 ROLES_CON_ESCRITURA = {"Dinamizador", "Administrador"}
 
 User = get_user_model()
@@ -54,6 +56,12 @@ class JWTPlataformaAuthentication(BaseAuthentication):
             raise exceptions.AuthenticationFailed("Token de sesión sin usuario.")
 
         roles = payload.get("roles", [])
+        ver_token = payload.get("ver", 0)
+        ver_actual = jwt_version_vigente(username)
+        if ver_actual is not None and ver_token < ver_actual:
+            raise exceptions.AuthenticationFailed(
+                "El token de sesión fue revocado — vuelva a iniciar sesión.")
+
         user, _ = User.objects.get_or_create(username=username)
         # is_staff se deriva del rol de plataforma en cada request — si a alguien
         # le retiran el rol Administrador en el inventario, pierde acceso al

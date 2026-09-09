@@ -55,6 +55,23 @@ def catalogo_sistemas_rbac():
         return None
 
 
+def auditoria_rbac(limite=80):
+    """Últimas filas de log_auditoria de RBAC — para el panel unificado."""
+    try:
+        r = requests.get(
+            f"{RBAC_INTERNAL_URL}/api/auditoria",
+            params={"limite": limite},
+            timeout=_TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+        if isinstance(data, list):
+            return data
+        return data.get("registros") or data.get("filas") or []
+    except requests.RequestException:
+        return None
+
+
 def accesos_rbac_por_sistema(nombre_sistema):
     """Busca en el catálogo canónico de RBAC los accesos reales del sistema
     cuyo nombre coincide (sin distinguir mayúsculas ni espacios sobrantes)
