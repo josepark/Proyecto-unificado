@@ -629,6 +629,7 @@ def cobertura_controles(request):
 from .integracion_rbac import catalogo_sistemas_rbac
 from .integracion_rbac import resumen_rbac as _resumen_rbac
 from .integracion_riesgos import resumen_riesgos_panel as _resumen_riesgos
+from .integracion_riesgos import resumen_vinculacion as _resumen_vinculacion
 
 
 def calcular_panel_ejecutivo():
@@ -660,8 +661,9 @@ def calcular_panel_ejecutivo():
             "id", "codigo", "nombre", "tipo", "total_activos", "criticos", "sin_rack",
         )
     )
+    total_activos_count = qs.count()
     return {
-        "total_activos": qs.count(),
+        "total_activos": total_activos_count,
         "completitud": {
             "valoracion_cid": round(con_cid / total * 100),
             "propietario": round(con_prop / total * 100),
@@ -678,6 +680,7 @@ def calcular_panel_ejecutivo():
         "datacenters": datacenters_resumen,
         "rbac": _resumen_rbac(),
         "riesgos": _resumen_riesgos(),
+        "vinculacion": _resumen_vinculacion(total_activos_count),
     }
 
 

@@ -134,6 +134,24 @@ def generar_pdf():
     else:
         el.append(Paragraph("No se pudo consultar RBAC al generar este reporte.", NOTA))
 
+    vinc = panel.get("vinculacion") or {}
+    if vinc.get("disponible"):
+        el.append(Spacer(1, 6))
+        pct = round(vinc["vinculados"] / vinc["total_inventario"] * 100, 1) if vinc["total_inventario"] else 100
+        el.append(_kpi_tabla([
+            (f"{vinc['vinculados']}/{vinc['total_inventario']} ({pct}%)",
+             "Activos vinculados Inventario ↔ Gestión de Riesgos"),
+            (vinc["sin_espejo_riesgos"], "Activos del Inventario sin espejo en Riesgos"),
+            (vinc["huerfanos_riesgos"], "Activos huérfanos solo en Riesgos"),
+        ]))
+        if vinc["sin_espejo_riesgos"] or vinc["huerfanos_riesgos"]:
+            el.append(Paragraph(
+                "Ejecute sincronizar_activos_inventario o ./desplegar.sh --sincronizar para "
+                "alinear ambos módulos.", NOTA))
+    else:
+        el.append(Spacer(1, 6))
+        el.append(Paragraph("No se pudo consultar el estado de sincronización con Riesgos.", NOTA))
+
     # --- Declaración de Aplicabilidad ---
     el.append(Paragraph("2. Declaración de Aplicabilidad (controles ISO/IEC 27002:2022)", H2))
     el.append(Paragraph(

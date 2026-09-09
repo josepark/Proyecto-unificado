@@ -158,6 +158,57 @@ class PanelEjecutivoUnificadoTest(TestCase):
             r = self.client.get(self.URL)
         self.assertEqual(r.json()["rbac"], resumen_falso)
 
+    def test_incluye_vinculacion_inventario_riesgos(self):
+        from unittest.mock import patch
+
+        vinc_falsa = {
+            "disponible": True,
+            "total_inventario": 38,
+            "vinculados": 36,
+            "sin_espejo_riesgos": 2,
+            "huerfanos_riesgos": 0,
+        }
+        with patch("inventario.views._resumen_vinculacion", return_value=vinc_falsa):
+            r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["vinculacion"], vinc_falsa)
+
+
+class IntegracionRiesgosOla7Test(TestCase):
+    """Ola 7 — vinculación en panel ejecutivo y reporte consolidado."""
+
+    URL_PANEL = "/api/dashboard-ejecutivo/"
+
+    @classmethod
+    def setUpTestData(cls):
+        from .models import Activo
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.dinamizador = User.objects.create_user("ola7_reporte", password="x")
+        cls.dinamizador.groups.add(cls.grupo_dinamizador)
+        cls.activo = Activo.objects.create(
+            nombre="Activo reporte", clase="INFRA", clasificacion_si="INT",
+            nivel_riesgo="MED",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.dinamizador)
+
+    def test_reporte_pdf_incluye_sincronizacion(self):
+        from unittest.mock import patch
+
+        vinc_falsa = {
+            "disponible": True,
+            "total_inventario": 1,
+            "vinculados": 0,
+            "sin_espejo_riesgos": 1,
+            "huerfanos_riesgos": 0,
+        }
+        with patch("inventario.reporte_consolidado.inicio_rbac", return_value=None), \
+             patch("inventario.views._resumen_vinculacion", return_value=vinc_falsa):
+            r = self.client.get("/api/reporte-consolidado.pdf")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"sin espejo", r.content.lower())
+
 
 class CruceRBACSistemaTest(TestCase):
     """Cruce en vivo (por nombre) entre `sistema_mca_equivalente` del

@@ -1,6 +1,7 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
+import PanelVinculacion from '../../componentes/PanelVinculacion';
 
 export default function PanelEjecutivo() {
   const { alertasUnificadas } = useOutletContext() ?? {};
@@ -47,6 +48,11 @@ export default function PanelEjecutivo() {
           </p>
         </div>
       </div>
+
+      <PanelVinculacion
+        vinculacion={d.vinculacion ?? alertasUnificadas?.vinculacion}
+        compacto
+      />
 
       <div className="card">
         <h2>Cumplimiento de Control de Acceso (RBAC · SUIIN-SGSI-MCA-001)</h2>

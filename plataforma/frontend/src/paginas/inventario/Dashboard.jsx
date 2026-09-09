@@ -105,11 +105,25 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {alertasRes?.vinculacion?.disponible && alertasRes.vinculacion.sin_espejo_riesgos > 0 && (
+      {alertasRes?.vinculacion?.disponible
+        && (alertasRes.vinculacion.sin_espejo_riesgos > 0 || alertasRes.vinculacion.huerfanos_riesgos > 0) && (
         <div className="card" style={{ marginBottom: 14, borderColor: 'var(--alto)' }}>
           <div className="cuerpo" style={{ fontSize: 13 }}>
-            <b>{alertasRes.vinculacion.sin_espejo_riesgos}</b> activo(s) sin espejo en Gestión de Riesgos.{' '}
-            <Link to="/inventario/riesgos">Ver valoración inherente →</Link>
+            {alertasRes.vinculacion.sin_espejo_riesgos > 0 && (
+              <p style={{ margin: '0 0 6px' }}>
+                <b>{alertasRes.vinculacion.sin_espejo_riesgos}</b> activo(s) sin espejo en Gestión de Riesgos.
+              </p>
+            )}
+            {alertasRes.vinculacion.huerfanos_riesgos > 0 && (
+              <p style={{ margin: '0 0 6px' }}>
+                <b>{alertasRes.vinculacion.huerfanos_riesgos}</b> huérfano(s) solo en Riesgos.
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Link to="/inventario/riesgos">Valoración inherente →</Link>
+              <Link to="/inventario/panel-ejecutivo">Panel ejecutivo →</Link>
+              <a href={inventarioApi.exportarVinculacionCsv('todos')}>↓ CSV sincronización</a>
+            </div>
           </div>
         </div>
       )}
