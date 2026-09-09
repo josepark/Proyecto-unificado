@@ -5,7 +5,7 @@ import Alertas from './Alertas';
 
 const FIXTURE = {
   total_consolidado: 12,
-  resumen: { inventario: 4, inventario_criticas: 1, rbac: 3, riesgos: 5, sin_espejo_riesgos: 2 },
+  resumen: { inventario: 4, inventario_criticas: 1, rbac: 3, riesgos: 5, sync: 3, sin_espejo_riesgos: 2, huerfanos_riesgos: 1 },
   vinculacion: {
     disponible: true,
     total_inventario: 10,
@@ -64,6 +64,7 @@ describe('Alertas — centro unificado', () => {
     await screen.findByText('Centro de alertas');
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('Total señales')).toBeInTheDocument();
+    expect(screen.getByText('Sync')).toBeInTheDocument();
   });
 
   it('enlaza alertas de inventario a la ficha del activo', async () => {

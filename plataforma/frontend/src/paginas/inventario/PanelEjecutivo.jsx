@@ -2,9 +2,10 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import PanelVinculacion from '../../componentes/PanelVinculacion';
+import { pendientesSync } from '../../lib/integracionUi';
 
 export default function PanelEjecutivo() {
-  const { alertasUnificadas } = useOutletContext() ?? {};
+  const { alertasUnificadas, puedeEditar } = useOutletContext() ?? {};
   const { datos: d, cargando, error } = useApi(() => inventarioApi.panelEjecutivo(), []);
 
   if (cargando) return <p>Cargando panel ejecutivo…</p>;
@@ -52,13 +53,14 @@ export default function PanelEjecutivo() {
       <PanelVinculacion
         vinculacion={d.vinculacion ?? alertasUnificadas?.vinculacion}
         compacto
+        ocultarSiOk
       />
 
       <div className="card">
         <h2>Cumplimiento de Control de Acceso (RBAC · SUIIN-SGSI-MCA-001)</h2>
         <div className="cuerpo">
           {!d.rbac ? (
-            <p style={{ color: '#9a1f1f' }}>El módulo RBAC no respondió — estos indicadores no están disponibles en este momento.</p>
+            <p style={{ color: 'var(--texto-suave)', fontSize: 13 }}>El módulo RBAC no respondió — estos indicadores no están disponibles en este momento.</p>
           ) : (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 13, marginBottom: 16 }}>
@@ -69,17 +71,10 @@ export default function PanelEjecutivo() {
                 <Kpi n={d.rbac.roles_certificacion_vencida} l="Roles con certificación vencida" crit={d.rbac.roles_certificacion_vencida > 0} />
                 <Kpi n={d.rbac.pendientes_total ?? 0} l="Pendientes RBAC (total)" crit={(d.rbac.pendientes_total ?? 0) > 0} />
               </div>
-              {d.rbac.desglose_pendientes && (
-                <div style={{ fontSize: 13, marginBottom: 12 }}>
-                  <strong>Desglose de pendientes</strong>
-                  <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-                    <li>Vencimientos próximos (7 d): <b>{d.rbac.desglose_pendientes.proximos_vencimientos}</b></li>
-                    <li>MFA incumplido: <b>{d.rbac.desglose_pendientes.alertas_mfa}</b></li>
-                    <li>Certificación de rol vencida: <b>{d.rbac.desglose_pendientes.roles_certificacion_vencida}</b></li>
-                    <li>Excepciones vencidas: <b>{d.rbac.desglose_pendientes.excepciones_vencidas}</b></li>
-                  </ul>
-                  <Link to="/rbac/inicio" style={{ fontSize: 12 }}>Ir al tablero RBAC →</Link>
-                </div>
+              {(d.rbac.pendientes_total ?? 0) > 0 && (
+                <Link to="/inventario/alertas" style={{ fontSize: 12 }}>
+                  Ver desglose en centro de alertas →
+                </Link>
               )}
             </>
           )}

@@ -10,8 +10,29 @@ import ActivoForm from './ActivoForm';
 beforeEach(() => {
   global.fetch = vi.fn(async (url, opciones) => {
     const u = String(url);
+    if (u.includes('/meta/')) {
+      return ok({
+        clases: [{ codigo: 'INFRA', nombre: 'Infraestructura', color: '#1f6b52', modelo_detalle: 'infra' }],
+        colores_clase: { INFRA: '#1f6b52' },
+      });
+    }
     if (u.includes('/datacenters/')) {
       return ok({ count: 0, results: [] });
+    }
+    if (u.includes('/zonas/')) {
+      return ok({ results: [] });
+    }
+    if (u.includes('/vlans/')) {
+      return ok({ results: [] });
+    }
+    if (u.includes('/catalogo-sistemas-rbac/')) {
+      return ok({ sistemas: [] });
+    }
+    if (u.includes('/amenazas/')) {
+      return ok({ results: [] });
+    }
+    if (u.includes('/controles/')) {
+      return ok({ results: [] });
     }
     if (opciones?.method === 'POST' && u.endsWith('/activos/')) {
       const body = JSON.parse(opciones.body);

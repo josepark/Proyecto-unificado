@@ -32,7 +32,7 @@ describe('ModuloInventario — badges Ola 6', () => {
     expect(screen.getByText('Valoración inherente')).toBeInTheDocument();
     const badges = document.querySelectorAll('.badge-modulo');
     expect(badges.length).toBe(2);
-    expect(badges[0].textContent).toBe('3');
+    expect(badges[0].textContent).toBe('↻3');
     expect(badges[1].textContent).toBe('3');
   });
 });

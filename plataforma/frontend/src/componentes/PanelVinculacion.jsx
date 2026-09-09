@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom';
 import { inventarioApi } from '../api/inventario';
+import { MSG_SYNC_OPERADOR, pendientesSync } from '../lib/integracionUi';
 
 function KpiSync({ valor, etiqueta, critico }) {
+  const esNumero = typeof valor === 'number';
   return (
     <div
       className="card"
       style={{
         margin: 0,
         textAlign: 'center',
-        borderColor: critico && valor > 0 ? 'var(--alto)' : undefined,
+        borderColor: critico && esNumero && valor > 0 ? 'var(--alto)' : undefined,
       }}
     >
       <div className="cuerpo" style={{ padding: '10px 8px' }}>
@@ -16,7 +18,7 @@ function KpiSync({ valor, etiqueta, critico }) {
           style={{
             fontSize: 20,
             fontWeight: 'bold',
-            color: critico && valor > 0 ? 'var(--alto)' : 'var(--verde-profundo)',
+            color: critico && esNumero && valor > 0 ? 'var(--alto)' : 'var(--verde-profundo)',
           }}
         >
           {valor}
@@ -28,13 +30,20 @@ function KpiSync({ valor, etiqueta, critico }) {
 }
 
 /** Panel operativo Inventario ↔ Riesgos (Ola 6). */
-export default function PanelVinculacion({ vinculacion, detalle, compacto = false }) {
+export default function PanelVinculacion({
+  vinculacion,
+  detalle,
+  compacto = false,
+  puedeEditar = false,
+  ocultarSiOk = false,
+}) {
   const res = detalle?.resumen ?? vinculacion;
   if (!res?.disponible) {
     return (
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="cuerpo" style={{ fontSize: 13, color: 'var(--texto-suave)' }}>
-          Estado de sincronización no disponible — el módulo de Riesgos no responde.
+          No se pudo verificar la sincronización — Gestión de Riesgos no responde.
+          {' '}<Link to="/inventario/alertas">Centro de alertas →</Link>
         </div>
       </div>
     );
@@ -43,11 +52,14 @@ export default function PanelVinculacion({ vinculacion, detalle, compacto = fals
   const sinEspejo = res.sin_espejo_riesgos ?? 0;
   const huerfanos = res.huerfanos_riesgos ?? 0;
   const ok = detalle?.sincronizacion_ok ?? (sinEspejo === 0 && huerfanos === 0);
+  if (ocultarSiOk && ok) return null;
+
   const pct = detalle?.porcentaje_vinculados
     ?? (res.total_inventario ? Math.round((res.vinculados / res.total_inventario) * 1000) / 10 : 100);
 
   const listaSinEspejo = detalle?.sin_espejo ?? [];
   const listaHuerfanos = detalle?.huerfanos_riesgos ?? [];
+  const pend = pendientesSync(res);
 
   return (
     <div className="card" style={{ marginBottom: 14, borderColor: ok ? undefined : 'var(--alto)' }}>
@@ -65,42 +77,49 @@ export default function PanelVinculacion({ vinculacion, detalle, compacto = fals
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
             gap: 8,
-            marginBottom: 12,
+            marginBottom: compacto && ok ? 0 : 12,
           }}
         >
           <KpiSync valor={`${res.vinculados}/${res.total_inventario}`} etiqueta={`Vinculados (${pct}%)`} />
           <KpiSync valor={sinEspejo} etiqueta="Sin espejo" critico />
-          <KpiSync valor={huerfanos} etiqueta="Huérfanos Riesgos" critico />
+          <KpiSync valor={huerfanos} etiqueta="Huérfanos en Riesgos" critico />
         </div>
 
         {!ok && (
           <p style={{ fontSize: 13, margin: '0 0 10px' }}>
-            Ejecute <code>sincronizar_activos_inventario</code> o{' '}
-            <code>./desplegar.sh --sincronizar</code>. El cron de ejemplo programa sync cada 6 h
-            (<code>cron/suiin-sgsi.cron.example</code>).
+            {puedeEditar ? MSG_SYNC_OPERADOR : (
+              <>Hay activos desalineados entre Inventario y Gestión de Riesgos. Contacte al administrador del SGSI.</>
+            )}
           </p>
         )}
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: compacto ? 0 : 12 }}>
-          <a className="btn btn-sec" style={{ fontSize: 12 }} href={inventarioApi.exportarVinculacionCsv('todos')}>
-            ↓ CSV completo
-          </a>
-          {sinEspejo > 0 ? (
-            <a className="btn btn-sec" style={{ fontSize: 12 }} href={inventarioApi.exportarVinculacionCsv('sin_espejo')}>
-              ↓ Sin espejo ({sinEspejo})
+        {(!compacto || pend > 0) && (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: compacto ? 0 : 12 }}>
+            <a className="btn btn-sec" style={{ fontSize: 12 }} href={inventarioApi.exportarVinculacionCsv('todos')}>
+              ↓ CSV completo
             </a>
-          ) : null}
-          {huerfanos > 0 ? (
-            <a className="btn btn-sec" style={{ fontSize: 12 }} href={inventarioApi.exportarVinculacionCsv('huerfanos')}>
-              ↓ Huérfanos ({huerfanos})
-            </a>
-          ) : null}
-          {huerfanos > 0 ? (
-            <Link to="/gestion-riesgos/activos?huerfanos=1" style={{ fontSize: 12, alignSelf: 'center' }}>
-              Ver huérfanos en Riesgos →
-            </Link>
-          ) : null}
-        </div>
+            {sinEspejo > 0 ? (
+              <a className="btn btn-sec" style={{ fontSize: 12 }} href={inventarioApi.exportarVinculacionCsv('sin_espejo')}>
+                ↓ Sin espejo ({sinEspejo})
+              </a>
+            ) : null}
+            {huerfanos > 0 ? (
+              <a className="btn btn-sec" style={{ fontSize: 12 }} href={inventarioApi.exportarVinculacionCsv('huerfanos')}>
+                ↓ Huérfanos ({huerfanos})
+              </a>
+            ) : null}
+            {sinEspejo > 0 ? (
+              <Link to="/inventario/dashboard?solo_sin_espejo=1" style={{ fontSize: 12, alignSelf: 'center' }}>
+                Ver en Dashboard →
+              </Link>
+            ) : null}
+            {huerfanos > 0 ? (
+              <Link to="/gestion-riesgos/activos?huerfanos=1" style={{ fontSize: 12, alignSelf: 'center' }}>
+                Huérfanos en Riesgos →
+              </Link>
+            ) : null}
+          </div>
+        )}
 
         {!compacto && listaSinEspejo.length > 0 && (
           <>

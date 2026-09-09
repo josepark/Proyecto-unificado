@@ -96,21 +96,29 @@ class ActivoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], url_path="resumen-riesgos")
     def resumen_riesgos(self, request, pk=None):
         """KPIs del activo espejo en SUIIN-SGSI-RIESGOS (Ola 5 — flujo unificado)."""
-        from .integracion_riesgos import resumen_activo_por_inventario
+        from .integracion_riesgos import mapa_activos_por_inventario, resumen_activo_por_inventario
         activo = self.get_object()
         data = resumen_activo_por_inventario(activo.pk)
-        if not data:
+        if data:
+            return Response({
+                "vinculado": True,
+                "modulo_disponible": True,
+                "inventario_id": activo.pk,
+                **data,
+                "url_gestion": f"/gestion-riesgos/activos/{data['id']}",
+                "url_inventario": f"/inventario/activos/{activo.pk}",
+            })
+        if mapa_activos_por_inventario() is None:
             return Response({
                 "vinculado": False,
-                "mensaje": "Este activo aún no está sincronizado en Gestión de Riesgos. "
-                           "Ejecute sincronizar_activos_inventario o ./desplegar.sh.",
+                "modulo_disponible": False,
+                "mensaje": "Gestión de Riesgos no responde en este momento. Intente más tarde o contacte al administrador.",
             })
         return Response({
-            "vinculado": True,
-            "inventario_id": activo.pk,
-            **data,
-            "url_gestion": f"/gestion-riesgos/activos/{data['id']}",
-            "url_inventario": f"/inventario/activos/{activo.pk}",
+            "vinculado": False,
+            "modulo_disponible": True,
+            "mensaje": "Este activo aún no tiene espejo en Gestión de Riesgos. "
+                       "Solicite al administrador del SGSI la sincronización de activos.",
         })
 
     @action(detail=True, methods=["get"])
@@ -510,6 +518,9 @@ def alertas_unificadas(request):
     from .integracion_riesgos import resumen_vinculacion
     from .models import Activo
     vinculacion = resumen_vinculacion(Activo.objects.count())
+    sync_ops = 0
+    if vinculacion.get("disponible"):
+        sync_ops = vinculacion.get("sin_espejo_riesgos", 0) + vinculacion.get("huerfanos_riesgos", 0)
     ries_ops = 0
     if ries_alertas.get("disponible"):
         ries_ops += ries_alertas.get("total_vencidas", 0)
@@ -535,12 +546,15 @@ def alertas_unificadas(request):
             "inventario_criticas": inv.get("alertas_criticas", 0),
             "rbac": rbac.get("pendientes_total", 0) if rbac else 0,
             "riesgos": ries_ops,
+            "sync": sync_ops,
             "sin_espejo_riesgos": vinculacion.get("sin_espejo_riesgos", 0) if vinculacion.get("disponible") else 0,
+            "huerfanos_riesgos": vinculacion.get("huerfanos_riesgos", 0) if vinculacion.get("disponible") else 0,
         },
         "total_consolidado": (
             inv.get("total_alertas", 0)
             + (rbac.get("pendientes_total") or 0)
             + ries_ops
+            + sync_ops
         ),
     })
 

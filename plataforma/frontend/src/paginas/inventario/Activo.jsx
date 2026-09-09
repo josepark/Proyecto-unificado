@@ -5,7 +5,7 @@ import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import HojaVidaActivo from './HojaVidaActivo';
 import { useInventarioMeta } from '../../hooks/useInventarioMeta';
-import { claseTagRiesgoMatriz, etiquetaCobertura } from '../../lib/integracionUi';
+import { claseTagRiesgoMatriz, claseTagNivelInventario, etiquetaCobertura, MSG_RIESGOS_NO_DISPONIBLE } from '../../lib/integracionUi';
 
 const CAMPOS_DETALLE_OCULTOS = new Set([
   'id', 'activo', 'accesos', 'accesos_rbac', 'sistema_rbac_nombre',
@@ -95,15 +95,46 @@ function AccesosSistema({ sistema }) {
   );
 }
 
-function TarjetaIntegracionRiesgos({ resumen }) {
+function TarjetaIntegracionRiesgos({ resumen, cargando, error }) {
+  if (cargando) {
+    return (
+      <div className="card">
+        <h2>Gestión de Riesgos</h2>
+        <div className="cuerpo" style={{ fontSize: 13, color: 'var(--texto-suave)' }}>Consultando módulo de Riesgos…</div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="card">
+        <h2>Gestión de Riesgos</h2>
+        <div className="cuerpo" style={{ fontSize: 13, color: 'var(--alto)' }}>
+          No se pudo cargar el resumen de Riesgos ({error.message}).
+        </div>
+      </div>
+    );
+  }
   if (!resumen) return null;
+
+  if (resumen.modulo_disponible === false) {
+    return (
+      <div className="card">
+        <h2>Gestión de Riesgos</h2>
+        <div className="cuerpo">
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--texto-suave)' }}>
+            {resumen.mensaje || MSG_RIESGOS_NO_DISPONIBLE}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!resumen.vinculado) {
     return (
       <div className="card">
         <h2>Gestión de Riesgos</h2>
         <div className="cuerpo">
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--texto-suave)' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--alto)' }}>
             {resumen.mensaje}
           </p>
         </div>
@@ -157,7 +188,10 @@ export default function Activo() {
     () => inventarioApi.historialActivo(id),
     [id],
   );
-  const { datos: resumenRiesgos } = useApi(() => inventarioApi.resumenRiesgosActivo(id), [id]);
+  const { datos: resumenRiesgos, cargando: cargandoResumen, error: errorResumen } = useApi(
+    () => inventarioApi.resumenRiesgosActivo(id),
+    [id],
+  );
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState(null);
 
@@ -202,7 +236,7 @@ export default function Activo() {
         <span className="clase-badge" style={{ background: coloresClase[a.clase] || '#888' }}>
           {a.clase_display}
         </span>
-        <span className={`tag t-${a.nivel_riesgo}`}>{a.nivel_riesgo_display}</span>
+        <span className={claseTagNivelInventario(a.nivel_riesgo)}>{a.nivel_riesgo_display}</span>
         {resumenRiesgos?.vinculado && (
           <Link
             to={resumenRiesgos.url_gestion || `/gestion-riesgos/activos/${resumenRiesgos.id}`}
@@ -253,14 +287,6 @@ export default function Activo() {
         <a className="btn btn-sec" href={`/api/activos/${a.id}/qr.png`} download={`QR-${a.id_activo}.png`}>
           ⬇ Descargar QR
         </a>
-        {resumenRiesgos?.vinculado && (
-          <Link
-            className="btn btn-sec"
-            to={resumenRiesgos.url_gestion || `/gestion-riesgos/activos/${resumenRiesgos.id}`}
-          >
-            ↗ Gestión de Riesgos
-          </Link>
-        )}
       </div>
       {errorEliminar && (
         <p style={{ color: 'var(--crit)', fontWeight: 'bold', marginTop: -12, marginBottom: 16 }}>
@@ -269,7 +295,11 @@ export default function Activo() {
       )}
 
       <div className="detalle-grid">
-        <TarjetaIntegracionRiesgos resumen={resumenRiesgos} />
+        <TarjetaIntegracionRiesgos
+          resumen={resumenRiesgos}
+          cargando={cargandoResumen}
+          error={errorResumen}
+        />
 
         <div className="card">
           <h2>Valoración y riesgo</h2>

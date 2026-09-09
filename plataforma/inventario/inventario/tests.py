@@ -1829,7 +1829,13 @@ class IntegracionRiesgosOla5Test(TestCase):
         self.assertEqual(data["riesgos"]["activos_sin_cobertura"], 4)
         self.assertEqual(data["resumen"]["inventario"], data["inventario"]["total_alertas"])
         self.assertEqual(data["resumen"]["riesgos"], 10)  # 2+3+4+1+0
-        self.assertGreaterEqual(data["total_consolidado"], 5)
+        self.assertEqual(data["resumen"]["sync"], 1)
+        self.assertEqual(data["resumen"]["sin_espejo_riesgos"], 1)
+        inv_total = data["inventario"]["total_alertas"]
+        self.assertEqual(
+            data["total_consolidado"],
+            inv_total + 5 + 10 + 1,
+        )
 
     def test_alertas_unificadas_degrada_si_riesgos_no_responde(self):
         import requests

@@ -1,5 +1,7 @@
 import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
 
+import { pendientesSync } from '../lib/integracionUi';
+
 const PESTANAS = [
   { to: 'dashboard', etiqueta: 'Dashboard' },
   { to: 'panel-ejecutivo', etiqueta: 'Panel ejecutivo' },
@@ -12,9 +14,9 @@ const PESTANAS = [
 
 export default function ModuloInventario() {
   const { alertasUnificadas, ...contexto } = useOutletContext() ?? {};
-  const totalAlertas = alertasUnificadas?.total_consolidado ?? 0;
   const vinc = alertasUnificadas?.vinculacion;
-  const pendientesSync = (vinc?.sin_espejo_riesgos ?? 0) + (vinc?.huerfanos_riesgos ?? 0);
+  const pendientesSyncCount = pendientesSync(vinc);
+  const totalAlertas = alertasUnificadas?.total_consolidado ?? 0;
 
   return (
     <div>
@@ -27,13 +29,13 @@ export default function ModuloInventario() {
                 {totalAlertas}
               </span>
             ) : null}
-            {p.to === 'riesgos' && pendientesSync > 0 ? (
+            {p.to === 'riesgos' && pendientesSyncCount > 0 ? (
               <span
                 className="badge-modulo"
                 style={{ marginLeft: 6, verticalAlign: 'middle', background: 'var(--alto)' }}
-                title="Activos pendientes de sincronizar con Gestión de Riesgos"
+                title="Pendientes de sincronización Inventario ↔ Riesgos"
               >
-                {pendientesSync}
+                ↻{pendientesSyncCount}
               </span>
             ) : null}
           </NavLink>

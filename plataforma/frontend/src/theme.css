@@ -218,7 +218,7 @@ tr:hover td {
 }
 .t-CRIT { background: var(--risk-critico); color: #fff; }
 .t-ALTO { background: var(--risk-alto); color: #fff; }
-.t-MEDIO { background: var(--risk-medio); color: var(--base-950); }
+.t-MEDIO, .t-MED { background: var(--risk-medio); color: var(--base-950); }
 .t-BAJO { background: var(--risk-bajo); color: var(--base-950); }
 
 /* Encabezado institucional */

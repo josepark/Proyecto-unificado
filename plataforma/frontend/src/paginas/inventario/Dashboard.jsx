@@ -1,18 +1,22 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { useInventarioMeta } from '../../hooks/useInventarioMeta';
+import PanelVinculacion from '../../componentes/PanelVinculacion';
+import { claseTagNivelInventario, pendientesSync } from '../../lib/integracionUi';
 
 export default function Dashboard() {
   const navegar = useNavigate();
+  const [searchParams] = useSearchParams();
   const { puedeEditar, alertasUnificadas } = useOutletContext() ?? {};
   const alertasRes = alertasUnificadas;
+  const vinc = alertasRes?.vinculacion;
   const { coloresClase } = useInventarioMeta();
   const { datos: stats, cargando: cargandoStats } = useApi(() => inventarioApi.estadisticas(), []);
   const [busqueda, setBusqueda] = useState('');
   const [filtroClase, setFiltroClase] = useState('');
-  const [soloSinEspejo, setSoloSinEspejo] = useState(false);
+  const [soloSinEspejo, setSoloSinEspejo] = useState(searchParams.get('solo_sin_espejo') === '1');
   const [seleccionados, setSeleccionados] = useState(() => new Set());
   const { datos: activos, cargando: cargandoLista } = useApi(
     () => inventarioApi.listarActivos({
@@ -23,6 +27,10 @@ export default function Dashboard() {
     }),
     [busqueda, filtroClase, soloSinEspejo],
   );
+
+  useEffect(() => {
+    if (searchParams.get('solo_sin_espejo') === '1') setSoloSinEspejo(true);
+  }, [searchParams]);
 
   const clasesCatalogo = stats?.clases ?? [];
   const kpisClase = useMemo(() => {
@@ -107,27 +115,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {alertasRes?.vinculacion?.disponible
-        && (alertasRes.vinculacion.sin_espejo_riesgos > 0 || alertasRes.vinculacion.huerfanos_riesgos > 0) && (
-        <div className="card" style={{ marginBottom: 14, borderColor: 'var(--alto)' }}>
-          <div className="cuerpo" style={{ fontSize: 13 }}>
-            {alertasRes.vinculacion.sin_espejo_riesgos > 0 && (
-              <p style={{ margin: '0 0 6px' }}>
-                <b>{alertasRes.vinculacion.sin_espejo_riesgos}</b> activo(s) sin espejo en Gestión de Riesgos.
-              </p>
-            )}
-            {alertasRes.vinculacion.huerfanos_riesgos > 0 && (
-              <p style={{ margin: '0 0 6px' }}>
-                <b>{alertasRes.vinculacion.huerfanos_riesgos}</b> huérfano(s) solo en Riesgos.
-              </p>
-            )}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link to="/inventario/riesgos">Valoración inherente →</Link>
-              <Link to="/inventario/panel-ejecutivo">Panel ejecutivo →</Link>
-              <a href={inventarioApi.exportarVinculacionCsv('todos')}>↓ CSV sincronización</a>
-            </div>
-          </div>
-        </div>
+      {(pendientesSync(vinc) > 0 || vinc?.disponible === false) && (
+        <PanelVinculacion
+          vinculacion={vinc}
+          compacto
+          puedeEditar={puedeEditar}
+          ocultarSiOk
+        />
       )}
 
       {cargandoStats ? (
@@ -173,6 +167,7 @@ export default function Dashboard() {
             onChange={(e) => setSoloSinEspejo(e.target.checked)}
           />
           Solo sin espejo en Riesgos
+          <span title="Activos del Inventario sin registro espejo en Gestión de Riesgos (no incluye huérfanos solo en Riesgos)" style={{ marginLeft: 4, cursor: 'help' }}>ⓘ</span>
         </label>
       </div>
 
@@ -193,8 +188,8 @@ export default function Dashboard() {
               <th>ID</th>
               <th>Activo</th>
               <th>Clase</th>
-              <th>Riesgo</th>
-              <th>Riesgos</th>
+              <th>Nivel</th>
+              <th title="Vínculo con Gestión de Riesgos">Sync ↗</th>
               <th>Propietario</th>
             </tr>
           </thead>
@@ -224,11 +219,11 @@ export default function Dashboard() {
                   </span>
                 </td>
                 <td onClick={() => navegar(`/inventario/activos/${a.id}`)} style={{ cursor: 'pointer' }}>
-                  <span className={`tag t-${a.nivel_riesgo}`}>{a.nivel_riesgo_display}</span>
+                  <span className={claseTagNivelInventario(a.nivel_riesgo)}>{a.nivel_riesgo_display}</span>
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>
                   {a.vinculado_riesgos === null ? (
-                    <span style={{ color: 'var(--texto-suave)', fontSize: 11 }} title="Riesgos no disponible">—</span>
+                    <span style={{ color: 'var(--texto-suave)', fontSize: 11 }} title="Gestión de Riesgos no disponible">—</span>
                   ) : a.vinculado_riesgos ? (
                     <Link
                       to={`/gestion-riesgos/activos/${a.riesgos_id}`}
@@ -238,9 +233,13 @@ export default function Dashboard() {
                       ↗
                     </Link>
                   ) : (
-                    <span style={{ color: 'var(--alto)', fontSize: 11 }} title="Sin espejo — ejecute sincronizar_activos_inventario">
+                    <Link
+                      to={`/inventario/activos/${a.id}`}
+                      title="Sin espejo en Gestión de Riesgos — abrir ficha"
+                      style={{ color: 'var(--alto)', fontSize: 12, textDecoration: 'none' }}
+                    >
                       ⚠
-                    </span>
+                    </Link>
                   )}
                 </td>
                 <td onClick={() => navegar(`/inventario/activos/${a.id}`)} style={{ cursor: 'pointer' }}>

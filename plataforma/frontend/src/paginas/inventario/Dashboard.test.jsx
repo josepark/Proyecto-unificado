@@ -70,11 +70,11 @@ describe('Dashboard — exportación y etiquetas', () => {
     expect(enlace).toHaveAttribute('href', '/api/etiquetas/lote.pdf?ids=1');
   });
 
-  it('muestra columna de vinculación con Riesgos y filtro sin espejo', async () => {
+  it('muestra columna Sync y filtro sin espejo', async () => {
     renderDashboard({ puedeEditar: true, alertasUnificadas: { vinculacion: { disponible: true } } });
     await screen.findByText('SIS-001');
-    expect(screen.getByRole('columnheader', { name: 'Riesgos' })).toBeInTheDocument();
-    expect(screen.getByTitle('Sin espejo — ejecute sincronizar_activos_inventario')).toBeInTheDocument();
-    expect(screen.getByLabelText('Solo sin espejo en Riesgos')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Sync ↗' })).toBeInTheDocument();
+    expect(screen.getByTitle('Sin espejo en Gestión de Riesgos — abrir ficha')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Solo sin espejo en Riesgos/i })).toBeInTheDocument();
   });
 });

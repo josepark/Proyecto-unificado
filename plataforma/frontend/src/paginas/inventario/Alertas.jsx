@@ -4,6 +4,7 @@ import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { eventosApi } from '../../api/client';
 import PanelVinculacion from '../../componentes/PanelVinculacion';
+import { pendientesSync } from '../../lib/integracionUi';
 
 const SEV_CLASE = { crit: 't-CRIT', alto: 't-ALTO', medio: 't-MEDIO', bajo: 't-BAJO' };
 const SEV_TEXTO = { crit: 'Crítico', alto: 'Alto', medio: 'Medio', bajo: 'Bajo' };
@@ -116,7 +117,7 @@ function SeccionRbac({ rbac }) {
   );
 }
 
-function SeccionRiesgos({ riesgos, vinculacion }) {
+function SeccionRiesgos({ riesgos }) {
   if (!riesgos?.disponible) {
     return (
       <div className="card" style={{ marginBottom: 14 }}>
@@ -136,46 +137,29 @@ function SeccionRiesgos({ riesgos, vinculacion }) {
     ['Activos comprometidos (Red Team)', riesgos.activos_comprometidos, '/gestion-riesgos/activos'],
   ].filter(([, n]) => n > 0);
 
-  const filasVinc = vinculacion?.disponible && vinculacion.sin_espejo_riesgos > 0
-    ? [['Activos sin espejo en Riesgos', vinculacion.sin_espejo_riesgos, '/inventario/riesgos']]
-    : [];
-  const todas = [...filas, ...filasVinc];
+  if (!filas.length) return null;
 
-  if (!todas.length) return null;
-
-  const total = todas.reduce((s, [, n]) => s + n, 0);
+  const total = filas.reduce((s, [, n]) => s + n, 0);
   return (
     <div className="card" style={{ marginBottom: 14 }}>
       <h2>
-        Gestión de Riesgos <span style={{ float: 'right' }}>{total}</span>
+        Gestión de Riesgos (operativo) <span style={{ float: 'right' }}>{total}</span>
       </h2>
       <div className="cuerpo">
-        {todas.map(([titulo, n, ruta]) => (
+        {filas.map(([titulo, n, ruta]) => (
           <div key={titulo} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
             <Link to={ruta} style={{ color: 'inherit' }}>{titulo}</Link>
             <b>{n}</b>
           </div>
         ))}
-        {vinculacion?.huerfanos_riesgos > 0 && (
-          <p style={{ fontSize: 12, color: 'var(--alto)', margin: '8px 0 0' }}>
-            {vinculacion.huerfanos_riesgos} activo(s) huérfano(s) solo en Riesgos —{' '}
-            <Link to="/gestion-riesgos/activos?huerfanos=1">ver listado →</Link>
-          </p>
-        )}
         <Link to="/gestion-riesgos" style={{ fontSize: 12 }}>Ir a Gestión de Riesgos →</Link>
       </div>
     </div>
   );
 }
 
-function SeccionVinculacion({ vinculacion }) {
-  if (!vinculacion?.disponible) return null;
-  if (!(vinculacion.sin_espejo_riesgos > 0 || vinculacion.huerfanos_riesgos > 0)) return null;
-  return <PanelVinculacion vinculacion={vinculacion} compacto />;
-}
-
 export default function Alertas() {
-  const { recargarAlertasUnificadas } = useOutletContext() ?? {};
+  const { recargarAlertasUnificadas, puedeEditar } = useOutletContext() ?? {};
   const { datos, cargando, error, recargar } = useApi(() => inventarioApi.alertasUnificadas(), []);
 
   function actualizarTodo() {
@@ -199,6 +183,7 @@ export default function Alertas() {
   const rbac = datos?.rbac;
   const riesgos = datos?.riesgos;
   const vinculacion = datos?.vinculacion;
+  const syncPend = res.sync ?? pendientesSync(vinculacion);
   const hayIntegracion = (
     !rbac?.disponible
     || rbac.pendientes_total > 0
@@ -208,20 +193,18 @@ export default function Alertas() {
       + (riesgos?.activos_sin_cobertura || 0)
       + (riesgos?.vulnerabilidades_criticas || 0)
       + (riesgos?.activos_comprometidos || 0) > 0
-    || (vinculacion?.sin_espejo_riesgos ?? 0) > 0
-    || (vinculacion?.huerfanos_riesgos ?? 0) > 0
   );
   const vacio = (datos?.total_consolidado ?? 0) === 0
     && rbac?.disponible
     && riesgos?.disponible
-    && !(vinculacion?.sin_espejo_riesgos > 0);
+    && vinculacion?.disponible;
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 16px', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Centro de alertas</h2>
         <span style={{ fontSize: 13, color: 'var(--texto-suave)' }}>
-          Inventario · RBAC · Riesgos
+          Inventario · RBAC · Riesgos · Sync
         </span>
         <button
           type="button"
@@ -237,18 +220,23 @@ export default function Alertas() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
           gap: 10,
           marginBottom: 18,
         }}
       >
-        <KpiResumen valor={datos?.total_consolidado ?? 0} etiqueta="Total señales" critico />
+        <KpiResumen
+          valor={datos?.total_consolidado ?? 0}
+          etiqueta="Total señales"
+          critico={(res.inventario_criticas ?? 0) > 0 || syncPend > 0}
+        />
         <KpiResumen valor={res.inventario ?? 0} etiqueta="Inventario" critico={res.inventario_criticas > 0} href="#inv" />
         <KpiResumen valor={res.rbac ?? 0} etiqueta="RBAC" critico={res.rbac > 0} href="/rbac/inicio" />
-        <KpiResumen valor={res.riesgos ?? 0} etiqueta="Riesgos" critico={res.riesgos > 0} href="/gestion-riesgos" />
+        <KpiResumen valor={res.riesgos ?? 0} etiqueta="Riesgos (ops.)" critico={res.riesgos > 0} href="/gestion-riesgos" />
+        <KpiResumen valor={syncPend} etiqueta="Sync" critico={syncPend > 0} href="/inventario/riesgos" />
       </div>
 
-      <SeccionVinculacion vinculacion={vinculacion} />
+      <PanelVinculacion vinculacion={vinculacion} compacto puedeEditar={puedeEditar} />
 
       {vacio && (
         <div className="card" style={{ marginBottom: 14 }}>
@@ -276,7 +264,7 @@ export default function Alertas() {
         <>
           <h3 style={{ fontSize: 14, color: 'var(--verde-profundo)', margin: '16px 0 8px' }}>Integración</h3>
           <SeccionRbac rbac={rbac} />
-          <SeccionRiesgos riesgos={riesgos} vinculacion={vinculacion} />
+          <SeccionRiesgos riesgos={riesgos} />
         </>
       )}
     </div>

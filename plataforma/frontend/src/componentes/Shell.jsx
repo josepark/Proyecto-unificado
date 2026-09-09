@@ -5,6 +5,7 @@ import { useApi } from '../hooks/useApi';
 import { consultarSesionInventario, eventosApi } from '../api/client';
 import { inventarioApi } from '../api/inventario';
 import { rbacApi } from '../api/rbac';
+import { pendientesSync } from '../lib/integracionUi';
 import { puedeVerRbac } from '../paginas/rbac/rbacUtil';
 
 function moduloDeRuta(pathname) {
@@ -73,7 +74,7 @@ export default function Shell() {
   const totalAlertas = alertasUni?.total_consolidado ?? 0;
   const pendientesRiesgos = alertasUni?.resumen?.riesgos ?? 0;
   const vinc = alertasUni?.vinculacion;
-  const pendientesSync = (vinc?.sin_espejo_riesgos ?? 0) + (vinc?.huerfanos_riesgos ?? 0);
+  const pendientesSyncCount = pendientesSync(vinc);
 
   useEffect(() => {
     function actualizarAlertas() {
@@ -144,20 +145,20 @@ export default function Shell() {
         <nav className="pestanas-modulo">
           <NavLink to="/inventario" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Inventario
-            {totalAlertas > 0 ? (
-              <span className="badge-modulo" style={{ marginLeft: 6 }} title="Señales en centro de alertas">
-                {totalAlertas}
-              </span>
-            ) : null}
-            {pendientesSync > 0 ? (
-              <span
-                className="badge-modulo"
-                style={{ marginLeft: 4, background: 'var(--alto)' }}
-                title="Activos pendientes de sincronizar con Gestión de Riesgos"
-              >
-                ↻{pendientesSync}
-              </span>
-            ) : null}
+              {totalAlertas > 0 ? (
+                <span className="badge-modulo" style={{ marginLeft: 6 }} title="Señales operativas (Inventario + RBAC + Riesgos + sync)">
+                  {totalAlertas}
+                </span>
+              ) : null}
+              {pendientesSyncCount > 0 ? (
+                <span
+                  className="badge-modulo"
+                  style={{ marginLeft: 4, background: 'var(--alto)' }}
+                  title="Activos pendientes de sincronizar Inventario ↔ Riesgos (también incluidos en el total)"
+                >
+                  ↻{pendientesSyncCount}
+                </span>
+              ) : null}
           </NavLink>
           <span style={{ position: 'relative', display: 'inline-block' }}>
             <NavLink to="/rbac" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
@@ -208,7 +209,7 @@ export default function Shell() {
           <NavLink to="/gestion-riesgos" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Gestión de Riesgos y PTR
             {pendientesRiesgos > 0 ? (
-              <span className="badge-modulo" style={{ marginLeft: 6 }} title="Pendientes operativos en Riesgos">
+              <span className="badge-modulo" style={{ marginLeft: 6 }} title="Pendientes operativos en Riesgos (PTR, vulns, cobertura)">
                 {pendientesRiesgos}
               </span>
             ) : null}

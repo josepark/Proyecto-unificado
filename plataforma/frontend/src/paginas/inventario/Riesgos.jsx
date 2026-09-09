@@ -2,6 +2,7 @@ import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import PanelVinculacion from '../../componentes/PanelVinculacion';
+import { claseTagNivelInventario } from '../../lib/integracionUi';
 
 function nivelCelda(p, i) {
   const s = p * i;
@@ -63,7 +64,12 @@ export default function Riesgos() {
         )}
       </div>
 
-      <PanelVinculacion vinculacion={vinc} detalle={detalleVinc} />
+      <PanelVinculacion
+        vinculacion={vinc}
+        detalle={detalleVinc}
+        puedeEditar={puedeEditar}
+        ocultarSiOk
+      />
 
       <div className="detalle-grid">
         <div className="card">
@@ -107,7 +113,7 @@ export default function Riesgos() {
                       return (
                         <td
                           key={i}
-                          className={`tag t-${lvl}`}
+                          className={claseTagNivelInventario(lvl)}
                           style={{ padding: 10 }}
                           title={arr.map((a) => a.id_activo).join(', ')}
                         >
@@ -190,7 +196,7 @@ export default function Riesgos() {
                   <td>{a.impacto ?? '—'}</td>
                   <td>{a.score ?? '—'}</td>
                   <td>
-                    <span className={`tag t-${a.nivel}`}>{a.nivel}</span>
+                    <span className={claseTagNivelInventario(a.nivel)}>{a.nivel}</span>
                   </td>
                   <td>
                     {a.nivel !== a.nivel_registrado ? (
