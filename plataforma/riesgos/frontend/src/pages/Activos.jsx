@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Search, ShieldOff, Radar as RadarIcon, Plus, Pencil, Trash2, Unlink } from "lucide-react";
 import endpoints from "../api/endpoints";
 import { useApiData } from "../lib/useApiData";
@@ -20,12 +20,17 @@ const PAGE_SIZE = 50;
 
 export default function Activos() {
   const plataforma = usePlataforma();
+  const [searchParams] = useSearchParams();
   const enlaceActivo = (id) => rutaRiesgos(plataforma.anidado, plataforma.prefijo, `activos/${id}`);
   const [busqueda, setBusqueda] = useState("");
   const [nivel, setNivel] = useState("");
   const [soloSinCobertura, setSoloSinCobertura] = useState(false);
   const [soloRedTeam, setSoloRedTeam] = useState(false);
   const [soloHuerfanos, setSoloHuerfanos] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("huerfanos") === "1") setSoloHuerfanos(true);
+  }, [searchParams]);
 
   const { guard, loginOpen, setLoginOpen, puedeEditar } = useAuthGuard();
   const [page, setPage] = useState(1);

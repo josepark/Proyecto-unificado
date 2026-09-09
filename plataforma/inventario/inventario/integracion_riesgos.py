@@ -71,6 +71,63 @@ def kpis_riesgos_dashboard():
         return {"disponible": False}
 
 
+def mapa_activos_por_inventario():
+    """Mapa inventario_id → metadatos del activo espejo en Riesgos."""
+    try:
+        mapa = {}
+        page = 1
+        while page <= 50:
+            r = requests.get(
+                f"{RIESGOS_INTERNAL_URL}/api/activos/",
+                params={"page": page, "page_size": 200},
+                timeout=_TIMEOUT,
+            )
+            r.raise_for_status()
+            data = r.json()
+            for a in data.get("results", []):
+                inv_id = a.get("inventario_id")
+                if inv_id:
+                    mapa[int(inv_id)] = {
+                        "id": a.get("id"),
+                        "id_activo": a.get("id_activo"),
+                        "total_vulnerabilidades": a.get("total_vulnerabilidades", 0),
+                        "vulnerabilidades_criticas": a.get("vulnerabilidades_criticas", 0),
+                        "riesgo_matriz": a.get("riesgo_matriz"),
+                    }
+            if not data.get("next"):
+                break
+            page += 1
+        return mapa
+    except requests.RequestException:
+        return None
+
+
+def resumen_vinculacion(total_inventario):
+    """Conteos de sincronización Inventario ↔ Riesgos."""
+    mapa = mapa_activos_por_inventario()
+    if mapa is None:
+        return {"disponible": False}
+    huerfanos_riesgos = 0
+    try:
+        r = requests.get(
+            f"{RIESGOS_INTERNAL_URL}/api/activos/",
+            params={"sin_vinculo_inventario": "true", "page_size": 1},
+            timeout=_TIMEOUT,
+        )
+        r.raise_for_status()
+        huerfanos_riesgos = r.json().get("count", 0)
+    except requests.RequestException:
+        pass
+    vinculados = len(mapa)
+    return {
+        "disponible": True,
+        "total_inventario": total_inventario,
+        "vinculados": vinculados,
+        "sin_espejo_riesgos": max(0, total_inventario - vinculados),
+        "huerfanos_riesgos": huerfanos_riesgos,
+    }
+
+
 def resumen_riesgos_panel():
     """KPIs de Riesgos para panel ejecutivo y badges del Shell."""
     alertas = alertas_riesgos_resumen()

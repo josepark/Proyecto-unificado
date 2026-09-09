@@ -458,6 +458,9 @@ def alertas_unificadas(request):
     rbac = resumen_rbac() or {}
     ries_alertas = alertas_riesgos_resumen()
     ries_kpis = kpis_riesgos_dashboard()
+    from .integracion_riesgos import resumen_vinculacion
+    from .models import Activo
+    vinculacion = resumen_vinculacion(Activo.objects.count())
     ries_ops = 0
     if ries_alertas.get("disponible"):
         ries_ops += ries_alertas.get("total_vencidas", 0)
@@ -477,11 +480,13 @@ def alertas_unificadas(request):
             **ries_alertas,
             **ries_kpis,
         },
+        "vinculacion": vinculacion,
         "resumen": {
             "inventario": inv.get("total_alertas", 0),
             "inventario_criticas": inv.get("alertas_criticas", 0),
             "rbac": rbac.get("pendientes_total", 0) if rbac else 0,
             "riesgos": ries_ops,
+            "sin_espejo_riesgos": vinculacion.get("sin_espejo_riesgos", 0) if vinculacion.get("disponible") else 0,
         },
         "total_consolidado": (
             inv.get("total_alertas", 0)
@@ -516,21 +521,36 @@ def calcular_riesgos():
     """Calcula el riesgo (probabilidad x impacto) de cada activo y la
     matriz. Extraída de la vista riesgos() para que el reporte consolidado
     (reporte_consolidado.py) pueda reusar el mismo cálculo."""
+    from .integracion_riesgos import mapa_activos_por_inventario, resumen_vinculacion
+
+    qs = _activos_full()
+    total = qs.count()
+    mapa = mapa_activos_por_inventario() or {}
     filas = []
     matriz = defaultdict(int)          # (prob, impacto) -> conteo
     conteo_nivel = Counter()
-    for a in _activos_full():
+    for a in qs:
         r = motor_riesgo.calcular_activo(a)
         conteo_nivel[r["nivel"]] += 1
         if r["impacto"] is not None:
             matriz[f"{r['probabilidad']},{r['impacto']}"] += 1
-        filas.append({
+        espejo = mapa.get(a.pk)
+        fila = {
             "id": a.id, "id_activo": a.id_activo, "nombre": a.nombre,
-            "clase": a.clase, "nivel_registrado": a.nivel_riesgo, **r})
+            "clase": a.clase, "nivel_registrado": a.nivel_riesgo, **r,
+            "vinculado_riesgos": bool(espejo),
+        }
+        if espejo:
+            fila["riesgos_id"] = espejo["id"]
+            fila["url_gestion"] = f"/gestion-riesgos/activos/{espejo['id']}"
+            fila["vulnerabilidades_criticas"] = espejo.get("vulnerabilidades_criticas", 0)
+        filas.append(fila)
     filas.sort(key=lambda x: (x["score"] or -1), reverse=True)
     return {
         "activos": filas, "matriz": dict(matriz), "por_nivel": dict(conteo_nivel),
-        "sin_valorar": conteo_nivel.get("SIN", 0)}
+        "sin_valorar": conteo_nivel.get("SIN", 0),
+        "vinculacion": resumen_vinculacion(total),
+    }
 
 
 @api_view(["GET"])

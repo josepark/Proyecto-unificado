@@ -66,12 +66,20 @@ export default function Shell() {
     };
   }, [verRbac, cargando, autenticado]);
 
-  const { datos: alertasUni } = useApi(
+  const { datos: alertasUni, recargar: recargarAlertas } = useApi(
     () => (autenticado && !cargando ? inventarioApi.alertasUnificadas() : Promise.resolve(null)),
     [autenticado, cargando],
   );
   const totalAlertas = alertasUni?.total_consolidado ?? 0;
   const pendientesRiesgos = alertasUni?.resumen?.riesgos ?? 0;
+
+  useEffect(() => {
+    function actualizarAlertas() {
+      if (autenticado && !cargando) recargarAlertas();
+    }
+    eventosApi.addEventListener('alertas-actualizadas', actualizarAlertas);
+    return () => eventosApi.removeEventListener('alertas-actualizadas', actualizarAlertas);
+  }, [autenticado, cargando, recargarAlertas]);
 
   const outletContext = {
     autenticado,
@@ -81,6 +89,7 @@ export default function Shell() {
     roles,
     soloLecturaRbac,
     alertasUnificadas: alertasUni,
+    recargarAlertasUnificadas: recargarAlertas,
   };
 
   return (

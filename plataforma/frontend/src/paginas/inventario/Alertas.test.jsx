@@ -1,11 +1,18 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Alertas from './Alertas';
 
 const FIXTURE = {
   total_consolidado: 12,
-  resumen: { inventario: 4, inventario_criticas: 1, rbac: 3, riesgos: 5 },
+  resumen: { inventario: 4, inventario_criticas: 1, rbac: 3, riesgos: 5, sin_espejo_riesgos: 2 },
+  vinculacion: {
+    disponible: true,
+    total_inventario: 10,
+    vinculados: 8,
+    sin_espejo_riesgos: 2,
+    huerfanos_riesgos: 1,
+  },
   inventario: {
     total_alertas: 4,
     alertas_criticas: 1,
@@ -30,6 +37,14 @@ const FIXTURE = {
   },
 };
 
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useOutletContext: () => ({ recargarAlertasUnificadas: vi.fn() }),
+  };
+});
+
 beforeEach(() => {
   global.fetch = vi.fn(async () => ({
     ok: true,
@@ -49,7 +64,6 @@ describe('Alertas — centro unificado', () => {
     await screen.findByText('Centro de alertas');
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('Total señales')).toBeInTheDocument();
-    expect(screen.getByText('RBAC')).toBeInTheDocument();
   });
 
   it('enlaza alertas de inventario a la ficha del activo', async () => {
@@ -62,14 +76,24 @@ describe('Alertas — centro unificado', () => {
     expect(enlace).toHaveAttribute('href', '/inventario/activos/7');
   });
 
-  it('muestra secciones de integración RBAC y Riesgos', async () => {
+  it('muestra aviso de sincronización cuando hay activos sin espejo', async () => {
     render(
       <MemoryRouter>
         <Alertas />
       </MemoryRouter>,
     );
-    await screen.findByText('Integración');
-    expect(screen.getAllByText(/Matriz RBAC/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Gestión de Riesgos/i).length).toBeGreaterThan(0);
+    await screen.findByText(/Sincronización Inventario ↔ Riesgos/i);
+    expect(screen.getByText(/sin espejo en Gestión de Riesgos/i)).toBeInTheDocument();
+  });
+
+  it('tiene botón de actualizar', async () => {
+    render(
+      <MemoryRouter>
+        <Alertas />
+      </MemoryRouter>,
+    );
+    const btn = await screen.findByRole('button', { name: /Actualizar/i });
+    fireEvent.click(btn);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 });

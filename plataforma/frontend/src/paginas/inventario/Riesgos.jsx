@@ -44,6 +44,8 @@ export default function Riesgos() {
   });
   const maxCobertura = Math.max(...(cob?.detalle ?? []).map((x) => x.num_activos), 1);
   const filasOrdenadas = [...activos].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+  const vinc = datos?.vinculacion;
+  const sinEspejo = vinc?.sin_espejo_riesgos ?? 0;
 
   return (
     <div>
@@ -59,6 +61,17 @@ export default function Riesgos() {
           </button>
         )}
       </div>
+
+      {vinc?.disponible && sinEspejo > 0 && (
+        <div className="card" style={{ marginBottom: 14, borderColor: 'var(--alto)' }}>
+          <div className="cuerpo" style={{ fontSize: 13 }}>
+            <b>{sinEspejo}</b> activo(s) del Inventario aún no tienen espejo en{' '}
+            <Link to="/gestion-riesgos">Gestión de Riesgos</Link>
+            {' '}({vinc.vinculados}/{vinc.total_inventario} sincronizados).
+            Ejecute <code>sincronizar_activos_inventario</code> o <code>./desplegar.sh</code>.
+          </div>
+        </div>
+      )}
 
       <div className="detalle-grid">
         <div className="card">
@@ -171,6 +184,7 @@ export default function Riesgos() {
                 <th>Score</th>
                 <th>Nivel calc.</th>
                 <th>vs registrado</th>
+                <th>Gestión</th>
               </tr>
             </thead>
             <tbody>
@@ -191,6 +205,20 @@ export default function Riesgos() {
                       <span style={{ color: 'var(--alto)', fontSize: 11 }}>≠ registrado ({a.nivel_registrado})</span>
                     ) : (
                       <span style={{ color: 'var(--bajo)', fontSize: 11 }}>✓</span>
+                    )}
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    {a.vinculado_riesgos ? (
+                      <Link
+                        to={a.url_gestion || `/gestion-riesgos/activos/${a.riesgos_id}`}
+                        title="Ver vulns y PTR en Gestión de Riesgos"
+                        style={{ fontSize: 12 }}
+                      >
+                        ↗ Riesgos
+                        {(a.vulnerabilidades_criticas ?? 0) > 0 ? ` (${a.vulnerabilidades_criticas} crít.)` : ''}
+                      </Link>
+                    ) : (
+                      <span style={{ color: 'var(--texto-suave)', fontSize: 11 }} title="Sin sincronizar">—</span>
                     )}
                   </td>
                 </tr>

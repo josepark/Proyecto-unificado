@@ -1744,7 +1744,11 @@ class IntegracionRiesgosOla5Test(TestCase):
         with patch("inventario.views.catalogo_sistemas_rbac", return_value=[]), \
              patch("inventario.integracion_rbac.resumen_rbac", return_value=rbac_falso), \
              patch("inventario.integracion_riesgos.alertas_riesgos_resumen", return_value=ries_alertas), \
-             patch("inventario.integracion_riesgos.kpis_riesgos_dashboard", return_value=ries_kpis):
+             patch("inventario.integracion_riesgos.kpis_riesgos_dashboard", return_value=ries_kpis), \
+             patch("inventario.integracion_riesgos.resumen_vinculacion", return_value={
+                 "disponible": True, "total_inventario": 5, "vinculados": 4,
+                 "sin_espejo_riesgos": 1, "huerfanos_riesgos": 0,
+             }):
             r = self.client.get(self.URL_ALERTAS)
         self.assertEqual(r.status_code, 200)
         data = r.json()
@@ -1752,6 +1756,7 @@ class IntegracionRiesgosOla5Test(TestCase):
         self.assertIn("rbac", data)
         self.assertIn("riesgos", data)
         self.assertIn("resumen", data)
+        self.assertIn("vinculacion", data)
         self.assertTrue(data["rbac"]["disponible"])
         self.assertTrue(data["riesgos"]["disponible"])
         self.assertEqual(data["riesgos"]["total_vencidas"], 2)
@@ -1800,4 +1805,32 @@ class IntegracionRiesgosOla5Test(TestCase):
         self.assertEqual(data["inventario_id"], self.activo.pk)
         self.assertEqual(data["url_gestion"], "/gestion-riesgos/activos/99")
         self.assertEqual(data["url_inventario"], f"/inventario/activos/{self.activo.pk}")
+
+    def test_calcular_riesgos_incluye_vinculacion_y_mapa(self):
+        from unittest.mock import patch
+
+        mapa_falso = {
+            self.activo.pk: {
+                "id": 99,
+                "id_activo": "INFRA-001",
+                "total_vulnerabilidades": 2,
+                "vulnerabilidades_criticas": 1,
+                "riesgo_matriz": "ALTO",
+            },
+        }
+        vinc_falsa = {
+            "disponible": True,
+            "total_inventario": 1,
+            "vinculados": 1,
+            "sin_espejo_riesgos": 0,
+            "huerfanos_riesgos": 0,
+        }
+        with patch("inventario.integracion_riesgos.mapa_activos_por_inventario", return_value=mapa_falso), \
+             patch("inventario.integracion_riesgos.resumen_vinculacion", return_value=vinc_falsa):
+            from inventario.views import calcular_riesgos
+            data = calcular_riesgos()
+        fila = next(f for f in data["activos"] if f["id"] == self.activo.pk)
+        self.assertTrue(fila["vinculado_riesgos"])
+        self.assertEqual(fila["riesgos_id"], 99)
+        self.assertEqual(data["vinculacion"]["vinculados"], 1)
 

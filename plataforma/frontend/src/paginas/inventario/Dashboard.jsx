@@ -105,6 +105,15 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {alertasRes?.vinculacion?.disponible && alertasRes.vinculacion.sin_espejo_riesgos > 0 && (
+        <div className="card" style={{ marginBottom: 14, borderColor: 'var(--alto)' }}>
+          <div className="cuerpo" style={{ fontSize: 13 }}>
+            <b>{alertasRes.vinculacion.sin_espejo_riesgos}</b> activo(s) sin espejo en Gestión de Riesgos.{' '}
+            <Link to="/inventario/riesgos">Ver valoración inherente →</Link>
+          </div>
+        </div>
+      )}
+
       {cargandoStats ? (
         <p>Cargando indicadores…</p>
       ) : stats ? (
