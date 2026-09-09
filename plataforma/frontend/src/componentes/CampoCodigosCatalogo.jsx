@@ -1,6 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
-/** Campo de códigos separados por coma con autocompletado desde un catálogo. */
+function codigoDeItem(item) {
+  return (item.codigo || item.id || '').toUpperCase();
+}
+
+/** Campo de códigos separados (coma o «/») con autocompletado desde un catálogo. */
 export function CampoCodigosCatalogo({
   label,
   value,
@@ -11,19 +15,21 @@ export function CampoCodigosCatalogo({
   placeholder = '',
   filtrarItem = null,
   maxSugerencias = 12,
+  separador = ',',
 }) {
   const id = useId();
   const contenedorRef = useRef(null);
   const [enfocado, setEnfocado] = useState(false);
   const [indiceActivo, setIndiceActivo] = useState(0);
+  const esSlash = separador === '/';
 
   const { completos, incompleto } = useMemo(() => {
-    const partes = (value || '').split(',').map((s) => s.trim());
+    const partes = (value || '').split(separador).map((s) => s.trim());
     return {
       completos: partes.slice(0, -1).filter(Boolean).map((c) => c.toUpperCase()),
       incompleto: (partes[partes.length - 1] || '').trim(),
     };
-  }, [value]);
+  }, [value, separador]);
 
   const sugerencias = useMemo(() => {
     const busqueda = incompleto.toUpperCase();
@@ -35,7 +41,8 @@ export function CampoCodigosCatalogo({
     const yaElegidos = new Set(completos);
 
     const filtradas = lista.filter((item) => {
-      const codigo = (item.codigo || '').toUpperCase();
+      const codigo = codigoDeItem(item);
+      if (!codigo) return false;
       if (yaElegidos.has(codigo)) return false;
       if (codigo.startsWith(busqueda)) return true;
       const nombre = (item.nombre || item.descripcion || '').toLowerCase();
@@ -60,12 +67,22 @@ export function CampoCodigosCatalogo({
   }, []);
 
   function aplicarCodigo(codigo) {
-    const partes = (value || '').split(',').map((s) => s.trim()).filter((s, i, arr) => s || i < arr.length - 1);
-    if (partes.length === 0) {
-      onChange(`${codigo}, `);
+    if (esSlash) {
+      const partes = (value || '').split('/').map((s) => s.trim()).filter((s, i, arr) => s || i < arr.length - 1);
+      if (!partes.length) {
+        onChange(`${codigo}/`);
+      } else {
+        partes[partes.length - 1] = codigo;
+        onChange(`${partes.join('/')}/`);
+      }
     } else {
-      partes[partes.length - 1] = codigo;
-      onChange(`${partes.join(', ')}, `);
+      const partes = (value || '').split(',').map((s) => s.trim()).filter((s, i, arr) => s || i < arr.length - 1);
+      if (partes.length === 0) {
+        onChange(`${codigo}, `);
+      } else {
+        partes[partes.length - 1] = codigo;
+        onChange(`${partes.join(', ')}, `);
+      }
     }
     setEnfocado(true);
   }
@@ -80,7 +97,7 @@ export function CampoCodigosCatalogo({
       setIndiceActivo((i) => (i - 1 + sugerencias.length) % sugerencias.length);
     } else if (ev.key === 'Enter' && sugerencias[indiceActivo]) {
       ev.preventDefault();
-      aplicarCodigo(sugerencias[indiceActivo].codigo);
+      aplicarCodigo(codigoDeItem(sugerencias[indiceActivo]));
     } else if (ev.key === 'Escape') {
       setEnfocado(false);
     }
@@ -137,13 +154,13 @@ export function CampoCodigosCatalogo({
           }}
         >
           {sugerencias.map((item, i) => (
-            <li key={item.codigo}>
+            <li key={codigoDeItem(item)}>
               <button
                 type="button"
                 role="option"
                 aria-selected={i === indiceActivo}
                 onMouseDown={(ev) => ev.preventDefault()}
-                onClick={() => aplicarCodigo(item.codigo)}
+                onClick={() => aplicarCodigo(codigoDeItem(item))}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -156,7 +173,7 @@ export function CampoCodigosCatalogo({
                   fontSize: 13,
                 }}
               >
-                <strong>{item.codigo}</strong>
+                <strong>{codigoDeItem(item)}</strong>
                 {(item.nombre || item.descripcion) && (
                   <span style={{ color: 'var(--texto-suave)', marginLeft: 8 }}>
                     {item.nombre || item.descripcion}

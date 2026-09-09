@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, Fila } from '../../componentes/CamposFormulario';
+import { CampoCodigosCatalogo } from '../../componentes/CampoCodigosCatalogo';
 
 const OPC_CLASIFICACION = [
   ['Altamente Confidencial', 'Altamente Confidencial'],
@@ -34,6 +36,10 @@ export default function SistemaForm() {
     [id],
   );
   const { datos: catalogos } = useApi(() => rbacApi.catalogos(), []);
+  const { datos: catalogoMitre, cargando: cargandoMitre, error: errorMitre } = useApi(
+    () => inventarioApi.amenazas().then((r) => r.results || r),
+    [],
+  );
 
   const [form, setForm] = useState(editando ? null : vacio());
   const [guardando, setGuardando] = useState(false);
@@ -171,11 +177,16 @@ export default function SistemaForm() {
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Técnicas ATT&amp;CK</h2>
           <div className="cuerpo">
-            <Campo
+            <CampoCodigosCatalogo
               label="Códigos separados por «/» (p. ej. T1566/T1190)"
-              placeholder="T1566/T1190"
+              placeholder="T1566/T1190 — escriba T para ver sugerencias"
+              separador="/"
               value={form.tecnicas_attack}
-              onChange={(e) => set('tecnicas_attack', e.target.value)}
+              onChange={(v) => set('tecnicas_attack', v)}
+              items={catalogoMitre || []}
+              cargando={cargandoMitre}
+              errorCatalogo={errorMitre}
+              filtrarItem={(a) => a.tipo === 'TE' || a.tipo === 'ST'}
             />
             <p style={{ fontSize: 12, color: 'var(--texto-suave)', marginTop: 8, marginBottom: 0 }}>
               Cada código debe existir en el catálogo MITRE ATT&CK ya sincronizado; el backend rechaza técnicas no reconocidas.

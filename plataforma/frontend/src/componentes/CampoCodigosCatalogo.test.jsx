@@ -26,7 +26,7 @@ describe('CampoCodigosCatalogo', () => {
     expect(screen.queryByText(/TA0040/)).not.toBeInTheDocument();
   });
 
-  it('inserta el código elegido en el valor', () => {
+  it('inserta el código elegido con separador coma', () => {
     const onChange = vi.fn();
     render(
       <CampoCodigosCatalogo
@@ -40,5 +40,22 @@ describe('CampoCodigosCatalogo', () => {
     fireEvent.focus(screen.getByLabelText(/Amenazas/i));
     fireEvent.click(screen.getByRole('option', { name: /T1486/i }));
     expect(onChange).toHaveBeenCalledWith('T1486, ');
+  });
+
+  it('inserta el código con separador slash (RBAC)', () => {
+    const onChange = vi.fn();
+    render(
+      <CampoCodigosCatalogo
+        label="Técnicas"
+        value="T14"
+        onChange={onChange}
+        items={ITEMS}
+        separador="/"
+        filtrarItem={(a) => a.tipo === 'TE'}
+      />,
+    );
+    fireEvent.focus(screen.getByLabelText(/Técnicas/i));
+    fireEvent.click(screen.getByRole('option', { name: /T1486/i }));
+    expect(onChange).toHaveBeenCalledWith('T1486/');
   });
 });
