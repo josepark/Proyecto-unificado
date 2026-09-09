@@ -1,9 +1,8 @@
 # Frontend — Soluciones SUIIN (React, interfaz principal)
 
-SPA de React que va reemplazando, módulo por módulo, tanto el JS embebido
-del Inventario como las plantillas de RBAC + los iframes del tablero
-Django. Ver `README-DESPLIEGUE.md` (raíz del proyecto), sección 9, para el
-contexto completo de la migración.
+SPA de React que es la **interfaz principal** de la plataforma SUIIN-SGSI. Ver
+[README.md](../README.md) para visión general y [README-DESPLIEGUE.md](../README-DESPLIEGUE.md)
+para despliegue e integración histórica.
 
 **Estado actual:** migración React completa — interfaz en `/`, login en
 `/login` (API `POST /api/auth/login/`), logout en `/logout/`.
@@ -27,7 +26,7 @@ por entorno.
 ## Pruebas
 
 ```bash
-npm test          # corre toda la suite una vez
+npm test          # 57 pruebas — corre toda la suite una vez
 npm run test:watch  # modo interactivo, vuelve a correr al guardar
 ```
 
@@ -58,11 +57,16 @@ src/
 ├── theme.css              Paleta e identidad visual (misma que el resto de la plataforma)
 ├── App.jsx                Rutas de los dos módulos (anidadas, una sub-navegación por módulo)
 ├── componentes/
-│   ├── Shell.jsx              Encabezado + pestañas de módulo + aviso de sesión vencida
-│   ├── ModuloInventario.jsx    Sub-navegación del Inventario
-│   ├── ModuloRBAC.jsx           Sub-navegación de RBAC (Roles/Usuarios/Matriz/…)
-│   ├── PuertaRBAC.jsx           Guardia de rol antes de ModuloRBAC
-│   └── ModuloRiesgosPTR.jsx     Módulo nativo SUIIN-SGSI-RIESGOS (/gestion-riesgos/)
+│   ├── Shell.jsx              Encabezado + pestañas de módulo + badges de alertas
+│   ├── ModuloInventario.jsx   Sub-navegación del Inventario (badges sync/alertas)
+│   ├── ModuloRBAC.jsx         Sub-navegación RBAC + badges por pestaña
+│   ├── PuertaRBAC.jsx         Guardia de rol antes de ModuloRBAC
+│   ├── PanelVinculacion.jsx   Sync Inventario ↔ Riesgos (Olas 5–8)
+│   ├── BannerErrorMutacion.jsx Errores inline (sustituye alert() en RBAC)
+│   ├── AvisoConsultaRbac.jsx  Modo solo lectura para Consultor
+│   └── ModuloRiesgosPTR.jsx     Módulo nativo SUIIN-SGSI-RIESGOS
+├── lib/
+│   └── integracionUi.js       Utilidades compartidas Inventario ↔ Riesgos
 ├── api/
 │   ├── client.js           Fábrica de cliente HTTP con manejo de CSRF y evento de sesión vencida
 │   ├── inventario.js        Cliente del Inventario (Django DRF)

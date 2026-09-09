@@ -5,7 +5,8 @@ Consejo Regional Indígena del Cauca (CRIC) · UAIIN · SUIIN
 
 > **Este módulo ahora forma parte de la Plataforma SUIIN unificada** (junto al
 > Inventario de Activos y la Matriz RBAC) y consume su catálogo de activos desde
-> ahí en vez de mantener uno propio — ver `../README-DESPLIEGUE.md`, sección 11,
+> ahí en vez de mantener uno propio — inicio rápido en [README.md](../README.md);
+> despliegue integrado en [README-DESPLIEGUE.md](../README-DESPLIEGUE.md), sección 11,
 > para el despliegue integrado (recomendado) y el comando
 > `sincronizar_activos_inventario`. Lo que sigue en este documento describe el
 > módulo en sí y también sirve para ejecutarlo de forma independiente si hace

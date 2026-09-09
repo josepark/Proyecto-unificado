@@ -33,13 +33,16 @@ python3 seed.py        # crea rbac.db con los datos del documento MCA-001
 python3 app.py         # http://localhost:5000/api/csrf — solo API (UI en React)
 ```
 
-## Seguridad (v2.1 — sin inicio de sesión)
+## Seguridad (despliegue integrado)
 
-La aplicación no exige autenticación: está pensada para uso **local o
-monousuario**. IMPORTANTE: no la exponga a la red; manténgala en
-127.0.0.1 o restrinja el puerto con firewall, porque cualquiera con
-alcance al puerto puede modificar la matriz. La bitácora registra
-"operador local" como responsable. Protecciones vigentes:
+En la plataforma unificada, RBAC **no se expone sin control**: nginx exige
+`auth_request` contra el Inventario (`/api/auth-rbac/`) antes de reenviar
+cualquier petición a `/rbac/api/`. Solo roles **Dinamizador**, **Administrador**
+(escritura) o **Consultor** (solo lectura GET) acceden según `auth_check_rbac`
+en `inventario/inventario/views.py`.
+
+La bitácora registra al usuario real vía header `X-Usuario-SGSI` (nginx lo
+obtiene de la sesión Django). Protecciones adicionales:
 
 - **Bitácora encadenada**: cada registro incluye el SHA-256 del anterior;
   el botón «Verificar integridad» en Auditoría detecta cualquier alteración

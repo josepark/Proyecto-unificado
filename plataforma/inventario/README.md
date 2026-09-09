@@ -1,5 +1,7 @@
 # Sistema de Inventario de Activos SGSI — SUIIN (v2)
 
+> **Plataforma unificada:** visión general e inicio rápido en [README.md](../README.md).
+
 **Documento base:** SUIIN-SGSI-INV-001
 **Alineación normativa:** ISO/IEC 27001:2022 · ISO/IEC 27002:2022 (Camino del SUIIN)
 **Entidad:** SUIIN — Sistema Único de Información Indígena · CRIC

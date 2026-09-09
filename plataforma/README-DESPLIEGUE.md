@@ -1,5 +1,8 @@
 # Plataforma SUIIN-SGSI — Despliegue integrado
 
+> **Inicio rápido:** vea [README.md](README.md). Este documento amplía arquitectura,
+> historial de integración, seguridad y resolución de incidencias.
+
 Una sola interfaz web (SPA React en `/`) que unifica tres módulos del SGSI.
 Cada aplicación conserva su stack y base de datos; nginx enruta las peticiones
 y delega la autorización de RBAC en la sesión del Inventario.
