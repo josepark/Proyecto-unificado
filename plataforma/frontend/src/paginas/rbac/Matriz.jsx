@@ -70,6 +70,17 @@ export default function Matriz() {
   }
 
   const rolSeleccionado = rolDetalle ? roles.find((r) => r.id === rolDetalle) : null;
+  const maxAdminHeat = Math.max(...(heatmap ?? []).map((h) => h.n_admin), 1);
+  const maxElevHeat = Math.max(...(heatmap ?? []).map((h) => h.n_elevados), 1);
+
+  function intensidadHeat(valor, maximo) {
+    if (!valor) return 'transparent';
+    const t = Math.min(valor / maximo, 1);
+    if (t >= 0.75) return '#b3261e';
+    if (t >= 0.5) return '#c65a00';
+    if (t >= 0.25) return '#0b57a4';
+    return '#0e7c66';
+  }
 
   return (
     <div>
@@ -84,28 +95,47 @@ export default function Matriz() {
         <div className="card" style={{ marginBottom: 16 }}>
           <h2>Mapa de calor — accesos Admin (A) por categoría</h2>
           <div className="cuerpo">
-            <table>
-              <thead>
-                <tr>
-                  <th>Categoría</th>
-                  <th className="num">Sistemas</th>
-                  <th className="num">Celdas Admin (A)</th>
-                  <th className="num">Accesos elevados</th>
-                </tr>
-              </thead>
-              <tbody>
-                {heatmap.map((h) => (
-                  <tr key={h.categoria}>
-                    <td>{h.categoria}</td>
-                    <td className="num">{h.sistemas}</td>
-                    <td className="num" style={{ color: h.n_admin > 0 ? 'var(--crit)' : undefined, fontWeight: h.n_admin > 0 ? 'bold' : undefined }}>
-                      {h.n_admin}
-                    </td>
-                    <td className="num">{h.n_elevados}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <p style={{ fontSize: 12, color: 'var(--texto-suave)', marginTop: 0 }}>
+              Intensidad proporcional al número de celdas con nivel Admin (A) y accesos elevados por categoría de sistema.
+            </p>
+            {heatmap.map((h) => (
+              <div key={h.categoria} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                  <strong>{h.categoria}</strong>
+                  <span style={{ color: 'var(--texto-suave)' }}>
+                    {h.sistemas} sist. · {h.n_admin} Admin · {h.n_elevados} elevados
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+                  <div style={{ flex: 1, background: 'var(--gris)', borderRadius: 4, overflow: 'hidden', height: 18 }} title={`${h.n_admin} celdas Admin (A)`}>
+                    <div
+                      style={{
+                        width: `${(h.n_admin / maxAdminHeat) * 100}%`,
+                        height: '100%',
+                        background: intensidadHeat(h.n_admin, maxAdminHeat),
+                        minWidth: h.n_admin ? 4 : 0,
+                        transition: 'width .2s',
+                      }}
+                    />
+                  </div>
+                  <div style={{ width: '35%', background: 'var(--gris)', borderRadius: 4, overflow: 'hidden', height: 18 }} title={`${h.n_elevados} accesos elevados`}>
+                    <div
+                      style={{
+                        width: `${(h.n_elevados / maxElevHeat) * 100}%`,
+                        height: '100%',
+                        background: intensidadHeat(h.n_elevados, maxElevHeat),
+                        opacity: 0.75,
+                        minWidth: h.n_elevados ? 4 : 0,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--texto-suave)', marginTop: 8 }}>
+              <span>Barra izquierda: Admin (A)</span>
+              <span>Barra derecha: accesos elevados</span>
+            </div>
           </div>
         </div>
       )}

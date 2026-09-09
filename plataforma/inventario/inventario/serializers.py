@@ -20,9 +20,23 @@ class ControlISOSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ZonaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Zona
+        fields = ("id", "nombre")
+
+
+class VlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VLAN
+        fields = ("id", "etiqueta")
+
+
 class InfraestructuraSerializer(serializers.ModelSerializer):
     zona = serializers.StringRelatedField()
     vlan = serializers.StringRelatedField()
+    zona_id = serializers.IntegerField(source="zona_id", read_only=True, allow_null=True)
+    vlan_id = serializers.IntegerField(source="vlan_id", read_only=True, allow_null=True)
     rack_codigo = serializers.CharField(source="rack_fk.codigo", read_only=True, default=None)
     rack_datacenter = serializers.CharField(source="rack_fk.datacenter.codigo", read_only=True, default=None)
 

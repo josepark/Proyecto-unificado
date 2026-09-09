@@ -92,7 +92,7 @@ export default function Activos() {
         eyebrow="Inventario técnico"
         title="Activos"
         description="Correlación Matriz de Activos × OpenVAS × Nmap × Red Team."
-        actions={puedeEditar && (
+        actions={puedeEditar && !plataforma.anidado && (
           <button
             onClick={guard(abrirCreacion)}
             className="flex items-center gap-1.5 rounded-lg bg-cric-green-600 px-3.5 py-2 text-[13px] font-medium text-base-100 transition-colors hover:bg-cric-green-500"
@@ -101,6 +101,16 @@ export default function Activos() {
           </button>
         )}
       />
+
+      {plataforma.anidado && (
+        <div className="mb-5 rounded-xl border border-cric-gold-500/40 bg-cric-gold-600/10 px-4 py-3 text-[13px] text-cric-gold-400">
+          En la plataforma unificada los activos se crean en el{' '}
+          <a href="/inventario/dashboard" className="font-medium underline hover:text-cric-gold-300">
+            Inventario
+          </a>
+          . Este módulo refleja la sincronización para vulnerabilidades, cobertura y PTR.
+        </div>
+      )}
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
@@ -149,6 +159,7 @@ export default function Activos() {
                   <th className="px-3 py-3 font-medium">Vulns.</th>
                   <th className="px-3 py-3 font-medium">Red Team</th>
                   <th className="px-3 py-3 font-medium">Riesgo</th>
+                  {plataforma.anidado && <th className="px-3 py-3 font-medium">Inventario</th>}
                   <th className="px-5 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -179,6 +190,23 @@ export default function Activos() {
                       )}
                     </td>
                     <td className="px-3 py-2.5"><NivelBadge nivel={a.riesgo_matriz} size="sm" /></td>
+                    {plataforma.anidado && (
+                      <td className="px-3 py-2.5">
+                        {a.inventario_id ? (
+                          <a
+                            href={`/inventario/activos/${a.inventario_id}`}
+                            className="text-[12px] text-cric-green-400 hover:underline"
+                            title="Ver ficha canónica en Inventario"
+                          >
+                            #{a.inventario_id}
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-[#e0475a]" title="Sin vínculo — ejecute sincronizar_activos_inventario">
+                            huérfano
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-5 py-2.5">
                       {puedeEditar && (
                         <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">

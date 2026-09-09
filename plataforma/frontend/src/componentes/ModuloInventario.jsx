@@ -3,8 +3,8 @@ import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
 const PESTANAS = [
   { to: 'dashboard', etiqueta: 'Dashboard' },
   { to: 'panel-ejecutivo', etiqueta: 'Panel ejecutivo' },
-  { to: 'riesgos', etiqueta: 'Riesgos' },
-  { to: 'alertas', etiqueta: 'Alertas' },
+  { to: 'riesgos', etiqueta: 'Valoración inherente' },
+  { to: 'alertas', etiqueta: 'Centro de alertas' },
   { to: 'centro-datos', etiqueta: 'Centro de datos' },
   { to: 'clases', etiqueta: 'Clases de activo' },
   { to: 'bitacora', etiqueta: 'Bitácora' },

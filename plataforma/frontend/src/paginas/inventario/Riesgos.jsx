@@ -48,8 +48,11 @@ export default function Riesgos() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 16px', flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Riesgos</h2>
-        <span style={{ fontSize: 13, color: 'var(--texto-suave)' }}>Metodología probabilidad × impacto (ISO/IEC 27005).</span>
+        <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Valoración inherente</h2>
+        <span style={{ fontSize: 13, color: 'var(--texto-suave)' }}>
+          Motor probabilidad × impacto del Inventario (ISO/IEC 27005). Para vulns y PTR use{' '}
+          <a href="/gestion-riesgos">Gestión de Riesgos</a>.
+        </span>
         {puedeEditar && (
           <button className="btn btn-sec" style={{ marginLeft: 'auto' }} onClick={recalcular}>
             ↻ Recalcular y aplicar niveles

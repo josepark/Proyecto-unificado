@@ -98,6 +98,7 @@ export default function Activo() {
     () => inventarioApi.historialActivo(id),
     [id],
   );
+  const { datos: resumenRiesgos } = useApi(() => inventarioApi.resumenRiesgosActivo(id), [id]);
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState(null);
 
@@ -143,6 +144,20 @@ export default function Activo() {
           {a.clase_display}
         </span>
         <span className={`tag t-${a.nivel_riesgo}`}>{a.nivel_riesgo_display}</span>
+        {resumenRiesgos?.vinculado && (
+          <Link
+            to={resumenRiesgos.url_gestion || `/gestion-riesgos/activos/${resumenRiesgos.id}`}
+            className="chip enlace"
+            style={{ marginLeft: 8 }}
+            title="Ver vulnerabilidades, cobertura y riesgo en Gestión de Riesgos"
+          >
+            Riesgos: {resumenRiesgos.total_vulnerabilidades ?? 0} vulns
+            {resumenRiesgos.vulnerabilidades_criticas > 0
+              ? ` (${resumenRiesgos.vulnerabilidades_criticas} crít.)`
+              : ''}
+            {resumenRiesgos.riesgo_matriz ? ` · ${resumenRiesgos.riesgo_matriz}` : ''}
+          </Link>
+        )}
       </div>
       <div className="ficha-sub">{a.nombre}</div>
 
@@ -172,7 +187,20 @@ export default function Activo() {
         <a className="btn btn-sec" href={`/api/activos/${a.id}/qr.png`} download={`QR-${a.id_activo}.png`}>
           ⬇ Descargar QR
         </a>
+        {resumenRiesgos?.vinculado && (
+          <Link
+            className="btn btn-sec"
+            to={resumenRiesgos.url_gestion || `/gestion-riesgos/activos/${resumenRiesgos.id}`}
+          >
+            ↗ Gestión de Riesgos
+          </Link>
+        )}
       </div>
+      {!resumenRiesgos?.vinculado && resumenRiesgos?.mensaje && (
+        <p style={{ fontSize: 13, color: 'var(--texto-suave)', marginTop: -8, marginBottom: 16 }}>
+          {resumenRiesgos.mensaje}
+        </p>
+      )}
       {errorEliminar && (
         <p style={{ color: 'var(--crit)', fontWeight: 'bold', marginTop: -12, marginBottom: 16 }}>
           Error al eliminar: {errorEliminar}

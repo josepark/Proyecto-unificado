@@ -63,7 +63,9 @@ class ActivoViewSet(HistorialMixin, viewsets.ModelViewSet):
             "vulnerabilidades", filter=Q(vulnerabilidades__severidad_ov="CRITICAL"), distinct=True),
     ).order_by("id_activo")
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["riesgo_matriz", "clasificacion_si", "cobertura", "afectado_red_team", "tipo"]
+    filterset_fields = [
+        "riesgo_matriz", "clasificacion_si", "cobertura", "afectado_red_team", "tipo", "inventario_id",
+    ]
     search_fields = ["id_activo", "nombre", "ip_principal"]
     ordering_fields = ["valor", "id_activo", "nombre"]
 
@@ -71,6 +73,15 @@ class ActivoViewSet(HistorialMixin, viewsets.ModelViewSet):
         if self.action == "list":
             return ActivoListSerializer
         return ActivoDetailSerializer
+
+    def create(self, request, *args, **kwargs):
+        from django.conf import settings
+        if getattr(settings, "PLATAFORMA_ACTIVOS_SOLO_INVENTARIO", False):
+            return Response({
+                "detail": "En la plataforma unificada los activos se crean en el Inventario. "
+                          "Use sincronizar_activos_inventario o ./desplegar.sh para reflejarlos aquí.",
+            }, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
 
     @action(detail=True, methods=["get"], url_path="hoja-riesgo.pdf")
     def hoja_riesgo_pdf(self, request, pk=None):

@@ -119,6 +119,10 @@ ALERTAS_EMAIL_DESTINATARIOS = [
 # SUIIN"); en desarrollo local, apunta al runserver del inventario.
 INVENTARIO_API_URL = os.environ.get("INVENTARIO_API_URL", "http://localhost:8000/api")
 
+# Plataforma unificada: activos canónicos en Inventario — bloquea POST /api/activos/ aquí.
+PLATAFORMA_ACTIVOS_SOLO_INVENTARIO = os.environ.get(
+    "PLATAFORMA_ACTIVOS_SOLO_INVENTARIO", "").lower() in ("1", "true", "yes")
+
 # Sesión única de plataforma: el Inventario emite un JWT firmado (ver
 # inventario/jwt_plataforma.py); riesgos lo verifica aquí SIN llamar de vuelta
 # al inventario en cada petición — solo valida la firma con este mismo

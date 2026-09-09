@@ -10,6 +10,7 @@ export const inventarioApi = {
   listarActivos: (params) => api.get('/activos/', params),
   obtenerActivo: (id) => api.get(`/activos/${id}/`),
   historialActivo: (id) => api.get(`/activos/${id}/historial/`),
+  resumenRiesgosActivo: (id) => api.get(`/activos/${id}/resumen-riesgos/`),
   crearActivo: (datos) => api.post('/activos/', datos),
   editarActivo: (id, datos) => api.patch(`/activos/${id}/`, datos),
   importarAnalizar: (formData) => api.postForm('/activos/importar/analizar/', formData),
@@ -40,6 +41,7 @@ export const inventarioApi = {
   // --- Paneles ---
   panelEjecutivo: () => api.get('/dashboard-ejecutivo/'),
   alertas: () => api.get('/alertas/'),
+  alertasUnificadas: () => api.get('/alertas/unificadas/'),
   bitacora: (params) => api.get('/bitacora/', params),
   accesos: () => api.get('/accesos/'),
   accesosUnificado: (params) => api.get('/accesos/unificado/', params),
@@ -53,6 +55,8 @@ export const inventarioApi = {
   // --- Catálogos ---
   amenazas: (params) => api.get('/amenazas/', { page_size: 2000, ...params }),
   controles: (params) => api.get('/controles/', { page_size: 200, ...params }),
+  zonas: () => api.get('/zonas/?page_size=200'),
+  vlans: () => api.get('/vlans/?page_size=200'),
   datacenters: () => api.get('/datacenters/?page_size=100'),
   crearDatacenter: (datos) => api.post('/datacenters/', datos),
   editarDatacenter: (id, datos) => api.patch(`/datacenters/${id}/`, datos),

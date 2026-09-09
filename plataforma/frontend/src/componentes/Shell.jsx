@@ -88,7 +88,11 @@ export default function Shell() {
             <>
               Sesión: <b>{usuario}</b>
               {soloLecturaRbac ? ' · consulta RBAC' : null}
-              {cargando ? ' · …' : null} · <a href="/logout/">Salir</a>
+              {cargando ? ' · …' : null}
+              {' · '}
+              <a href="/logout/" className="btn btn-sec" style={{ padding: '2px 10px', fontSize: 12, marginLeft: 4 }}>
+                Cerrar sesión
+              </a>
             </>
           ) : (
             <Link to={`/login?next=${encodeURIComponent(rutaTrasLogin)}`}>Iniciar sesión</Link>

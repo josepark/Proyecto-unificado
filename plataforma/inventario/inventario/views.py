@@ -20,11 +20,11 @@ class CatalogoPagination(PageNumberPagination):
     max_page_size = 2000
 
 from .models import (Activo, ActivoInfraestructura, SistemaInformacion,
-                     EquipoComputo, ClaseActivo, AmenazaMITRE, ControlISO)
+                     EquipoComputo, ClaseActivo, AmenazaMITRE, ControlISO, Zona, VLAN)
 from .serializers import (ActivoListSerializer, ActivoDetailSerializer,
                           ActivoWriteSerializer, ClaseActivoSerializer,
                           AmenazaMITRESerializer, ControlISOSerializer,
-                          HistorialSerializer)
+                          HistorialSerializer, ZonaSerializer, VlanSerializer)
 from .meta_inventario import meta_inventario, catalogo_clases_activo
 
 
@@ -72,7 +72,25 @@ class ActivoViewSet(viewsets.ModelViewSet):
         """Metadatos para la SPA: clases configurables, enums y colores."""
         return Response(meta_inventario())
 
-    @action(detail=True)
+    @action(detail=True, methods=["get"], url_path="resumen-riesgos")
+    def resumen_riesgos(self, request, pk=None):
+        """KPIs del activo espejo en SUIIN-SGSI-RIESGOS (Ola 5 — flujo unificado)."""
+        from .integracion_riesgos import resumen_activo_por_inventario
+        activo = self.get_object()
+        data = resumen_activo_por_inventario(activo.pk)
+        if not data:
+            return Response({
+                "vinculado": False,
+                "mensaje": "Este activo aún no está sincronizado en Gestión de Riesgos. "
+                           "Ejecute sincronizar_activos_inventario o ./desplegar.sh.",
+            })
+        return Response({
+            "vinculado": True,
+            **data,
+            "url_gestion": f"/gestion-riesgos/activos/{data['id']}",
+        })
+
+    @action(detail=True, methods=["get"])
     def historial(self, request, pk=None):
         """Bitacora de un activo especifico."""
         activo = self.get_object()
@@ -96,6 +114,20 @@ class ControlViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ControlISOSerializer
     search_fields = ["codigo", "descripcion"]
     pagination_class = CatalogoPagination
+
+
+class ZonaViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [RolPermisoOServicioInterno]
+    queryset = Zona.objects.all().order_by("nombre")
+    serializer_class = ZonaSerializer
+    search_fields = ["nombre"]
+
+
+class VlanViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [RolPermisoOServicioInterno]
+    queryset = VLAN.objects.all().order_by("etiqueta")
+    serializer_class = VlanSerializer
+    search_fields = ["etiqueta"]
 
 
 class ClaseActivoViewSet(viewsets.ModelViewSet):
@@ -411,6 +443,37 @@ def calcular_alertas():
 @permission_classes([RolPermiso])
 def alertas(request):
     return Response(calcular_alertas())
+
+
+@api_view(["GET"])
+@permission_classes([RolPermiso])
+def alertas_unificadas(request):
+    """Centro de alertas Ola 5: Inventario + RBAC + Riesgos en una sola respuesta."""
+    from .integracion_rbac import resumen_rbac
+    from .integracion_riesgos import alertas_riesgos_resumen, kpis_riesgos_dashboard
+
+    inv = calcular_alertas()
+    rbac = resumen_rbac() or {}
+    ries_alertas = alertas_riesgos_resumen()
+    ries_kpis = kpis_riesgos_dashboard()
+    return Response({
+        "inventario": inv,
+        "rbac": {
+            "disponible": bool(rbac),
+            "pendientes_total": rbac.get("pendientes_total", 0),
+            "desglose_pendientes": rbac.get("desglose_pendientes"),
+        },
+        "riesgos": {
+            **ries_alertas,
+            **ries_kpis,
+        },
+        "total_consolidado": (
+            inv.get("total_alertas", 0)
+            + (rbac.get("pendientes_total") or 0)
+            + ries_alertas.get("total_vencidas", 0)
+            + ries_alertas.get("total_por_vencer", 0)
+        ),
+    })
 
 
 # ---------------------------------------------------------------------------

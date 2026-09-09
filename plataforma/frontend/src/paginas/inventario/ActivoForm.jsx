@@ -77,7 +77,8 @@ function vacio() {
     amenazas: '', controles: '',
     infra: { tipo: '', ip_segmento: '', modelo: '', serial_placa: '',
       fabricante_proveedor: '', version_so_firmware: '',
-      fin_soporte_eol: '', hallazgos_abiertos: '', rack_fk: '', unidad_inicio: '', unidad_fin: '' },
+      fin_soporte_eol: '', hallazgos_abiertos: '', rack_fk: '', unidad_inicio: '', unidad_fin: '',
+      zona: '', vlan: '' },
     sist: { estado_operativo: 'SD', priorizar_analisis: 'SIN', backend: '',
       frontend: '', schema_bd: '', servidor_virtual: '',
       sistema_mca_equivalente: '', sistema_rbac_id: '', version: '', integracion_gateway: '', url: '' },
@@ -116,6 +117,8 @@ function desdeActivo(a) {
       rack_fk: a.infraestructura.rack_fk ?? '',
       unidad_inicio: a.infraestructura.unidad_inicio ?? '',
       unidad_fin: a.infraestructura.unidad_fin ?? '',
+      zona: a.infraestructura.zona_id ?? '',
+      vlan: a.infraestructura.vlan_id ?? '',
     } : base.infra,
     sist: a.sistema ? {
       ...base.sist,
@@ -170,7 +173,11 @@ export default function ActivoForm() {
     () => (form?.datacenter ? inventarioApi.racksDatacenter(form.datacenter) : Promise.resolve([])),
     [form?.datacenter],
   );
+  const { datos: zonasData } = useApi(() => inventarioApi.zonas(), []);
+  const { datos: vlansData } = useApi(() => inventarioApi.vlans(), []);
   const racks = racksDc?.results ?? racksDc ?? [];
+  const opcionesZona = (zonasData?.results ?? zonasData ?? []).map((z) => [String(z.id), z.nombre]);
+  const opcionesVlan = (vlansData?.results ?? vlansData ?? []).map((v) => [String(v.id), v.etiqueta]);
   const sistemasRbac = catalogoRbac?.sistemas ?? [];
 
   useEffect(() => {
@@ -239,6 +246,8 @@ export default function ActivoForm() {
         rack_fk: form.infra.rack_fk ? Number(form.infra.rack_fk) : null,
         unidad_inicio: numOrNull(form.infra.unidad_inicio),
         unidad_fin: numOrNull(form.infra.unidad_fin),
+        zona: form.infra.zona ? Number(form.infra.zona) : null,
+        vlan: form.infra.vlan ? Number(form.infra.vlan) : null,
       };
     } else if (modeloDetalle === 'sistema') {
       body.sistema = {
@@ -467,6 +476,20 @@ export default function ActivoForm() {
                   min="1"
                   value={form.infra.unidad_fin ?? ''}
                   onChange={(e) => setSub('infra', 'unidad_fin', e.target.value)}
+                />
+                <CampoSelect
+                  label="Zona de red"
+                  value={String(form.infra.zona ?? '')}
+                  onChange={(e) => setSub('infra', 'zona', e.target.value)}
+                  opciones={[['', '— Sin zona —'], ...opcionesZona]}
+                />
+              </Fila>
+              <Fila>
+                <CampoSelect
+                  label="VLAN"
+                  value={String(form.infra.vlan ?? '')}
+                  onChange={(e) => setSub('infra', 'vlan', e.target.value)}
+                  opciones={[['', '— Sin VLAN —'], ...opcionesVlan]}
                 />
               </Fila>
               <Fila>

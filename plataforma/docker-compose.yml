@@ -5,6 +5,8 @@ services:
     env_file: .env
     environment:
       JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:?Defina JWT_SHARED_SECRET en .env}
+      RIESGOS_INTERNAL_URL: ${RIESGOS_INTERNAL_URL:-http://riesgos-backend:8000}
+      RBAC_INTERNAL_URL: ${RBAC_INTERNAL_URL:-http://rbac:5000}
     volumes:
       - ./inventario/db.sqlite3:/app/db.sqlite3
       - ./inventario/media:/app/media
@@ -40,6 +42,7 @@ services:
       # sincronizar_activos_inventario.py.
       INVENTARIO_API_URL: ${INVENTARIO_API_URL:-http://inventario:8000/api}
       ALERTAS_EMAIL_DESTINATARIOS: ${RIESGOS_ALERTAS_EMAIL_DESTINATARIOS:-}
+      PLATAFORMA_ACTIVOS_SOLO_INVENTARIO: ${PLATAFORMA_ACTIVOS_SOLO_INVENTARIO:-true}
     volumes:
       - ./riesgos/backend/db.sqlite3:/app/db.sqlite3
       - ./riesgos/backend/media:/app/media

@@ -1684,3 +1684,98 @@ class JWTRevocacionTest(TestCase):
                              algorithms=["HS256"], issuer="suiin-inventario")
         self.assertLess(payload["ver"], ver_nueva)
 
+
+class IntegracionRiesgosOla5Test(TestCase):
+    """Ola 5 — flujo unificado Inventario ↔ Riesgos (integracion_riesgos.py)."""
+
+    URL_ALERTAS = "/api/alertas/unificadas/"
+
+    @classmethod
+    def setUpTestData(cls):
+        from .models import Activo
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.consultor = User.objects.create_user("integracion_riesgos_test", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+        cls.activo = Activo.objects.create(
+            nombre="Servidor sync", clase="INFRA", clasificacion_si="CONF",
+            estado="ACT", nivel_riesgo="MED",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.consultor)
+
+    def test_alertas_unificadas_incluye_tres_modulos(self):
+        from unittest.mock import patch
+
+        rbac_falso = {
+            "pendientes_total": 5,
+            "desglose_pendientes": {
+                "proximos_vencimientos": 1,
+                "alertas_mfa": 2,
+                "roles_certificacion_vencida": 1,
+                "excepciones_vencidas": 1,
+            },
+        }
+        ries_alertas = {"total_vencidas": 2, "total_por_vencer": 3, "disponible": True}
+        ries_kpis = {
+            "disponible": True,
+            "activos_sin_cobertura": 4,
+            "vulnerabilidades_criticas": 1,
+            "activos_comprometidos": 0,
+        }
+
+        with patch("inventario.views.catalogo_sistemas_rbac", return_value=[]), \
+             patch("inventario.integracion_rbac.resumen_rbac", return_value=rbac_falso), \
+             patch("inventario.integracion_riesgos.alertas_riesgos_resumen", return_value=ries_alertas), \
+             patch("inventario.integracion_riesgos.kpis_riesgos_dashboard", return_value=ries_kpis):
+            r = self.client.get(self.URL_ALERTAS)
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("inventario", data)
+        self.assertIn("rbac", data)
+        self.assertIn("riesgos", data)
+        self.assertTrue(data["rbac"]["disponible"])
+        self.assertTrue(data["riesgos"]["disponible"])
+        self.assertEqual(data["riesgos"]["total_vencidas"], 2)
+        self.assertEqual(data["riesgos"]["activos_sin_cobertura"], 4)
+        self.assertGreaterEqual(data["total_consolidado"], 5)
+
+    def test_alertas_unificadas_degrada_si_riesgos_no_responde(self):
+        import requests
+        from unittest.mock import patch
+
+        with patch("inventario.integracion_riesgos.requests.get",
+                   side_effect=requests.RequestException("caído")):
+            r = self.client.get(self.URL_ALERTAS)
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.json()["riesgos"]["disponible"])
+
+    def test_resumen_riesgos_sin_vinculo(self):
+        r = self.client.get(f"/api/activos/{self.activo.pk}/resumen-riesgos/")
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.json()["vinculado"])
+
+    def test_resumen_riesgos_con_activo_espejo(self):
+        from unittest.mock import patch, MagicMock
+
+        resp = MagicMock()
+        resp.json.return_value = {
+            "results": [{
+                "id": 99,
+                "id_activo": "INFRA-001",
+                "riesgo_matriz": "ALTO",
+                "total_vulnerabilidades": 7,
+                "vulnerabilidades_criticas": 2,
+                "cobertura": "PARCIAL",
+                "afectado_red_team": False,
+            }],
+        }
+        resp.raise_for_status = MagicMock()
+
+        with patch("inventario.integracion_riesgos.requests.get", return_value=resp):
+            r = self.client.get(f"/api/activos/{self.activo.pk}/resumen-riesgos/")
+        data = r.json()
+        self.assertTrue(data["vinculado"])
+        self.assertEqual(data["total_vulnerabilidades"], 7)
+        self.assertEqual(data["url_gestion"], "/gestion-riesgos/activos/99")
+

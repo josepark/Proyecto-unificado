@@ -8,6 +8,8 @@ router.register(r"clases-activo", views.ClaseActivoViewSet)
 router.register(r"activos", views.ActivoViewSet)
 router.register(r"amenazas", views.AmenazaViewSet)
 router.register(r"controles", views.ControlViewSet)
+router.register(r"zonas", views.ZonaViewSet)
+router.register(r"vlans", views.VlanViewSet)
 router.register(r"datacenters", views.DatacenterViewSet)
 router.register(r"racks", views.RackViewSet)
 router.register(r"diagramas", views.DiagramaViewSet)
@@ -23,6 +25,7 @@ urlpatterns = [
     path("api/auth-rbac/", views.auth_check_rbac, name="auth_check_rbac"),
     path("api/token-jwt/", views.token_jwt, name="token_jwt"),
     path("api/alertas/", views.alertas, name="alertas"),
+    path("api/alertas/unificadas/", views.alertas_unificadas, name="alertas_unificadas"),
     path("api/riesgos/", views.riesgos, name="riesgos"),
     path("api/riesgos/recalcular/", views.recalcular_riesgos, name="recalcular_riesgos"),
     path("api/cobertura/", views.cobertura_controles, name="cobertura"),

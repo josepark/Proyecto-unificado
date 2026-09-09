@@ -153,6 +153,7 @@ class ActivoListSerializer(serializers.ModelSerializer):
             "riesgo_matriz_display", "clasificacion_si", "clasificacion_si_display", "vlan",
             "en_nmap", "cobertura", "cobertura_display", "afectado_red_team",
             "campana_red_team_nombre", "total_vulnerabilidades", "vulnerabilidades_criticas",
+            "inventario_id",
         ]
 
 
