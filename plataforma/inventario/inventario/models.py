@@ -119,11 +119,6 @@ class ClaseActivo(models.Model):
 
 
 class Activo(models.Model):
-    class Clase(models.TextChoices):
-        INFRAESTRUCTURA = "INFRA", "Infraestructura de red"
-        SISTEMA = "SIST", "Sistema de informacion"
-        EQUIPO = "EQUI", "Equipo de computo"
-
     class Clasificacion(models.TextChoices):
         ALTAMENTE = "ALTA", "Altamente Confidencial"
         CONFIDENCIAL = "CONF", "Confidencial"
@@ -228,11 +223,11 @@ class Activo(models.Model):
     # Prefijo legacy retirado (Ola 2) — solo ClaseActivo.prefijo_id.
 
     def nombre_clase(self):
-        """Etiqueta legible desde el catálogo dinámico o el enum legacy."""
+        """Etiqueta legible desde el catálogo dinámico."""
         cat = ClaseActivo.objects.filter(codigo=self.clase).first()
         if cat:
             return cat.nombre
-        return dict(self.Clase.choices).get(self.clase, self.clase)
+        return self.clase
 
     def get_clase_display(self):
         """Compatibilidad DRF/admin — delega al catálogo dinámico."""

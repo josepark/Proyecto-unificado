@@ -145,7 +145,7 @@ class Command(BaseCommand):
                     defaults=dict(
                         nombre=norm(nombre),
                         descripcion=norm(descripcion),
-                        clase=Activo.Clase.INFRAESTRUCTURA,
+                        clase="INFRA",
                         clasificacion_si=CLASIF_MAP.get(norm(clasif_txt).lower(), ""),
                         confidencialidad=cid(c),
                         integridad=cid(i),
@@ -213,7 +213,7 @@ class Command(BaseCommand):
                 defaults=dict(
                     nombre=modulo,
                     descripcion=f"Modulo/sistema de informacion SUIIN: {modulo}.",
-                    clase=Activo.Clase.SISTEMA,
+                    clase="SIST",
                     clasificacion_si=CLASIF_MAP.get(norm(row[10]).lower(), ""),
                     estado=estado_activo,
                 ))

@@ -21,6 +21,14 @@ COLUMNAS = [
     "ciclo_vida", "datacenter", "propietario", "custodio",
     "area_responsable", "procesa_datos_personales", "rto", "rpo",
     "descripcion",
+    "amenazas", "controles",
+    "infra_tipo", "infra_ip_segmento", "infra_modelo", "infra_serial_placa",
+    "infra_rack", "infra_u_inicio", "infra_u_fin",
+    "sist_estado_operativo", "sist_backend", "sist_frontend", "sist_schema_bd",
+    "sist_servidor_virtual", "sist_sistema_rbac_id", "sist_sistema_mca", "sist_url",
+    "equipo_tipo", "equipo_marca", "equipo_modelo", "equipo_serial",
+    "equipo_usuario_asignado",
+    "detalle_extra_json",
 ]
 # Encabezados legibles para la plantilla descargable — el análisis del
 # archivo subido acepta cualquiera de los dos (clave técnica o este
@@ -28,7 +36,7 @@ COLUMNAS = [
 # persona a escribir exactamente "clasificacion_si".
 ENCABEZADOS = {
     "id_activo": "ID Activo (vacío = automático)", "nombre": "Nombre *",
-    "clase": "Clase * (INFRA/SIST/EQUI)",
+    "clase": "Clase * (código del catálogo)",
     "clasificacion_si": "Clasificación SI (ALTA/CONF/INT/PUB)",
     "nivel_riesgo": "Nivel de riesgo (SIN/BAJO/MED/ALTO/CRIT)",
     "confidencialidad": "Confidencialidad (0-4)", "integridad": "Integridad (0-4)",
@@ -40,6 +48,29 @@ ENCABEZADOS = {
     "area_responsable": "Área responsable",
     "procesa_datos_personales": "Procesa datos personales (Si/No)",
     "rto": "RTO", "rpo": "RPO", "descripcion": "Descripción",
+    "amenazas": "Amenazas MITRE (códigos separados por coma)",
+    "controles": "Controles ISO (códigos separados por coma)",
+    "infra_tipo": "Infra — tipo",
+    "infra_ip_segmento": "Infra — IP / segmento",
+    "infra_modelo": "Infra — modelo",
+    "infra_serial_placa": "Infra — serial / placa",
+    "infra_rack": "Infra — rack (código en el DC)",
+    "infra_u_inicio": "Infra — U inicio",
+    "infra_u_fin": "Infra — U fin",
+    "sist_estado_operativo": "Sistema — estado operativo (OP/IMP/NO/SD)",
+    "sist_backend": "Sistema — backend",
+    "sist_frontend": "Sistema — frontend",
+    "sist_schema_bd": "Sistema — schema BD",
+    "sist_servidor_virtual": "Sistema — servidor virtual",
+    "sist_sistema_rbac_id": "Sistema — ID en Matriz RBAC",
+    "sist_sistema_mca": "Sistema — nombre MCA (fallback)",
+    "sist_url": "Sistema — URL",
+    "equipo_tipo": "Equipo — tipo (ESC/PORT/AIO/TAB/OTRO)",
+    "equipo_marca": "Equipo — marca",
+    "equipo_modelo": "Equipo — modelo",
+    "equipo_serial": "Equipo — serial",
+    "equipo_usuario_asignado": "Equipo — usuario asignado",
+    "detalle_extra_json": "Detalle extra JSON (clases genéricas)",
 }
 _CAMPOS_ENTEROS = ("confidencialidad", "integridad", "disponibilidad")
 _FILA_EJEMPLO = {
@@ -50,6 +81,16 @@ _FILA_EJEMPLO = {
     "propietario": "Coordinación TI", "custodio": "", "area_responsable": "",
     "procesa_datos_personales": "No", "rto": "4 horas", "rpo": "1 hora",
     "descripcion": "",
+    "amenazas": "", "controles": "",
+    "infra_tipo": "Switch", "infra_ip_segmento": "10.0.1.0/24",
+    "infra_modelo": "", "infra_serial_placa": "",
+    "infra_rack": "A01", "infra_u_inicio": 10, "infra_u_fin": 11,
+    "sist_estado_operativo": "", "sist_backend": "", "sist_frontend": "",
+    "sist_schema_bd": "", "sist_servidor_virtual": "", "sist_sistema_rbac_id": "",
+    "sist_sistema_mca": "", "sist_url": "",
+    "equipo_tipo": "", "equipo_marca": "", "equipo_modelo": "",
+    "equipo_serial": "", "equipo_usuario_asignado": "",
+    "detalle_extra_json": "",
 }
 
 
@@ -74,9 +115,8 @@ def generar_plantilla():
     from .models import Activo, ClaseActivo
     codigos = list(ClaseActivo.objects.filter(activo=True).order_by("orden", "codigo")
                    .values_list("codigo", flat=True))
-    if not codigos:
-        codigos = [c[0] for c in Activo.Clase.choices]
-    ref.append(["clase", " / ".join(codigos)])
+    ref.append(["clase", " / ".join(codigos) if codigos else "(sin clases activas)"])
+    ref.append(["detalle por clase", "Use columnas infra_*, sist_*, equipo_* o detalle_extra_json"])
     ref.append(["clasificacion_si", " / ".join(c[0] for c in Activo.Clasificacion.choices)])
     ref.append(["nivel_riesgo", " / ".join(c[0] for c in Activo.NivelRiesgo.choices)])
     ref.append(["estado", " / ".join(c[0] for c in Activo.Estado.choices)])
@@ -118,6 +158,154 @@ def _mapear_encabezados(fila_encabezados):
                     mapa[i] = clave
                     break
     return mapa
+
+
+def _lista_codigos(texto):
+    if not texto:
+        return []
+    return [c.strip() for c in str(texto).split(",") if c.strip()]
+
+
+def _ensamblar_bloques(cuerpo, crudo, datacenter_id=None):
+    """Convierte columnas planas infra_*/sist_*/equipo_* en bloques anidados."""
+    import json
+    from .models import Rack
+
+    cuerpo = dict(cuerpo)
+    amenazas = _lista_codigos(crudo.get("amenazas"))
+    controles = _lista_codigos(crudo.get("controles"))
+    if amenazas:
+        cuerpo["amenazas_codigos"] = amenazas
+    if controles:
+        cuerpo["controles_codigos"] = controles
+
+    prefijos = {
+        "infraestructura": "infra_",
+        "sistema": "sist_",
+        "equipo": "equipo_",
+    }
+    mapa_sist = {"sist_sistema_mca": "sistema_mca_equivalente"}
+    for bloque, pref in prefijos.items():
+        datos = {}
+        for clave, valor in crudo.items():
+            if not clave.startswith(pref) or valor in (None, ""):
+                continue
+            if clave == "sist_sistema_rbac_id":
+                try:
+                    datos["sistema_rbac_id"] = int(valor)
+                except (TypeError, ValueError):
+                    raise ValueError(f"sist_sistema_rbac_id debe ser entero, recibido: {valor!r}")
+                continue
+            if clave in ("infra_u_inicio", "infra_u_fin"):
+                dest = "unidad_inicio" if clave == "infra_u_inicio" else "unidad_fin"
+                try:
+                    datos[dest] = int(valor)
+                except (TypeError, ValueError):
+                    raise ValueError(f"{clave} debe ser entero, recibido: {valor!r}")
+                continue
+            dest = clave[len(pref):]
+            if bloque == "sistema" and clave in mapa_sist:
+                dest = mapa_sist[clave]
+            datos[dest] = str(valor).strip()
+        if bloque == "infraestructura" and datos.get("rack") and datacenter_id:
+            rack = Rack.objects.filter(
+                datacenter_id=datacenter_id,
+                codigo__iexact=datos["rack"].strip(),
+            ).first()
+            if rack is None:
+                raise ValueError(
+                    f"Rack «{datos['rack']}» no existe en el centro de datos del activo.")
+            datos["rack_fk"] = rack.id
+        if datos:
+            cuerpo[bloque] = datos
+
+    extra = crudo.get("detalle_extra_json")
+    if extra not in (None, ""):
+        try:
+            cuerpo["detalle_extra"] = json.loads(str(extra))
+        except json.JSONDecodeError as e:
+            raise ValueError(f"detalle_extra_json no es JSON válido: {e}") from e
+    return cuerpo
+
+
+def _fila_desde_activo(activo):
+    """Serializa un activo al mismo esquema de columnas que la plantilla."""
+    import json
+    row = {c: "" for c in COLUMNAS}
+    row.update({
+        "id_activo": activo.id_activo,
+        "nombre": activo.nombre,
+        "clase": activo.clase,
+        "clasificacion_si": activo.clasificacion_si or "",
+        "nivel_riesgo": activo.nivel_riesgo or "",
+        "confidencialidad": activo.confidencialidad,
+        "integridad": activo.integridad,
+        "disponibilidad": activo.disponibilidad,
+        "estado": activo.estado or "",
+        "ciclo_vida": activo.ciclo_vida or "",
+        "datacenter": activo.datacenter.codigo if activo.datacenter else "",
+        "propietario": activo.propietario or "",
+        "custodio": activo.custodio or "",
+        "area_responsable": activo.area_responsable or "",
+        "procesa_datos_personales": "Si" if activo.procesa_datos_personales else "No",
+        "rto": activo.rto or "",
+        "rpo": activo.rpo or "",
+        "descripcion": activo.descripcion or "",
+        "amenazas": ", ".join(a.codigo for a in activo.amenazas.all()),
+        "controles": ", ".join(c.codigo for c in activo.controles.all()),
+    })
+    inf = getattr(activo, "infraestructura", None)
+    if inf:
+        row.update({
+            "infra_tipo": inf.tipo or "",
+            "infra_ip_segmento": inf.ip_segmento or "",
+            "infra_modelo": inf.modelo or "",
+            "infra_serial_placa": inf.serial_placa or "",
+            "infra_rack": inf.rack_fk.codigo if inf.rack_fk_id else (inf.rack or ""),
+            "infra_u_inicio": inf.unidad_inicio or "",
+            "infra_u_fin": inf.unidad_fin or "",
+        })
+    sis = getattr(activo, "sistema", None)
+    if sis:
+        row.update({
+            "sist_estado_operativo": sis.estado_operativo or "",
+            "sist_backend": sis.backend or "",
+            "sist_frontend": sis.frontend or "",
+            "sist_schema_bd": sis.schema_bd or "",
+            "sist_servidor_virtual": sis.servidor_virtual or "",
+            "sist_sistema_rbac_id": sis.sistema_rbac_id or "",
+            "sist_sistema_mca": sis.sistema_mca_equivalente or "",
+            "sist_url": sis.url or "",
+        })
+    eq = getattr(activo, "equipo", None)
+    if eq:
+        row.update({
+            "equipo_tipo": eq.tipo_equipo or "",
+            "equipo_marca": eq.marca or "",
+            "equipo_modelo": eq.modelo or "",
+            "equipo_serial": eq.serial or "",
+            "equipo_usuario_asignado": eq.usuario_asignado or "",
+        })
+    if activo.detalle_extra:
+        row["detalle_extra_json"] = json.dumps(activo.detalle_extra, ensure_ascii=False)
+    return [row[c] for c in COLUMNAS]
+
+
+def generar_export_inventario():
+    """Workbook de exportación con el mismo esquema que la plantilla de importación."""
+    from .models import Activo
+
+    wb = generar_plantilla()
+    ws = wb.active
+    ws.title = "Inventario exportado"
+    ws.delete_rows(2, 1)
+    qs = (Activo.objects.select_related(
+              "datacenter", "infraestructura", "infraestructura__rack_fk",
+              "sistema", "equipo")
+          .prefetch_related("amenazas", "controles"))
+    for activo in qs:
+        ws.append(_fila_desde_activo(activo))
+    return wb
 
 
 def _completar_bloque_detalle(cuerpo):
@@ -189,6 +377,7 @@ def analizar_archivo(archivo_django):
             continue
 
         dc_codigo = (cuerpo.pop("datacenter", "") or "").strip()
+        dc_id = None
         if dc_codigo:
             dc_id = datacenters_por_codigo.get(dc_codigo.lower())
             if dc_id is None:
@@ -197,6 +386,13 @@ def analizar_archivo(archivo_django):
                                    "datos": cuerpo})
                 continue
             cuerpo["datacenter"] = dc_id
+
+        try:
+            cuerpo = _ensamblar_bloques(cuerpo, crudo, datacenter_id=dc_id)
+        except ValueError as e:
+            resultados.append({"fila": num_fila, "estado": "error",
+                               "mensaje": str(e), "datos": cuerpo})
+            continue
 
         id_activo = (cuerpo.get("id_activo") or "").strip()
         if id_activo:

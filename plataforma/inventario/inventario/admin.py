@@ -1,23 +1,30 @@
 from django.contrib import admin
+from django.db.models import JSONField
+from django.forms import Textarea
 from simple_history.admin import SimpleHistoryAdmin
 from .models import (Activo, ActivoInfraestructura, SistemaInformacion,
-                     EquipoComputo, Zona, VLAN, AmenazaMITRE, ControlISO,
-                     RolMCA, AccesoRol)
+                     EquipoComputo, ClaseActivo, Zona, VLAN, AmenazaMITRE, ControlISO,
+                     RolMCA, Rack)
 
 
 class InfraInline(admin.StackedInline):
     model = ActivoInfraestructura
     extra = 0
+    fields = (
+        "tipo", "ip_segmento", "modelo", "serial_placa", "rack_fk",
+        "unidad_inicio", "unidad_fin", "fabricante_proveedor", "fin_soporte_eol",
+        "hallazgos_abiertos",
+    )
 
-
-class AccesoRolInline(admin.TabularInline):
-    model = AccesoRol
-    extra = 1
 
 
 class SistemaInline(admin.StackedInline):
     model = SistemaInformacion
     extra = 0
+    fields = (
+        "estado_operativo", "backend", "frontend", "schema_bd", "servidor_virtual",
+        "sistema_rbac_id", "sistema_mca_equivalente", "url", "priorizar_analisis", "version",
+    )
 
 
 class EquipoInline(admin.StackedInline):
@@ -57,9 +64,24 @@ class ActivoAdmin(SimpleHistoryAdmin):
 @admin.register(SistemaInformacion)
 class SistemaAdmin(SimpleHistoryAdmin):
     list_display = ("activo", "estado_operativo", "backend", "frontend",
-                    "servidor_virtual", "priorizar_analisis")
+                    "sistema_rbac_id", "servidor_virtual", "priorizar_analisis")
     list_filter = ("estado_operativo", "priorizar_analisis")
-    inlines = [AccesoRolInline]
+    # Accesos RolMCA retirados del admin — ver Matriz RBAC en vivo.
+
+
+@admin.register(ClaseActivo)
+class ClaseActivoAdmin(SimpleHistoryAdmin):
+    list_display = ("codigo", "nombre", "prefijo_id", "modelo_detalle", "activo", "orden")
+    list_filter = ("modelo_detalle", "activo")
+    search_fields = ("codigo", "nombre", "prefijo_id")
+    ordering = ("orden", "codigo")
+    formfield_overrides = {
+        JSONField: {"widget": Textarea(attrs={"rows": 12, "style": "font-family: monospace"})},
+    }
+    fieldsets = (
+        (None, {"fields": ("codigo", "nombre", "prefijo_id", "color", "orden", "activo")}),
+        ("Detalle de activos", {"fields": ("modelo_detalle", "detalle_schema")}),
+    )
 
 
 @admin.register(ActivoInfraestructura)
@@ -100,6 +122,12 @@ admin.site.index_title = "Gestion del inventario de activos"
 from .models import Datacenter, Diagrama, EventoHojaVida
 
 
+class RackInline(admin.TabularInline):
+    model = Rack
+    extra = 1
+    fields = ("codigo", "capacidad_u", "ubicacion")
+
+
 class DiagramaInline(admin.TabularInline):
     model = Diagrama
     extra = 0
@@ -113,12 +141,19 @@ class HojaVidaInline(admin.TabularInline):
     ordering = ("-fecha",)
 
 
+@admin.register(Rack)
+class RackAdmin(SimpleHistoryAdmin):
+    list_display = ("codigo", "datacenter", "capacidad_u", "ubicacion")
+    list_filter = ("datacenter",)
+    search_fields = ("codigo", "ubicacion")
+
+
 @admin.register(Datacenter)
 class DatacenterAdmin(SimpleHistoryAdmin):
     list_display = ("codigo", "nombre", "tipo", "nivel_tier", "ciudad", "responsable")
     list_filter = ("tipo", "nivel_tier", "ciudad")
     search_fields = ("codigo", "nombre", "ciudad")
-    inlines = [DiagramaInline]
+    inlines = [RackInline, DiagramaInline]
 
 
 @admin.register(Diagrama)

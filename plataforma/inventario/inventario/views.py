@@ -583,30 +583,8 @@ def _xlsx_response(wb, nombre):
 @api_view(["GET"])
 @permission_classes([RolPermiso])
 def exportar_inventario_xlsx(request):
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Inventario"
-    cab = ["ID", "Nombre", "Clase", "Clasificacion", "C", "I", "D", "Valor",
-           "Riesgo", "Propietario", "Datacenter", "Datos personales", "Estado"]
-    ws.append(cab)
-    fill = PatternFill("solid", fgColor="0d2b23")
-    for c in ws[1]:
-        c.font = Font(color="FFFFFF", bold=True)
-        c.fill = fill
-    for a in Activo.objects.select_related("datacenter").all():
-        ws.append([a.id_activo, a.nombre, a.get_clase_display(),
-                   a.get_clasificacion_si_display() if a.clasificacion_si else "",
-                   a.confidencialidad, a.integridad, a.disponibilidad, a.valor,
-                   a.get_nivel_riesgo_display(), a.propietario,
-                   a.datacenter.codigo if a.datacenter else "",
-                   "Si" if a.procesa_datos_personales else "No",
-                   a.get_estado_display()])
-    for col in ws.columns:
-        w = max(len(str(c.value or "")) for c in col) + 2
-        ws.column_dimensions[col[0].column_letter].width = min(w, 45)
-    return _xlsx_response(wb, "inventario_suiin.xlsx")
+    from .importar_activos import generar_export_inventario
+    return _xlsx_response(generar_export_inventario(), "inventario_suiin.xlsx")
 
 
 @api_view(["GET"])

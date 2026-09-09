@@ -1093,16 +1093,18 @@ class ImportarActivosTest(TestCase):
 
     def _archivo(self, filas):
         """Construye un .xlsx en memoria con la plantilla real más las
-        filas indicadas — así la prueba usa el mismo generador que
-        descarga cualquier usuario, no un archivo hecho a mano aparte."""
+        filas indicadas — filas pueden ser listas o dicts indexados por COLUMNAS."""
         import io
 
-        from .importar_activos import generar_plantilla
+        from .importar_activos import COLUMNAS, generar_plantilla
         wb = generar_plantilla()
         ws = wb.active
         ws.delete_rows(2, 1)  # quitar la fila de ejemplo
         for f in filas:
-            ws.append(f)
+            if isinstance(f, dict):
+                ws.append([f.get(c, "") for c in COLUMNAS])
+            else:
+                ws.append(f)
         buf = io.BytesIO()
         wb.save(buf)
         buf.seek(0)
@@ -1213,6 +1215,38 @@ class ImportarActivosTest(TestCase):
     def test_analizar_sin_archivo_da_400(self):
         r = self.client.post("/api/activos/importar/analizar/", {})
         self.assertEqual(r.status_code, 400)
+
+    def test_analizar_infra_con_rack_por_codigo(self):
+        from .models import Rack
+        from .importar_activos import COLUMNAS
+
+        Rack.objects.create(datacenter=self.dc, codigo="A01", capacidad_u=42)
+        fila = {c: "" for c in COLUMNAS}
+        fila.update({
+            "nombre": "Switch rack A01", "clase": "INFRA", "estado": "ACT",
+            "ciclo_vida": "PROD", "datacenter": "DC-TEST", "procesa_datos_personales": "No",
+            "infra_tipo": "Switch", "infra_rack": "A01", "infra_u_inicio": 10, "infra_u_fin": 11,
+        })
+        r = self.client.post("/api/activos/importar/analizar/", {"archivo": self._archivo([fila])})
+        self.assertEqual(r.status_code, 200)
+        item = r.json()["filas"][0]
+        self.assertEqual(item["estado"], "ok")
+        self.assertEqual(item["datos"]["infraestructura"]["rack_fk"], Rack.objects.get(codigo="A01").id)
+
+    def test_exportar_inventario_comparte_esquema_con_plantilla(self):
+        from openpyxl import load_workbook
+        import io
+
+        from .importar_activos import COLUMNAS, generar_plantilla
+        plantilla = generar_plantilla()
+        r = self.client.get("/api/exportar/inventario.xlsx")
+        self.assertEqual(r.status_code, 200)
+        exp = load_workbook(io.BytesIO(r.content), read_only=True)
+        self.assertEqual(
+            [c.value for c in exp.active[1]],
+            [c.value for c in plantilla.active[1]],
+        )
+        self.assertEqual(len([c.value for c in exp.active[1]]), len(COLUMNAS))
 
 
 class ReporteConsolidadoTest(TestCase):
