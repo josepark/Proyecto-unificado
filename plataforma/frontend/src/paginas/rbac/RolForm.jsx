@@ -4,6 +4,8 @@ import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, CampoTextarea, Fila } from '../../componentes/CamposFormulario';
+import { AvisoConsultaRbac, BloqueoCreacionRbac } from '../../componentes/AvisoConsultaRbac';
+import { modoFormularioRbac } from './rbacUtil';
 
 const OPC_SI_NO_DET7 = [
   ['1', 'Sí'],
@@ -44,7 +46,9 @@ export default function RolForm() {
   const { id } = useParams();
   const editando = Boolean(id);
   const navegar = useNavigate();
-  const { puedeEditar } = useOutletContext() ?? {};
+  const ctx = useOutletContext() ?? {};
+  const { puedeEditar } = ctx;
+  const { soloLectura, bloqueado, bloquearCreacion } = modoFormularioRbac(ctx, editando);
 
   const { datos: rolExistente, cargando: cargandoRol, error: errorCarga, recargar } = useApi(
     () => (editando ? rbacApi.obtenerRol(id) : Promise.resolve(null)),
@@ -70,7 +74,7 @@ export default function RolForm() {
 
   const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
-  if (puedeEditar === false) {
+  if (bloqueado) {
     return (
       <div className="card">
         <div className="cuerpo">
@@ -79,6 +83,9 @@ export default function RolForm() {
         </div>
       </div>
     );
+  }
+  if (bloquearCreacion) {
+    return <BloqueoCreacionRbac entidad="roles" rutaListado="/rbac/roles" />;
   }
   if (editando && (cargandoRol || !form)) return <p>Cargando rol…</p>;
   if (editando && errorCarga) {
@@ -164,7 +171,7 @@ export default function RolForm() {
         ← Volver a Roles
       </Link>
       <h2 style={{ margin: '4px 0 16px', color: 'var(--verde-profundo)' }}>
-        {editando ? `Editar rol ${form.abreviatura}` : 'Nuevo rol'}
+        {editando ? (soloLectura ? `Rol ${form.abreviatura}` : `Editar rol ${form.abreviatura}`) : 'Nuevo rol'}
         {editando && rolExistente && !rolExistente.activo && (
           <span className="tag t-CRIT" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
             DESACTIVADO
@@ -172,7 +179,10 @@ export default function RolForm() {
         )}
       </h2>
 
+      <AvisoConsultaRbac visible={soloLectura} />
+
       <form onSubmit={guardar}>
+        <fieldset disabled={soloLectura} style={{ border: 'none', margin: 0, padding: 0 }}>
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Identificación</h2>
           <div className="cuerpo">
@@ -272,17 +282,20 @@ export default function RolForm() {
 
         {error && <p style={{ color: 'var(--crit)', fontWeight: 'bold', marginBottom: 12 }}>Error: {error}</p>}
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          <button className="btn btn-primary" type="submit" disabled={guardando}>
-            {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Crear rol'}
-          </button>
-          <Link to="/rbac/roles" className="btn btn-sec" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
-            Cancelar
-          </Link>
-        </div>
+        {!soloLectura && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <button className="btn btn-primary" type="submit" disabled={guardando}>
+              {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Crear rol'}
+            </button>
+            <Link to="/rbac/roles" className="btn btn-sec" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+              Cancelar
+            </Link>
+          </div>
+        )}
+        </fieldset>
       </form>
 
-      {editando && rolExistente?.activo && (
+      {editando && rolExistente?.activo && !soloLectura && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Certificación periódica de accesos</h2>
           <div className="cuerpo">
@@ -346,7 +359,7 @@ export default function RolForm() {
         </div>
       )}
 
-      {editando && (
+      {editando && !soloLectura && (
         <div className="card">
           <h2>Zona de baja</h2>
           <div className="cuerpo" style={{ display: 'flex', gap: 8 }}>

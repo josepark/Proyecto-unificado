@@ -6,6 +6,8 @@ import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, Fila } from '../../componentes/CamposFormulario';
 import { CampoCodigosCatalogo } from '../../componentes/CampoCodigosCatalogo';
+import { AvisoConsultaRbac, BloqueoCreacionRbac } from '../../componentes/AvisoConsultaRbac';
+import { modoFormularioRbac } from './rbacUtil';
 
 const OPC_CLASIFICACION = [
   ['Altamente Confidencial', 'Altamente Confidencial'],
@@ -29,7 +31,8 @@ export default function SistemaForm() {
   const { id } = useParams();
   const editando = Boolean(id);
   const navegar = useNavigate();
-  const { puedeEditar } = useOutletContext() ?? {};
+  const ctx = useOutletContext() ?? {};
+  const { soloLectura, bloqueado, bloquearCreacion } = modoFormularioRbac(ctx, editando);
 
   const { datos: sistemaExistente, cargando: cargandoSistema, error: errorCarga, recargar } = useApi(
     () => (editando ? rbacApi.obtenerSistema(id) : Promise.resolve(null)),
@@ -53,7 +56,7 @@ export default function SistemaForm() {
 
   const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
-  if (puedeEditar === false) {
+  if (bloqueado) {
     return (
       <div className="card">
         <div className="cuerpo">
@@ -62,6 +65,9 @@ export default function SistemaForm() {
         </div>
       </div>
     );
+  }
+  if (bloquearCreacion) {
+    return <BloqueoCreacionRbac entidad="sistemas" rutaListado="/rbac/sistemas" />;
   }
   if (editando && (cargandoSistema || !form)) return <p>Cargando sistema…</p>;
   if (editando && errorCarga) {
@@ -133,7 +139,7 @@ export default function SistemaForm() {
         ← Volver a Sistemas
       </Link>
       <h2 style={{ margin: '4px 0 16px', color: 'var(--verde-profundo)' }}>
-        {editando ? `Editar ${form.nombre}` : 'Crear sistema / recurso'}
+        {editando ? (soloLectura ? form.nombre : `Editar ${form.nombre}`) : 'Crear sistema / recurso'}
         {editando && sistemaExistente && !sistemaExistente.activo && (
           <span className="tag t-CRIT" style={{ marginLeft: 10, verticalAlign: 'middle' }}>
             DESACTIVADO
@@ -141,7 +147,10 @@ export default function SistemaForm() {
         )}
       </h2>
 
+      <AvisoConsultaRbac visible={soloLectura} />
+
       <form onSubmit={guardar}>
+        <fieldset disabled={soloLectura} style={{ border: 'none', margin: 0, padding: 0 }}>
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Identificación</h2>
           <div className="cuerpo">
@@ -202,14 +211,17 @@ export default function SistemaForm() {
 
         {error && <p style={{ color: 'var(--crit)', fontWeight: 'bold', marginBottom: 12 }}>Error: {error}</p>}
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          <button className="btn btn-primary" type="submit" disabled={guardando}>
-            {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Crear sistema'}
-          </button>
-          <Link to="/rbac/sistemas" className="btn btn-sec" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
-            Cancelar
-          </Link>
-        </div>
+        {!soloLectura && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <button className="btn btn-primary" type="submit" disabled={guardando}>
+              {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Crear sistema'}
+            </button>
+            <Link to="/rbac/sistemas" className="btn btn-sec" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+              Cancelar
+            </Link>
+          </div>
+        )}
+        </fieldset>
       </form>
 
       {editando && (
@@ -284,6 +296,7 @@ export default function SistemaForm() {
             </div>
           </div>
 
+          {!soloLectura && (
           <div className="card">
             <h2>Zona de baja</h2>
             <div className="cuerpo" style={{ display: 'flex', gap: 8 }}>
@@ -295,6 +308,7 @@ export default function SistemaForm() {
               </button>
             </div>
           </div>
+          )}
         </>
       )}
     </div>

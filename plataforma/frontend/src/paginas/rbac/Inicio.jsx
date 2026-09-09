@@ -152,7 +152,9 @@ export default function Inicio() {
                 <tbody>
                   {d.alertas_mfa.map((a) => (
                     <tr key={a.id}>
-                      <td>{a.nombre}</td>
+                      <td>
+                        <Link to={`/rbac/usuarios/${a.id}/editar`}>{a.nombre}</Link>
+                      </td>
                       <td>{a.rol}</td>
                       <td>{a.mfa_requerido}</td>
                       <td style={{ color: 'var(--crit)' }}>{a.mfa_activo}</td>

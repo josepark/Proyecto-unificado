@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
+import BannerErrorMutacion from '../../componentes/BannerErrorMutacion';
 import { mensajeErrorRbac } from './rbacUtil';
 
 export default function Auditoria() {
-  const [busqueda, setBusqueda] = useState('');
-  const [entidad, setEntidad] = useState('');
+  const [searchParams] = useSearchParams();
+  const [busqueda, setBusqueda] = useState(() => searchParams.get('q') || '');
+  const [entidad, setEntidad] = useState(() => searchParams.get('entidad') || '');
   const [accion, setAccion] = useState('');
   const [pagina, setPagina] = useState(1);
   const { datos: catalogos } = useApi(() => rbacApi.catalogos(), []);
@@ -20,6 +23,7 @@ export default function Auditoria() {
   );
   const [verificando, setVerificando] = useState(false);
   const [resultadoVerif, setResultadoVerif] = useState(null);
+  const [errorVerif, setErrorVerif] = useState(null);
 
   function actualizarFiltro(setter) {
     return (valor) => {
@@ -31,11 +35,12 @@ export default function Auditoria() {
   async function verificar() {
     setVerificando(true);
     setResultadoVerif(null);
+    setErrorVerif(null);
     try {
       const r = await rbacApi.verificarCadena();
       setResultadoVerif(r);
     } catch (e) {
-      setResultadoVerif({ integra: false, error: e.message });
+      setErrorVerif(e.message || 'No se pudo verificar la cadena.');
     } finally {
       setVerificando(false);
     }
@@ -71,9 +76,10 @@ export default function Auditoria() {
         <p style={{ fontWeight: 'bold', marginBottom: 12, color: resultadoVerif.integra ? 'var(--bajo)' : 'var(--crit)' }}>
           {resultadoVerif.integra
             ? `Cadena íntegra: ${resultadoVerif.detalle} registro(s) verificados sin alteraciones.`
-            : `Cadena rota: se detectó una alteración en el registro #${resultadoVerif.detalle ?? '?'}${resultadoVerif.error ? ` (${resultadoVerif.error})` : ''}.`}
+            : `Cadena rota: se detectó una alteración en el registro #${resultadoVerif.detalle ?? '?'}.`}
         </p>
       )}
+      <BannerErrorMutacion error={errorVerif} onCerrar={() => setErrorVerif(null)} />
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
         <input

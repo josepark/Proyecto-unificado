@@ -160,6 +160,7 @@ export default function ActivoForm() {
   const [form, setForm] = useState(editando ? null : vacio());
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [filtroRbac, setFiltroRbac] = useState('');
 
   const opcionesClase = useMemo(
     () => clases.map((c) => [c.codigo, c.nombre]),
@@ -179,6 +180,11 @@ export default function ActivoForm() {
   const opcionesZona = (zonasData?.results ?? zonasData ?? []).map((z) => [String(z.id), z.nombre]);
   const opcionesVlan = (vlansData?.results ?? vlansData ?? []).map((v) => [String(v.id), v.etiqueta]);
   const sistemasRbac = catalogoRbac?.sistemas ?? [];
+  const sistemasRbacFiltrados = useMemo(() => {
+    const q = filtroRbac.trim().toLowerCase();
+    if (!q) return sistemasRbac;
+    return sistemasRbac.filter((s) => (s.nombre || '').toLowerCase().includes(q));
+  }, [sistemasRbac, filtroRbac]);
 
   useEffect(() => {
     if (editando && activoExistente) setForm(desdeActivo(activoExistente));
@@ -541,26 +547,44 @@ export default function ActivoForm() {
                 />
               </Fila>
               <Fila>
-                <CampoSelect
-                  label="Sistema en Matriz RBAC"
-                  value={String(form.sist.sistema_rbac_id ?? '')}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    const sel = sistemasRbac.find((s) => String(s.id) === id);
-                    setForm((f) => ({
-                      ...f,
-                      sist: {
-                        ...f.sist,
-                        sistema_rbac_id: id,
-                        sistema_mca_equivalente: sel?.nombre || f.sist.sistema_mca_equivalente,
-                      },
-                    }));
-                  }}
-                  opciones={[
-                    ['', '— Sin vínculo RBAC —'],
-                    ...sistemasRbac.map((s) => [String(s.id), s.nombre]),
-                  ]}
-                />
+                <div>
+                  <Campo
+                    label="Filtrar catálogo RBAC"
+                    placeholder="Escriba para acotar la lista…"
+                    value={filtroRbac}
+                    onChange={(e) => setFiltroRbac(e.target.value)}
+                  />
+                  <CampoSelect
+                    label="Sistema en Matriz RBAC"
+                    value={String(form.sist.sistema_rbac_id ?? '')}
+                    onChange={(e) => {
+                      const sid = e.target.value;
+                      const sel = sistemasRbac.find((s) => String(s.id) === sid);
+                      setForm((f) => ({
+                        ...f,
+                        sist: {
+                          ...f.sist,
+                          sistema_rbac_id: sid,
+                          sistema_mca_equivalente: sel?.nombre || f.sist.sistema_mca_equivalente,
+                        },
+                      }));
+                    }}
+                    opciones={[
+                      ['', '— Sin vínculo RBAC —'],
+                      ...sistemasRbacFiltrados.map((s) => [String(s.id), s.nombre]),
+                    ]}
+                  />
+                  {form.sist.sistema_rbac_id ? (
+                    <p style={{ fontSize: 12, margin: '6px 0 0' }}>
+                      <Link to={`/rbac/sistemas/${form.sist.sistema_rbac_id}/editar`}>Ver en Matriz RBAC →</Link>
+                    </p>
+                  ) : null}
+                  {catalogoRbac && sistemasRbac.length === 0 ? (
+                    <p style={{ fontSize: 12, color: 'var(--texto-suave)', margin: '6px 0 0' }}>
+                      Catálogo RBAC no disponible — use el nombre MCA equivalente como respaldo.
+                    </p>
+                  ) : null}
+                </div>
                 <Campo
                   label="Sistema MCA equivalente (fallback)"
                   value={form.sist.sistema_mca_equivalente}

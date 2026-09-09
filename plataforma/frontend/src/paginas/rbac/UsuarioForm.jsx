@@ -4,6 +4,8 @@ import { useApi } from '../../hooks/useApi';
 import { rbacApi } from '../../api/rbac';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, CampoTextarea, Fila } from '../../componentes/CamposFormulario';
+import { AvisoConsultaRbac, BloqueoCreacionRbac } from '../../componentes/AvisoConsultaRbac';
+import { modoFormularioRbac } from './rbacUtil';
 
 const OPC_MFA_ACTIVO = [
   ['No', 'No'],
@@ -40,7 +42,9 @@ export default function UsuarioForm() {
   const { id } = useParams();
   const editando = Boolean(id);
   const navegar = useNavigate();
-  const { puedeEditar } = useOutletContext() ?? {};
+  const ctx = useOutletContext() ?? {};
+  const { puedeEditar } = ctx;
+  const { soloLectura, bloqueado, bloquearCreacion } = modoFormularioRbac(ctx, editando);
 
   const { datos: usuarioExistente, cargando: cargandoUsuario, error: errorCarga, recargar: recargarUsuario } = useApi(
     () => (editando ? rbacApi.obtenerUsuario(id) : Promise.resolve(null)),
@@ -63,7 +67,7 @@ export default function UsuarioForm() {
 
   const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
-  if (puedeEditar === false) {
+  if (bloqueado) {
     return (
       <div className="card">
         <div className="cuerpo">
@@ -72,6 +76,9 @@ export default function UsuarioForm() {
         </div>
       </div>
     );
+  }
+  if (bloquearCreacion) {
+    return <BloqueoCreacionRbac entidad="usuarios" rutaListado="/rbac/usuarios" />;
   }
   if (editando && (cargandoUsuario || !form)) return <p>Cargando usuario…</p>;
   if (editando && errorCarga) {
@@ -156,10 +163,13 @@ export default function UsuarioForm() {
         ← Volver a Usuarios
       </Link>
       <h2 style={{ margin: '4px 0 16px', color: 'var(--verde-profundo)' }}>
-        {editando ? `Editar ${form.nombre}` : 'Registrar usuario'}
+        {editando ? (soloLectura ? form.nombre : `Editar ${form.nombre}`) : 'Registrar usuario'}
       </h2>
 
+      <AvisoConsultaRbac visible={soloLectura} />
+
       <form onSubmit={guardar}>
+        <fieldset disabled={soloLectura} style={{ border: 'none', margin: 0, padding: 0 }}>
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Identidad y rol</h2>
           <div className="cuerpo">
@@ -261,7 +271,36 @@ export default function UsuarioForm() {
           </div>
         </div>
 
-        {editando && (usuarioExistente?.accesos?.length ?? 0) > 0 && (
+        {avisoMfa && (
+          <p style={{ color: 'var(--alto)', fontWeight: 'bold', marginBottom: 12 }}>
+            Advertencia: el rol seleccionado exige MFA y el usuario no lo tiene activo. Los cambios se guardaron —
+            corrija el MFA cuando corresponda, o{' '}
+            <button
+              type="button"
+              onClick={() => navegar('/rbac/usuarios')}
+              style={{ background: 'none', border: 'none', padding: 0, color: 'var(--verde-profundo)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              continuar a la lista
+            </button>
+            .
+          </p>
+        )}
+        {error && <p style={{ color: 'var(--crit)', fontWeight: 'bold', marginBottom: 12 }}>Error: {error}</p>}
+
+        {!soloLectura && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-primary" type="submit" disabled={guardando}>
+              {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar usuario'}
+            </button>
+            <Link to="/rbac/usuarios" className="btn btn-sec" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+              Cancelar
+            </Link>
+          </div>
+        )}
+        </fieldset>
+      </form>
+
+      {editando && (usuarioExistente?.accesos?.length ?? 0) > 0 && (
           <div className="card" style={{ marginBottom: 14 }}>
             <h2>Accesos efectivos (matriz + excepciones)</h2>
             <div className="cuerpo" style={{ padding: 0 }}>
@@ -273,7 +312,7 @@ export default function UsuarioForm() {
                     <th>Nivel rol</th>
                     <th>Excepción</th>
                     <th>Efectivo</th>
-                    {puedeEditar && <th></th>}
+                    {!soloLectura && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -286,7 +325,7 @@ export default function UsuarioForm() {
                         <td>{a.nivel_rol}</td>
                         <td>{a.nivel_exc ? `${a.nivel_exc}${a.motivo ? ` — ${a.motivo}` : ''}` : '—'}</td>
                         <td><strong>{a.nivel_efectivo}</strong></td>
-                        {puedeEditar && (
+                        {!soloLectura && (
                           <td>
                             {a.nivel_exc ? (
                               <button
@@ -312,7 +351,7 @@ export default function UsuarioForm() {
           </div>
         )}
 
-        {editando && puedeEditar && (
+      {editando && !soloLectura && (
           <form onSubmit={agregarExcepcion} className="card" style={{ marginBottom: 14 }}>
             <h2>Nueva excepción de acceso</h2>
             <div className="cuerpo">
@@ -355,32 +394,6 @@ export default function UsuarioForm() {
             </div>
           </form>
         )}
-
-        {avisoMfa && (
-          <p style={{ color: 'var(--alto)', fontWeight: 'bold', marginBottom: 12 }}>
-            Advertencia: el rol seleccionado exige MFA y el usuario no lo tiene activo. Los cambios se guardaron —
-            corrija el MFA cuando corresponda, o{' '}
-            <button
-              type="button"
-              onClick={() => navegar('/rbac/usuarios')}
-              style={{ background: 'none', border: 'none', padding: 0, color: 'var(--verde-profundo)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 'bold' }}
-            >
-              continuar a la lista
-            </button>
-            .
-          </p>
-        )}
-        {error && <p style={{ color: 'var(--crit)', fontWeight: 'bold', marginBottom: 12 }}>Error: {error}</p>}
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-primary" type="submit" disabled={guardando}>
-            {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar usuario'}
-          </button>
-          <Link to="/rbac/usuarios" className="btn btn-sec" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
-            Cancelar
-          </Link>
-        </div>
-      </form>
     </div>
   );
 }

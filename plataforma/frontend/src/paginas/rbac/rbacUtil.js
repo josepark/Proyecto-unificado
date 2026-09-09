@@ -29,3 +29,15 @@ export function descripcionNivel(niveles, codigo) {
   if (!n) return codigo;
   return `${n.codigo} — ${n.nombre}: ${n.descripcion || ''}`;
 }
+
+/** Modo de formulario RBAC según rol (Dinamizador vs Consultor). */
+export function modoFormularioRbac({ puedeEditar, soloLecturaRbac }, editando) {
+  const soloLectura = Boolean(soloLecturaRbac && !puedeEditar);
+  return {
+    soloLectura,
+    /** Sin acceso al módulo (no debería pasar tras PuertaRBAC). */
+    bloqueado: puedeEditar === false && !soloLectura,
+    /** Consultor en ruta /nuevo — no puede crear. */
+    bloquearCreacion: soloLectura && !editando,
+  };
+}
