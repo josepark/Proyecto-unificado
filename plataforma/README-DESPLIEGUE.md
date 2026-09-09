@@ -297,8 +297,9 @@ subtécnicas en los dos), pero seguían siendo dos copias independientes sin
 ninguna garantía de que sigan iguales en la próxima versión de MITRE.
 
 `rbac/catalogo_attack_desde_inventario.py` (nuevo) regenera
-`static/attack_tecnicas.json` consultando `/api/amenazas/` del Inventario
-en vez de requerir el Excel de MITRE otra vez — probado de extremo a
+`static/attack_tecnicas.json` consultando `/api/interno/catalogo-mitre/` del
+Inventario (endpoint dedicado para sync servidor-a-servidor; no requiere sesión
+de usuario) en vez de requerir el Excel de MITRE otra vez — probado de extremo a
 extremo contra una instancia real del Inventario. Uso:
 
 ```bash
@@ -308,9 +309,9 @@ cd plataforma
 
 **Requisito:** `JWT_SHARED_SECRET` debe estar definido en `.env` (mismo valor
 en Inventario, Riesgos y RBAC). Los scripts internos envían la cabecera
-`X-Plataforma-Secret` con ese valor; sin ella, `/api/amenazas/` responde
-403 desde Ola 1. Si aún tiene placeholders, ejecute `python3 generar_secretos.py`
-y reconstruya los contenedores (`./desplegar.sh --purgar`).
+`X-Plataforma-Secret` con ese valor; sin ella, el endpoint interno responde
+403. Si aún tiene placeholders, ejecute `python3 generar_secretos.py`
+y reconstruya los contenedores (`docker compose build inventario riesgos-backend rbac && docker compose up -d`, o `./sincronizar_catalogos_mitre.sh --reconstruir`).
 
 Uso manual (equivalente al script):
 
