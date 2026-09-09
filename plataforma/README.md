@@ -162,6 +162,8 @@ plataforma/
 
 ## Documentación adicional
 
+- [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md) — guía de uso de la interfaz web
+- [docs/MANUAL-TECNICO.md](docs/MANUAL-TECNICO.md) — arquitectura, despliegue, APIs y operaciones
 - [README-DESPLIEGUE.md](README-DESPLIEGUE.md) — despliegue, seguridad, TLS, integraciones históricas
 - [inventario/README.md](inventario/README.md) — API Inventario
 - [rbac/README.md](rbac/README.md) — API RBAC y esquema MCA
