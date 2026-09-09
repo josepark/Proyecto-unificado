@@ -833,6 +833,21 @@ class ActivoDetailDisplayTest(TestCase):
         self.assertIn("estado_display", d)
         self.assertIn("ciclo_vida_display", d)
 
+    def test_detalle_con_infraestructura_no_falla(self):
+        from .models import Activo, ActivoInfraestructura, Datacenter, Rack
+        dc = Datacenter.objects.create(codigo="DC-TEST", nombre="Test DC")
+        rack = Rack.objects.create(datacenter=dc, codigo="1", capacidad_u=42)
+        a = Activo.objects.create(
+            nombre="Servidor con infra", clase="INFRA",
+            clasificacion_si="INT", nivel_riesgo="MED", datacenter=dc,
+        )
+        ActivoInfraestructura.objects.create(
+            activo=a, rack_fk=rack, unidad_inicio=10, unidad_fin=12,
+        )
+        r = self.client.get(f"/api/activos/{a.pk}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["infraestructura"]["rack_codigo"], "1")
+
 
 class EtiquetaActivoTest(TestCase):
     """Etiqueta adhesiva (70x40mm) para pegar en el activo físico, en

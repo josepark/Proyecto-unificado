@@ -35,8 +35,8 @@ class VlanSerializer(serializers.ModelSerializer):
 class InfraestructuraSerializer(serializers.ModelSerializer):
     zona = serializers.StringRelatedField()
     vlan = serializers.StringRelatedField()
-    zona_id = serializers.IntegerField(source="zona_id", read_only=True, allow_null=True)
-    vlan_id = serializers.IntegerField(source="vlan_id", read_only=True, allow_null=True)
+    zona_id = serializers.IntegerField(read_only=True, allow_null=True)
+    vlan_id = serializers.IntegerField(read_only=True, allow_null=True)
     rack_codigo = serializers.CharField(source="rack_fk.codigo", read_only=True, default=None)
     rack_datacenter = serializers.CharField(source="rack_fk.datacenter.codigo", read_only=True, default=None)
 
@@ -77,7 +77,7 @@ class SistemaSerializer(serializers.ModelSerializer):
             nombre_sistema=obj.sistema_mca_equivalente,
             sistema_rbac_id=obj.sistema_rbac_id,
         )
-        return s["nombre"] if s else None
+        return s.get("nombre") if s else None
 
 
 class ClaseActivoSerializer(serializers.ModelSerializer):

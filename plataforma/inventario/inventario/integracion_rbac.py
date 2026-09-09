@@ -87,7 +87,8 @@ def accesos_rbac_por_sistema(nombre_sistema=None, sistema_rbac_id=None):
     if nombre_sistema:
         objetivo = nombre_sistema.strip().lower()
         for s in catalogo:
-            if s["nombre"].strip().lower() == objetivo:
+            nom = (s.get("nombre") or "").strip().lower()
+            if nom and nom == objetivo:
                 return s.get("accesos") or []
     return None
 
@@ -106,6 +107,7 @@ def sistema_rbac_resumen(nombre_sistema=None, sistema_rbac_id=None):
     if nombre_sistema:
         objetivo = nombre_sistema.strip().lower()
         for s in catalogo:
-            if s["nombre"].strip().lower() == objetivo:
+            nom = (s.get("nombre") or "").strip().lower()
+            if nom and nom == objetivo:
                 return s
     return None
