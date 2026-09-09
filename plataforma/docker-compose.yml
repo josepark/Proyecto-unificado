@@ -3,6 +3,8 @@ services:
     build: ./inventario
     container_name: suiin-inventario
     env_file: .env
+    environment:
+      JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:?Defina JWT_SHARED_SECRET en .env}
     volumes:
       - ./inventario/db.sqlite3:/app/db.sqlite3
       - ./inventario/media:/app/media
@@ -30,6 +32,7 @@ services:
       # MISMA clave que inventario — cada aplicación Django debe tener la suya.
       # Defina RIESGOS_SECRET_KEY en .env (ver .env.example).
       DJANGO_SECRET_KEY: ${RIESGOS_SECRET_KEY:?Defina RIESGOS_SECRET_KEY en .env}
+      JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:?Defina JWT_SHARED_SECRET en .env}
       # Nombre del servicio 'inventario' resuelto por DNS interno de docker-compose
       # — riesgos consume de ahí el catálogo de activos (fuente canónica), en vez
       # de mantener uno propio. Ver riesgos/backend/riesgos/management/commands/
@@ -63,6 +66,7 @@ services:
       # Obligatorio en .env — sin default débil en producción (Ola 1).
       SUIIN_RBAC_SECRET: ${SUIIN_RBAC_SECRET:?Defina SUIIN_RBAC_SECRET en .env}
       INVENTARIO_URL: ${INVENTARIO_URL:-http://inventario:8000}
+      JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:?Defina JWT_SHARED_SECRET en .env}
     volumes:
       - ./rbac/rbac.db:/app/rbac.db
     expose:
