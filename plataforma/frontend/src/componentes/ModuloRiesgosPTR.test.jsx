@@ -78,4 +78,33 @@ describe('ModuloRiesgosPTR', () => {
     expect(document.querySelector('.modulo-riesgos-nativo')).toBeTruthy();
     expect(await screen.findByText(/Panel general/i)).toBeInTheDocument();
   });
+
+  it('sin proyecto riesgos muestra puerta con enlace al módulo asignado', () => {
+    render(
+      <MemoryRouter initialEntries={['/gestion-riesgos']}>
+        <Routes>
+          <Route
+            element={(
+              <Outlet
+                context={{
+                  autenticado: true,
+                  cargando: false,
+                  puedeEditar: true,
+                  puedeEliminar: false,
+                  modulos: ['inventario'],
+                }}
+              />
+            )}
+          >
+            <Route path="/gestion-riesgos/*" element={<ModuloRiesgosPTR />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/no tiene acceso al proyecto/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Ir a mi proyecto asignado/i })).toHaveAttribute(
+      'href',
+      '/inventario/dashboard',
+    );
+  });
 });

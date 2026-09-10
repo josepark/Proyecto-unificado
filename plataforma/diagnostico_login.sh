@@ -13,11 +13,11 @@ if [ ! -f docker-compose.yml ]; then
     exit 1
 fi
 
-echo "=== 1/5 · Contenedores ==="
+echo "=== 1/6 · Contenedores ==="
 docker compose ps -a || { rojo "docker compose no disponible"; exit 1; }
 
 echo ""
-echo "=== 2/5 · Secretos en .env (placeholders impiden arrancar con DEBUG=False) ==="
+echo "=== 2/6 · Secretos en .env (placeholders impiden arrancar con DEBUG=False) ==="
 if [ -f .env ]; then
     problemas=0
     for var in DJANGO_SECRET_KEY JWT_SHARED_SECRET RIESGOS_SECRET_KEY SUIIN_RBAC_SECRET; do
@@ -41,7 +41,7 @@ else
 fi
 
 echo ""
-echo "=== 3/5 · Gateway nginx (localhost) ==="
+echo "=== 3/6 · Gateway nginx (localhost) ==="
 if codigo=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1/healthz 2>/dev/null); then
     if [ "$codigo" = "200" ]; then
         verde "GET /healthz → $codigo"
@@ -64,7 +64,19 @@ else
 fi
 
 echo ""
-echo "=== 4/5 · Inventario directo (red docker, sin pasar por el navegador) ==="
+echo "=== 3b/6 · Sesión anónima (proyectos / SPA) ==="
+if cuerpo=$(curl -s --connect-timeout 3 http://127.0.0.1/api/sesion/ 2>/dev/null); then
+    if echo "$cuerpo" | grep -qE '"autenticado"[[:space:]]*:[[:space:]]*false'; then
+        verde "GET /api/sesion/ → autenticado: false (OK para logout / login)"
+    else
+        amarillo "GET /api/sesion/ no reporta autenticado:false — revise cookies o inventario"
+    fi
+else
+    rojo "GET /api/sesion/ sin respuesta"
+fi
+
+echo ""
+echo "=== 4/6 · Inventario directo (red docker, sin pasar por el navegador) ==="
 if docker compose ps inventario 2>/dev/null | grep -qE 'Up|running'; then
     if docker compose exec -T nginx curl -sf --connect-timeout 5 http://inventario:8000/api/sesion/ >/dev/null 2>&1; then
         verde "inventario:8000/api/sesion/ responde OK"
@@ -86,7 +98,7 @@ else
 fi
 
 echo ""
-echo "=== 5/5 · Acciones recomendadas ==="
+echo "=== 5/6 · Acciones recomendadas ==="
 cat <<'EOF'
 Si inventario está caído o el paso 3 devolvió 502:
 

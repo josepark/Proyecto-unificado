@@ -18,9 +18,9 @@ export default function RutaInicio() {
         <div className="cuerpo">
           <h2 style={{ marginTop: 0, color: 'var(--verde-profundo)' }}>Sin proyectos asignados</h2>
           <p>
-            Su cuenta está activa pero aún no tiene proyectos de la plataforma. Solicite al{' '}
-            <b>Administrador</b> que le asigne Inventario, Matriz RBAC o Gestión de Riesgos en{' '}
-            <b>Cuentas de acceso</b>.
+            Su cuenta está activa pero aún no tiene proyectos de la plataforma (Inventario, Matriz RBAC
+            o Gestión de Riesgos). Solicite al <b>Administrador del SGSI</b> que le asigne los proyectos
+            que necesite.
           </p>
           <a
             href="/logout/"

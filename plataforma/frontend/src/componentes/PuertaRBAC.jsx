@@ -33,7 +33,7 @@ export default function PuertaRBAC() {
         ) : (
           <p className="sub">
             Su sesión no tiene permisos para RBAC.{' '}
-            <a href="/logout/" onClick={() => prepararCierreSesion()}>Cierre sesión</a> e ingrese con una cuenta autorizada.
+            <a href="/logout/" onClick={() => prepararCierreSesion()}>Cerrar sesión</a> e ingrese con una cuenta autorizada.
           </p>
         )}
       </div>

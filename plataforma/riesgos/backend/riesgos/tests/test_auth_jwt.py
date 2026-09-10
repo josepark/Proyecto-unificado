@@ -19,11 +19,12 @@ def jwt_habilitado(settings):
     settings.JWT_ISSUER = "suiin-inventario"
 
 
-def _token(username="analista_plataforma", roles=("Dinamizador",), issuer="suiin-inventario",
-           secreto=SECRETO, expira_en_minutos=30, sub="7", ver=1):
+def _token(username="analista_plataforma", roles=("Dinamizador",), modulos=("riesgos",),
+           issuer="suiin-inventario", secreto=SECRETO, expira_en_minutos=30, sub="7", ver=1):
     ahora = dt.datetime.now(dt.timezone.utc)
     payload = {
         "iss": issuer, "sub": sub, "username": username, "roles": list(roles),
+        "modulos": list(modulos),
         "ver": ver,
         "iat": ahora, "exp": ahora + dt.timedelta(minutes=expira_en_minutos),
     }
@@ -40,6 +41,19 @@ class TestAutenticacionJWT:
     def test_token_valido_autentica(self):
         resp = _cliente_con_jwt(_token()).get("/api/activos/")
         assert resp.status_code == 200
+
+    def test_jwt_sin_modulo_riesgos_es_rechazado(self):
+        resp = _cliente_con_jwt(_token(modulos=["inventario", "rbac"])).get("/api/activos/")
+        assert resp.status_code == 401
+
+    def test_jwt_sin_claim_modulos_es_rechazado(self):
+        token = _token(modulos=())
+        import jwt as pyjwt
+        payload = pyjwt.decode(token, SECRETO, algorithms=["HS256"], issuer="suiin-inventario")
+        del payload["modulos"]
+        sin_modulos = pyjwt.encode(payload, SECRETO, algorithm="HS256")
+        resp = _cliente_con_jwt(sin_modulos).get("/api/activos/")
+        assert resp.status_code == 401
 
     def test_aprovisiona_el_usuario_la_primera_vez(self):
         assert not User.objects.filter(username="usuario_nuevo_jwt").exists()

@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useOutletContext, useLocation } from 'react-router-dom';
 
 import { pendientesSync } from '../lib/integracionUi';
-import { tieneModulo } from '../lib/modulosPlataforma';
+import { rutaInicioModulos, tieneModulo } from '../lib/modulosPlataforma';
 
 /** Rutas consultables sin sesión (API AllowAny). El resto exige login. */
 const RUTAS_PUBLICAS = new Set(['panel-ejecutivo']);
@@ -47,14 +47,22 @@ export default function ModuloInventario() {
   }
 
   if (sinInventario && !gestionUsuarios) {
+    const otroProyecto = rutaInicioModulos(modulos, { autenticado: true });
     return (
-      <div className="card">
-        <div className="cuerpo">
-          Su cuenta no tiene acceso al proyecto <b>Inventario de activos</b>.
-        </div>
+      <div className="modulo-restringido">
+        <p>
+          Su cuenta no tiene acceso al proyecto <b>Inventario de activos</b>. Contacte al administrador
+          del SGSI si necesita permiso.
+        </p>
+        {otroProyecto !== '/' ? (
+          <Link className="btn btn-primary" to={otroProyecto}>
+            Ir a mi proyecto asignado
+          </Link>
+        ) : null}
       </div>
     );
   }
+  const pestanasVisibles = sinInventario ? [PESTANA_USUARIOS] : pestanas;
   const vinc = alertasUnificadas?.vinculacion;
   const pendientesSyncCount = pendientesSync(vinc);
   const totalAlertas = alertasUnificadas?.total_consolidado ?? 0;
@@ -62,7 +70,7 @@ export default function ModuloInventario() {
   return (
     <div>
       <div className="tabs">
-        {pestanas.map((p) => (
+        {pestanasVisibles.map((p) => (
           <NavLink key={p.to} to={p.to} className={({ isActive }) => `tab${isActive ? ' activa' : ''}`}>
             {p.etiqueta}
             {p.to === 'alertas' && totalAlertas > 0 ? (

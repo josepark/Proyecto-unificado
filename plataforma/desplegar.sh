@@ -108,7 +108,11 @@ paso "5b/10 · Migraciones de base de datos"
 docker compose exec -T inventario python manage.py migrate --noinput
 docker compose exec -T riesgos-backend python manage.py migrate --noinput
 echo "Inventario:"
-docker compose exec -T inventario python manage.py showmigrations inventario | tail -5
+docker compose exec -T inventario python manage.py showmigrations inventario | tail -8
+if ! docker compose exec -T inventario python manage.py showmigrations inventario 2>/dev/null | grep -E '0014_backfill|0015_alter' | grep -q '\[X\]'; then
+    echo "ERROR: faltan migraciones 0014/0015 (modulos_acceso por proyecto)." >&2
+    exit 1
+fi
 echo "Riesgos:"
 docker compose exec -T riesgos-backend python manage.py showmigrations riesgos | tail -5
 
@@ -197,6 +201,18 @@ verificar_login() {
     esac
 }
 
+verificar_sesion_anonima() {
+    local cuerpo codigo
+    codigo=$(curl -s -o /tmp/suiin-sesion-anon.json -w '%{http_code}' --connect-timeout 5 http://127.0.0.1/api/sesion/ 2>/dev/null || echo "000")
+    cuerpo=$(cat /tmp/suiin-sesion-anon.json 2>/dev/null || true)
+    if [ "$codigo" = "200" ] && echo "$cuerpo" | grep -qE '"autenticado"[[:space:]]*:[[:space:]]*false'; then
+        echo "GET /api/sesion/ → anónimo OK (autenticado: false, modulos: [])."
+        return 0
+    fi
+    echo "ERROR: GET /api/sesion/ → $codigo (esperado autenticado:false)." >&2
+    return 1
+}
+
 verificar_rbac_resumen() {
     if docker compose exec -T rbac python3 -c "
 from recuperar_rbac_db import integridad_ok
@@ -250,6 +266,7 @@ fi
 paso "10/10 · Verificación final"
 verificar_rbac_resumen || exit 1
 verificar_login || exit 1
+verificar_sesion_anonima || exit 1
 
 paso "Listo"
 cat << 'EOF'

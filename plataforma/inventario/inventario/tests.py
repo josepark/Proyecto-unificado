@@ -1860,6 +1860,21 @@ class JWTRevocacionTest(TestCase):
                              algorithms=["HS256"], issuer="suiin-inventario")
         self.assertLess(payload["ver"], ver_nueva)
 
+    @override_settings(JWT_SHARED_SECRET="secreto-jwt-revocacion-test")
+    def test_cambio_modulos_incrementa_jwt_version(self):
+        from .models import PerfilPlataforma
+        from .signals import jwt_version_de
+
+        perfil, _ = PerfilPlataforma.objects.get_or_create(user=self.usuario)
+        perfil.modulos_acceso = ["inventario"]
+        perfil.save(update_fields=["modulos_acceso"])
+        ver_inicial = jwt_version_de(self.usuario)
+
+        perfil.modulos_acceso = ["inventario", "rbac", "riesgos"]
+        perfil.save(update_fields=["modulos_acceso"])
+        ver_nueva = jwt_version_de(self.usuario)
+        self.assertGreater(ver_nueva, ver_inicial)
+
 
 class IntegracionRiesgosOla5Test(TestCase):
     """Ola 5 — flujo unificado Inventario ↔ Riesgos (integracion_riesgos.py)."""

@@ -57,7 +57,7 @@ class JWTPlataformaAuthentication(BaseAuthentication):
 
         roles = payload.get("roles", [])
         modulos = payload.get("modulos")
-        if modulos is not None and "riesgos" not in modulos:
+        if not modulos or "riesgos" not in modulos:
             raise exceptions.AuthenticationFailed(
                 "Su cuenta no tiene acceso al módulo de Gestión de Riesgos.")
 

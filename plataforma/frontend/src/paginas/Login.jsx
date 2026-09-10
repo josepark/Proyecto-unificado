@@ -107,7 +107,7 @@ export default function Login() {
         <div className="login-pie">
           Acceso restringido · Roles: Consultor · Dinamizador · Administrador
           <br />
-          <Link to="/inventario/dashboard">← Volver al tablero (solo consulta)</Link>
+          <Link to="/inventario/panel-ejecutivo">← Panel ejecutivo (consulta pública)</Link>
         </div>
       </div>
     </div>

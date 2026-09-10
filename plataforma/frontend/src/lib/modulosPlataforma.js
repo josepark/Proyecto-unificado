@@ -20,7 +20,7 @@ export function tieneModulo(modulos, id, { autenticado = true } = {}) {
 export function rutaInicioModulos(modulos, { autenticado = true } = {}) {
   if (autenticado && !modulos?.length) return '/';
   const primero = MODULOS_PLATAFORMA.find((m) => tieneModulo(modulos, m.id, { autenticado }));
-  return primero?.ruta ?? '/inventario/dashboard';
+  return primero?.ruta ?? '/';
 }
 
 export function etiquetasModulos(modulos, { efectivos = true } = {}) {

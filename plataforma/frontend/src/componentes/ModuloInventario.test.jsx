@@ -61,4 +61,21 @@ describe('ModuloInventario — badges Ola 6', () => {
     );
     expect(screen.queryByTestId('outlet')).not.toBeInTheDocument();
   });
+
+  it('admin sin inventario en cuentas de acceso solo ve esa pestaña', () => {
+    vi.mocked(useOutletContext).mockReturnValue({
+      autenticado: true,
+      modulos: ['rbac'],
+      puedeEliminar: true,
+      alertasUnificadas: { total_consolidado: 0, vinculacion: { disponible: false } },
+    });
+    render(
+      <MemoryRouter initialEntries={['/inventario/usuarios']}>
+        <ModuloInventario />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Cuentas de acceso')).toBeInTheDocument();
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
+    expect(screen.getByTestId('outlet')).toBeInTheDocument();
+  });
 });

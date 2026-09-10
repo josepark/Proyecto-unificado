@@ -19,6 +19,7 @@ describe('modulosPlataforma', () => {
     expect(rutaInicioModulos(['riesgos'])).toBe('/gestion-riesgos');
     expect(rutaInicioModulos(['inventario', 'rbac'])).toBe('/inventario/dashboard');
     expect(rutaInicioModulos([], { autenticado: true })).toBe('/');
+    expect(rutaInicioModulos(['rbac'])).toBe('/rbac/inicio');
   });
 
   it('etiquetasModulos', () => {

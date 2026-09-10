@@ -1,4 +1,4 @@
-import { Routes, Route, useOutletContext, Navigate } from 'react-router-dom';
+import { Link, Routes, Route, useOutletContext, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@riesgos/context/AuthContext';
 import { PlataformaProvider, useRiesgosTo } from '@riesgos/context/PlataformaContext';
 import Layout from '@riesgos/components/Layout';
@@ -14,7 +14,7 @@ import RiesgosActivo from '@riesgos/pages/RiesgosActivo';
 import ImportarExcel from '@riesgos/pages/ImportarExcel';
 import Cumplimiento from '@riesgos/pages/Cumplimiento';
 import Catalogos from '@riesgos/pages/Catalogos';
-import { tieneModulo } from '../lib/modulosPlataforma';
+import { rutaInicioModulos, tieneModulo } from '../lib/modulosPlataforma';
 import '@riesgos/index-plataforma.css';
 
 function RedirigirPanelRiesgos() {
@@ -27,11 +27,18 @@ export default function ModuloRiesgosPTR() {
   const { autenticado, cargando, modulos } = useOutletContext() ?? {};
 
   if (autenticado && !cargando && !tieneModulo(modulos, 'riesgos', { autenticado })) {
+    const otroProyecto = rutaInicioModulos(modulos, { autenticado: true });
     return (
-      <div className="card">
-        <div className="cuerpo">
-          Su cuenta no tiene acceso al proyecto <b>Gestión de Riesgos y PTR</b>.
-        </div>
+      <div className="modulo-restringido">
+        <p>
+          Su cuenta no tiene acceso al proyecto <b>Gestión de Riesgos y PTR</b>. Contacte al administrador
+          del SGSI si necesita permiso.
+        </p>
+        {otroProyecto !== '/' ? (
+          <Link className="btn btn-primary" to={otroProyecto}>
+            Ir a mi proyecto asignado
+          </Link>
+        ) : null}
       </div>
     );
   }

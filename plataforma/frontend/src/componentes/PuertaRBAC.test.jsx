@@ -40,4 +40,14 @@ describe('PuertaRBAC', () => {
     renderConContexto({ puedeEditar: true, autenticado: true, modulos: ['rbac'] });
     expect(screen.getByRole('link', { name: /^Roles$/i })).toBeInTheDocument();
   });
+
+  it('autenticado sin proyecto rbac ve mensaje de acceso denegado', () => {
+    renderConContexto({
+      puedeEditar: true,
+      autenticado: true,
+      roles: ['Administrador'],
+      modulos: ['inventario'],
+    });
+    expect(screen.getByText(/no tiene acceso al proyecto/i)).toBeInTheDocument();
+  });
 });

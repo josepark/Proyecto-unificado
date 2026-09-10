@@ -4,6 +4,7 @@ const CLAVE_USUARIO = 'suiin_usuario_activo';
 /** Alias explícito para enlaces de cierre de sesión en la SPA. */
 export function prepararCierreSesion() {
   limpiarCredencialesLocales();
+  window.dispatchEvent(new CustomEvent('suiin-sesion-plataforma'));
 }
 
 export function limpiarCredencialesLocales() {
