@@ -2324,3 +2324,30 @@ class UsuariosPlataformaAPITest(TestCase):
         self.assertEqual(lista.status_code, 200)
         self.assertEqual(lista.json()["count"], 0)
 
+    def test_admin_no_demo_tiene_espacio_personal_vacio(self):
+        """Un Administrador distinto de admin/dinamizador/consultor no ve los 37 activos demo."""
+        self.client.force_login(self.administrador)
+        r = self.client.post(
+            self.BASE,
+            {
+                "username": "admin_pruebas",
+                "password": "ClaveSegura1",
+                "rol": "Administrador",
+                "modulos_acceso": ["inventario", "rbac", "riesgos"],
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+        from django.contrib.auth.models import User
+        from inventario.models import PerfilPlataforma, EspacioDatos
+
+        user = User.objects.get(username="admin_pruebas")
+        perfil = PerfilPlataforma.objects.get(user=user)
+        org = EspacioDatos.objects.get(codigo="organizacion")
+        self.assertNotEqual(perfil.espacio_datos_id, org.id)
+        self.assertTrue(perfil.espacio_datos.codigo.startswith("usuario-"))
+        self.client.force_login(user)
+        stats = self.client.get("/api/activos/estadisticas/")
+        self.assertEqual(stats.status_code, 200)
+        self.assertEqual(stats.json()["total_activos"], 0)
+

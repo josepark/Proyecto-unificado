@@ -1,5 +1,4 @@
 """Espacios de datos por usuario — aísla el inventario de cuentas nuevas."""
-from .permisos import user_es_admin
 
 ESPACIO_ORGANIZACION = "organizacion"
 
@@ -40,7 +39,8 @@ def crea_espacio_personal(user):
 
 
 def usuario_usa_espacio_organizacion(user):
-    if user.is_superuser or user_es_admin(user):
+    """Solo cuentas demo explícitas (y superusuario) comparten el inventario de ejemplo."""
+    if user.is_superuser:
         return True
     return user.username.lower() in USUARIOS_ESPACIO_ORGANIZACION
 
