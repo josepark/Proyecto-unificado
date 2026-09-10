@@ -49,3 +49,18 @@ def test_completa_migracion_interrumpida_sistema_new(copia_db):
     assert _completar_migracion_sistema_interrumpida(con)
     assert integridad_ok(db_path)
     con.close()
+
+
+def test_recrea_vistas_si_faltan_tras_migracion_aplicada(copia_db):
+    from migrar_espacio_datos import migrar
+
+    db_path, _ = copia_db
+    migrar(db_path)
+    con = sqlite3.connect(db_path)
+    con.execute("DROP VIEW IF EXISTS v_alertas_mfa")
+    con.execute("DROP VIEW IF EXISTS v_accesos_usuario")
+    con.commit()
+    con.close()
+    assert not integridad_ok(db_path)
+    migrar(db_path)
+    assert integridad_ok(db_path)

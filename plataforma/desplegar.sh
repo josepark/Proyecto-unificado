@@ -199,17 +199,22 @@ verificar_login() {
 
 verificar_rbac_resumen() {
     if docker compose exec -T rbac python3 -c "
+from recuperar_rbac_db import integridad_ok
 import sqlite3, sys
-c = sqlite3.connect('rbac.db')
-if not c.execute(\"SELECT 1 FROM sqlite_master WHERE type='table' AND name='sistema'\").fetchone():
+if not integridad_ok('rbac.db'):
     sys.exit(2)
-c.execute('SELECT COUNT(*) FROM sistema')
+c = sqlite3.connect('rbac.db')
+esp = 'organizacion'
+c.execute('SELECT COUNT(*) FROM v_alertas_mfa v JOIN usuario u ON u.id=v.id WHERE u.espacio_codigo=?', (esp,))
+c.execute('SELECT COUNT(*) FROM acceso_excepcion WHERE espacio_codigo=?', (esp,))
 " 2>/dev/null; then
-        echo "RBAC: tabla sistema presente (OK)."
+        echo "RBAC: esquema y vistas OK (/api/resumen operativo)."
     else
-        echo "ERROR: rbac.db corrupta — falta tabla sistema." >&2
-        echo "       Ejecute: docker compose exec rbac python3 recuperar_rbac_db.py" >&2
-        echo "       Luego:   docker compose exec rbac python3 migrar_espacio_datos.py migrar_v2_1.py" >&2
+        echo "ERROR: rbac.db incompleta (tabla sistema, espacio_codigo o vistas)." >&2
+        echo "       Ejecute:" >&2
+        echo "         docker compose exec rbac python3 migrar_espacio_datos.py" >&2
+        echo "         docker compose exec rbac python3 migrar_v2_1.py" >&2
+        echo "       Si persiste: docker compose exec rbac python3 recuperar_rbac_db.py" >&2
         return 1
     fi
 }

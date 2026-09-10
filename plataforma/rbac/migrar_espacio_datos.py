@@ -93,11 +93,32 @@ def _sistema_unicidad_por_espacio(con):
     return "UNIQUE(espacio_codigo,nombre)" in ddl
 
 
+def _vistas_ok(con):
+    for vista in _VISTAS_RBAC:
+        if not con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='view' AND name=?",
+            (vista,),
+        ).fetchone():
+            return False
+    return True
+
+
+def _recrear_vistas_si_faltan(con):
+    if _vistas_ok(con):
+        return False
+    _eliminar_vistas(con)
+    con.executescript(_RECREAR_VISTAS_SQL)
+    print("Vistas RBAC recreadas (v_accesos_usuario, v_roles_criticos, v_alertas_mfa).")
+    return True
+
+
 def _migracion_completa(con):
     for tabla in ("sistema", "usuario", "acceso_excepcion"):
         if "espacio_codigo" not in _columnas(con, tabla):
             return False
-    return _sistema_unicidad_por_espacio(con)
+    if not _sistema_unicidad_por_espacio(con):
+        return False
+    return _vistas_ok(con)
 
 
 def _eliminar_vistas(con):
@@ -170,13 +191,17 @@ def migrar(db_path=DB):
     try:
         if _migracion_completa(con):
             print("Migración de espacio de datos RBAC ya aplicada.")
-            return
-        for tabla in ("sistema", "usuario", "acceso_excepcion"):
-            _agregar_columna_espacio(con, tabla)
-        _recrear_sistema_unicidad_espacio(con)
-        con.execute("CREATE INDEX IF NOT EXISTS idx_usuario_espacio ON usuario(espacio_codigo)")
+        else:
+            for tabla in ("sistema", "usuario", "acceso_excepcion"):
+                _agregar_columna_espacio(con, tabla)
+            _recrear_sistema_unicidad_espacio(con)
+            con.execute(
+                "CREATE INDEX IF NOT EXISTS idx_usuario_espacio ON usuario(espacio_codigo)"
+            )
+            print("Migración de espacio de datos RBAC completa.")
+        if _recrear_vistas_si_faltan(con):
+            print("Esquema RBAC reparado (vistas faltantes tras migración interrumpida).")
         con.commit()
-        print("Migración de espacio de datos RBAC completa.")
     finally:
         con.close()
 
