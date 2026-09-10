@@ -1781,6 +1781,18 @@ class PoliticaSeguridadAPITest(TestCase):
         r = self.client.get("/api/accesos/unificado/")
         self.assertEqual(r.status_code, 200)
 
+    def test_accesos_inventario_consultor(self):
+        from .models import PerfilPlataforma, RegistroAcceso
+
+        PerfilPlataforma.objects.filter(user=self.consultor).update(
+            modulos_acceso=["inventario"],
+        )
+        RegistroAcceso.objects.create(usuario="consultor", accion="LOGIN", recurso="web")
+        self.client.force_login(self.consultor)
+        r = self.client.get("/api/accesos/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIsInstance(r.json(), list)
+
 
 class JWTRevocacionTest(TestCase):
     """Ola 1 — jwt_version invalida tokens emitidos antes de un cambio de rol."""

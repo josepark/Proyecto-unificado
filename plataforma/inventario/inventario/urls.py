@@ -37,6 +37,7 @@ urlpatterns = [
     path("api/reporte-consolidado.pdf", views.reporte_consolidado_pdf, name="reporte_consolidado"),
     path("api/catalogo/sistemas-rbac/", views.catalogo_sistemas_rbac_view, name="catalogo_sistemas_rbac"),
     path("api/interno/catalogo-mitre/", views.catalogo_mitre_interno, name="catalogo_mitre_interno"),
+    path("api/accesos/", views.accesos, name="accesos"),
     path("api/accesos/unificado/", views.accesos_unificado, name="accesos_unificado"),
     path("api/auth/jwt-version/<str:username>/", views.jwt_version_usuario, name="jwt_version"),
     path("api/integridad/", views.integridad_lista, name="integridad"),
