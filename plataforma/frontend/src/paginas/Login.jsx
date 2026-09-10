@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { inventarioApi } from '../api/inventario';
 import { useSesion } from '../hooks/useSesion';
 import { rutaInicioModulos } from '../lib/modulosPlataforma';
+import { sincronizarUsuarioActivo } from '../lib/sesionLocal';
 
 function rutaSegura(next, modulos) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
@@ -36,8 +37,8 @@ export default function Login() {
     setEnviando(true);
     try {
       const sesionLogin = await inventarioApi.login(usuario, clave);
+      sincronizarUsuarioActivo(sesionLogin.usuario || usuario.trim());
       await recargar();
-      window.dispatchEvent(new CustomEvent('suiin-sesion-plataforma'));
       navigate(rutaSegura(params.get('next'), sesionLogin.modulos), { replace: true });
     } catch (err) {
       if (err.status === 429) {

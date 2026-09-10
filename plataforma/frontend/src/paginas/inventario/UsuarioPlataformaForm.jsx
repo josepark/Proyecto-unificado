@@ -7,6 +7,7 @@ import { Campo, CampoSelect, Fila } from '../../componentes/CamposFormulario';
 import { MODULOS_PLATAFORMA } from '../../lib/modulosPlataforma';
 
 const ROLES = [
+  ['', 'Seleccione un rol…'],
   ['Consultor', 'Consultor — solo lectura'],
   ['Dinamizador', 'Dinamizador — lectura y escritura'],
   ['Administrador', 'Administrador — control total'],
@@ -20,7 +21,7 @@ function vacio() {
     email: '',
     first_name: '',
     last_name: '',
-    rol: 'Consultor',
+    rol: '',
     area: '',
     modulos_acceso: [],
     is_active: true,
@@ -35,11 +36,9 @@ function desdeUsuario(u) {
     email: u.email || '',
     first_name: u.first_name || '',
     last_name: u.last_name || '',
-    rol: u.rol || 'Consultor',
+    rol: u.rol || '',
     area: u.area || '',
-    modulos_acceso: u.modulos_acceso?.length
-      ? u.modulos_acceso
-      : MODULOS_PLATAFORMA.map((m) => m.id),
+    modulos_acceso: u.modulos_acceso || [],
     is_active: u.is_active !== false,
   };
 }
@@ -100,6 +99,10 @@ export default function UsuarioPlataformaForm() {
     ev.preventDefault();
     setError(null);
 
+    if (!editando && !form.rol) {
+      setError('Seleccione un rol.');
+      return;
+    }
     if (!editando && form.password.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres.');
       return;
@@ -157,7 +160,7 @@ export default function UsuarioPlataformaForm() {
         </div>
       ) : null}
 
-      <form onSubmit={guardar} className="card">
+      <form key={editando ? id : 'nuevo'} onSubmit={guardar} className="card">
         <div className="cuerpo">
           <h3 style={{ marginTop: 0 }}>Identidad</h3>
           <Fila columnas={2}>

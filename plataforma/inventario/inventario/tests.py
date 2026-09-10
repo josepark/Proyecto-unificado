@@ -2209,3 +2209,14 @@ class UsuariosPlataformaAPITest(TestCase):
         self.assertIn("modulos", r.json())
         self.assertIn("inventario", r.json()["modulos"])
 
+    def test_usuario_sin_modulos_no_accede(self):
+        from inventario.modulos_plataforma import modulos_de
+        from inventario.models import PerfilPlataforma
+
+        u = User.objects.create_user("sin_modulos", password="x")
+        u.groups.add(self.grupo_consultor)
+        PerfilPlataforma.objects.filter(user=u).update(modulos_acceso=[])
+        self.assertEqual(modulos_de(u), [])
+        self.client.force_login(u)
+        self.assertEqual(self.client.get("/api/activos/").status_code, 403)
+

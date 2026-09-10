@@ -8,6 +8,7 @@ import { rbacApi } from '../api/rbac';
 import { pendientesSync } from '../lib/integracionUi';
 import { tieneModulo } from '../lib/modulosPlataforma';
 import { puedeVerRbac, ENLACES_ALERTAS_RBAC } from '../paginas/rbac/rbacUtil';
+import { limpiarCredencialesLocales } from '../lib/sesionLocal';
 
 function moduloDeRuta(pathname) {
   if (pathname.startsWith('/rbac')) return 'rbac';
@@ -142,7 +143,12 @@ export default function Shell() {
               {soloLecturaRbac ? ' · consulta RBAC' : null}
               {cargando ? ' · …' : null}
               {' · '}
-              <a href="/logout/" className="btn btn-sec" style={{ padding: '2px 10px', fontSize: 12, marginLeft: 4 }}>
+              <a
+                href="/logout/"
+                className="btn btn-sec"
+                style={{ padding: '2px 10px', fontSize: 12, marginLeft: 4 }}
+                onClick={() => limpiarCredencialesLocales()}
+              >
                 Cerrar sesión
               </a>
             </>

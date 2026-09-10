@@ -42,8 +42,10 @@ describe('UsuarioPlataformaForm — alta', () => {
     vi.clearAllMocks();
   });
 
-  it('muestra proyectos sin marcar al crear', () => {
+  it('muestra formulario limpio al crear', () => {
     renderNuevo();
+    expect(screen.getByLabelText(/Usuario \(login\)/i)).toHaveValue('');
+    expect(screen.getByLabelText(/Rol en la plataforma/i)).toHaveValue('');
     const checks = screen.getAllByRole('checkbox').filter(
       (el) => el.closest('label')?.textContent?.includes('Inventario')
         || el.closest('label')?.textContent?.includes('RBAC')

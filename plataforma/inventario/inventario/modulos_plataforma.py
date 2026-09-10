@@ -39,7 +39,7 @@ def normalizar_modulos(valores):
 
 
 def modulos_de(user):
-    """Módulos permitidos para el usuario. Vacío en perfil = acceso a todos (compat)."""
+    """Módulos efectivos del usuario según su perfil (vacío = ninguno)."""
     if user is None or not getattr(user, "pk", None):
         return []
     if user.is_superuser or user_es_admin(user):
@@ -48,9 +48,7 @@ def modulos_de(user):
     if perfil is None:
         from .models import PerfilPlataforma
         perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
-    raw = perfil.modulos_acceso or []
-    normalizados = normalizar_modulos(raw)
-    return normalizados if normalizados else list(MODULOS_PLATAFORMA)
+    return normalizar_modulos(perfil.modulos_acceso or [])
 
 
 def tiene_modulo(user, modulo):

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { inventarioApi } from '../api/inventario';
 import { eventosApi, consultarSesionInventario } from '../api/client';
+import { sincronizarUsuarioActivo } from '../lib/sesionLocal';
 
 const VACIA = {
   autenticado: false,
@@ -48,7 +49,10 @@ export function SesionProvider({ children }) {
   const recargar = useCallback(({ silencioso = false } = {}) => {
     if (!silencioso) setCargando(true);
     return leerSesionConfirmada()
-      .then((s) => setSesion(mapearSesion(s)))
+      .then((s) => {
+        sincronizarUsuarioActivo(s.autenticado ? s.usuario : null);
+        setSesion(mapearSesion(s));
+      })
       .catch(() => {})
       .finally(() => {
         if (!silencioso) setCargando(false);
@@ -67,11 +71,14 @@ export function SesionProvider({ children }) {
         const confirm = await consultarSesionInventario();
         if (!confirm.autenticado) {
           const reconfirm = await leerSesionConfirmada();
+          sincronizarUsuarioActivo(reconfirm.autenticado ? reconfirm.usuario : null);
           setSesion(mapearSesion(reconfirm));
         } else {
+          sincronizarUsuarioActivo(confirm.usuario);
           setSesion(mapearSesion(confirm));
         }
       } else {
+        sincronizarUsuarioActivo(s.usuario);
         setSesion(mapearSesion(s));
       }
       setCargando(false);

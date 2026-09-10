@@ -539,8 +539,10 @@ class UsuarioPlataformaSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_modulos_acceso(self, obj):
-        from .modulos_plataforma import modulos_de
-        return modulos_de(obj)
+        perfil = getattr(obj, "perfil_plataforma", None)
+        if perfil:
+            return normalizar_modulos(perfil.modulos_acceso or [])
+        return []
 
     def get_rol(self, obj):
         rs = roles_de(obj) & set(ROLES_PLATAFORMA)
@@ -593,6 +595,8 @@ class UsuarioPlataformaWriteSerializer(serializers.Serializer):
 
         if creando and not password:
             raise serializers.ValidationError({"password": "La contraseña es obligatoria al crear."})
+        if creando and not attrs.get("rol"):
+            raise serializers.ValidationError({"rol": "Seleccione un rol."})
         if password and len(password) < 8:
             raise serializers.ValidationError({"password": "Mínimo 8 caracteres."})
 

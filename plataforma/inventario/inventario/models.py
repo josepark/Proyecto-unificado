@@ -713,7 +713,7 @@ class PerfilPlataforma(models.Model):
         "Módulos permitidos",
         default=list,
         blank=True,
-        help_text="Proyectos de la plataforma: inventario, rbac, riesgos. Vacío = todos.",
+        help_text="Proyectos asignados: inventario, rbac, riesgos. Vacío = sin acceso (salvo Administrador).",
     )
 
     class Meta:
