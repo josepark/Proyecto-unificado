@@ -1151,11 +1151,16 @@ def sesion_info_v2(request):
         }, headers={"Cache-Control": "no-store"})
     rs, puede_editar, puede_eliminar = _permisos_plataforma(user)
     from .modulos_plataforma import modulos_de
+    from .espacio_datos import espacio_datos_de
+
+    espacio = espacio_datos_de(user)
     return Response({
         "autenticado": True,
         "usuario": user.get_username(),
         "roles": rs, "puede_editar": puede_editar, "puede_eliminar": puede_eliminar,
         "modulos": modulos_de(user),
+        "espacio_codigo": espacio.codigo if espacio else None,
+        "espacio_compartido": bool(espacio and espacio.es_compartido),
     },
         headers={"Cache-Control": "no-store"})
 
@@ -1169,7 +1174,10 @@ from django.shortcuts import redirect
 
 def _respuesta_sesion(user):
     from .modulos_plataforma import modulos_de
+    from .espacio_datos import espacio_datos_de
+
     rs, puede_editar, puede_eliminar = _permisos_plataforma(user)
+    espacio = espacio_datos_de(user)
     return {
         "autenticado": True,
         "usuario": user.get_username(),
@@ -1177,6 +1185,8 @@ def _respuesta_sesion(user):
         "puede_editar": puede_editar,
         "puede_eliminar": puede_eliminar,
         "modulos": modulos_de(user),
+        "espacio_codigo": espacio.codigo if espacio else None,
+        "espacio_compartido": bool(espacio and espacio.es_compartido),
     }
 
 

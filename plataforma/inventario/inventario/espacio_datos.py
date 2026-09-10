@@ -45,6 +45,20 @@ def usuario_usa_espacio_organizacion(user):
     return user.username.lower() in USUARIOS_ESPACIO_ORGANIZACION
 
 
+def _reparar_espacio_demo_indevido(user, perfil):
+    """Usuarios no demo que quedaron en 'organizacion' (p. ej. migración 0016) → espacio personal."""
+    espacio = perfil.espacio_datos
+    if (
+        espacio
+        and espacio.codigo == ESPACIO_ORGANIZACION
+        and not usuario_usa_espacio_organizacion(user)
+    ):
+        espacio = crea_espacio_personal(user)
+        perfil.espacio_datos = espacio
+        perfil.save(update_fields=["espacio_datos"])
+    return perfil.espacio_datos
+
+
 def espacio_datos_de(user, crear_si_falta=True):
     if user is None or not getattr(user, "pk", None):
         return None
@@ -54,7 +68,7 @@ def espacio_datos_de(user, crear_si_falta=True):
 
         perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
     if perfil.espacio_datos_id:
-        return perfil.espacio_datos
+        return _reparar_espacio_demo_indevido(user, perfil)
     if not crear_si_falta:
         return None
     espacio = (

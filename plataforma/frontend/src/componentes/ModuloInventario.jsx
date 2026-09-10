@@ -58,7 +58,7 @@ export default function ModuloInventario() {
           </NavLink>
         ))}
       </div>
-      <Outlet context={{ ...resto, alertasUnificadas, puedeEliminar, modulos, autenticado }} />
+      <Outlet key={resto.usuario ?? 'anon'} context={{ ...resto, alertasUnificadas, puedeEliminar, modulos, autenticado }} />
     </div>
   );
 }

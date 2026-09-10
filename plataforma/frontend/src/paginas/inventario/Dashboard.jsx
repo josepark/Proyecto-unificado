@@ -189,11 +189,13 @@ export default function Dashboard() {
 
       {cargandoLista ? (
         <p>Cargando activos…</p>
-      ) : errorLista ? (
+      ) : errorLista || !activos ? (
         <p className="aviso">
           No se pudo cargar el listado de activos
-          {errorLista.status === 403 ? ' — su cuenta no tiene acceso al módulo Inventario' : ''}.
+          {errorLista?.status === 403 ? ' — su cuenta no tiene acceso al módulo Inventario' : ''}.
         </p>
+      ) : filas.length === 0 ? (
+        <p className="aviso">No hay activos en su espacio de datos.</p>
       ) : (
         <table>
           <thead>
