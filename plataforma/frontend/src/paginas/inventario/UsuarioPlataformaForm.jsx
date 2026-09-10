@@ -64,6 +64,10 @@ export default function UsuarioPlataformaForm() {
     if (editando && existente) setForm(desdeUsuario(existente));
   }, [editando, existente]);
 
+  useEffect(() => {
+    if (!editando) setForm(vacio());
+  }, [editando, id]);
+
   const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
   function alternarModulo(id) {
@@ -204,7 +208,14 @@ export default function UsuarioPlataformaForm() {
               label="Rol en la plataforma *"
               opciones={ROLES}
               value={form.rol}
-              onChange={(e) => set('rol', e.target.value)}
+              onChange={(e) => {
+                const rol = e.target.value;
+                setForm((f) => ({
+                  ...f,
+                  rol,
+                  ...(!editando && rol === 'Administrador' ? { modulos_acceso: [] } : {}),
+                }));
+              }}
               disabled={editando && existente?.is_superuser}
             />
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
@@ -220,39 +231,53 @@ export default function UsuarioPlataformaForm() {
           </Fila>
 
           <h3>Proyectos con acceso</h3>
-          <p className="sub" style={{ marginTop: 0 }}>
-            {esAdmin
-              ? 'Los Administradores tienen acceso a todos los proyectos de la plataforma.'
-              : editando
-                ? 'Módulos que puede ver este usuario. Debe haber al menos uno marcado.'
-                : 'Marque los proyectos a los que tendrá acceso. Debe seleccionar al menos uno antes de guardar.'}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-            {MODULOS_PLATAFORMA.map((m) => (
-              <label
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  fontSize: 14,
-                  opacity: esAdmin ? 0.7 : 1,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={
-                    esAdmin
-                      ? true
-                      : (form.modulos_acceso || []).includes(m.id)
-                  }
-                  onChange={() => alternarModulo(m.id)}
-                  disabled={esAdmin}
-                />
-                {m.etiqueta}
-              </label>
-            ))}
-          </div>
+          {!editando && esAdmin ? (
+            <p className="sub" style={{ marginTop: 0 }}>
+              Al crear un <b>Administrador</b>, la plataforma asignará los tres proyectos al guardar.
+              No hace falta marcar casillas aquí.
+            </p>
+          ) : (
+            <>
+              <p className="sub" style={{ marginTop: 0 }}>
+                {editando && esAdmin
+                  ? 'Los Administradores tienen acceso a todos los proyectos de la plataforma.'
+                  : editando
+                    ? 'Marque los proyectos que podrá ver y gestionar. Debe haber al menos uno.'
+                    : 'Seleccione los proyectos a los que tendrá acceso. Ninguno viene marcado por defecto.'}
+              </p>
+              {(form.modulos_acceso || []).length === 0 && !esAdmin ? (
+                <p className="sub" style={{ margin: '0 0 10px', color: 'var(--alto)' }}>
+                  Ningún proyecto seleccionado aún.
+                </p>
+              ) : null}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {MODULOS_PLATAFORMA.map((m) => (
+                  <label
+                    key={m.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 14,
+                      opacity: editando && esAdmin ? 0.7 : 1,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={
+                        editando && esAdmin
+                          ? true
+                          : (form.modulos_acceso || []).includes(m.id)
+                      }
+                      onChange={() => alternarModulo(m.id)}
+                      disabled={editando && esAdmin}
+                    />
+                    {m.etiqueta}
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
 
           <h3>{editando ? 'Nueva contraseña (opcional)' : 'Contraseña *'}</h3>
           <Fila columnas={2}>
