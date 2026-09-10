@@ -9,23 +9,26 @@ import { claseTagNivelInventario, pendientesSync } from '../../lib/integracionUi
 export default function Dashboard() {
   const navegar = useNavigate();
   const [searchParams] = useSearchParams();
-  const { puedeEditar, alertasUnificadas } = useOutletContext() ?? {};
+  const { puedeEditar, alertasUnificadas, usuario } = useOutletContext() ?? {};
   const alertasRes = alertasUnificadas;
   const vinc = alertasRes?.vinculacion;
   const { coloresClase } = useInventarioMeta();
-  const { datos: stats, cargando: cargandoStats } = useApi(() => inventarioApi.estadisticas(), []);
+  const { datos: stats, cargando: cargandoStats, error: errorStats } = useApi(
+    () => inventarioApi.estadisticas(),
+    [usuario],
+  );
   const [busqueda, setBusqueda] = useState('');
   const [filtroClase, setFiltroClase] = useState('');
   const [soloSinEspejo, setSoloSinEspejo] = useState(searchParams.get('solo_sin_espejo') === '1');
   const [seleccionados, setSeleccionados] = useState(() => new Set());
-  const { datos: activos, cargando: cargandoLista } = useApi(
+  const { datos: activos, cargando: cargandoLista, error: errorLista } = useApi(
     () => inventarioApi.listarActivos({
       search: busqueda,
       page_size: 50,
       ...(filtroClase ? { clase: filtroClase } : {}),
       ...(soloSinEspejo ? { sin_espejo_riesgos: 'true' } : {}),
     }),
-    [busqueda, filtroClase, soloSinEspejo],
+    [usuario, busqueda, filtroClase, soloSinEspejo],
   );
 
   useEffect(() => {
@@ -144,7 +147,7 @@ export default function Dashboard() {
           <Kpi n={stats.datos_personales || 0} l="Con datos personales" />
         </div>
       ) : (
-        <p>No se pudieron cargar los indicadores.</p>
+        <p>No se pudieron cargar los indicadores{errorStats?.status === 403 ? ' (sin permiso para Inventario)' : ''}.</p>
       )}
 
       {!cargandoStats && stats?.total_activos === 0 ? (
@@ -186,6 +189,11 @@ export default function Dashboard() {
 
       {cargandoLista ? (
         <p>Cargando activos…</p>
+      ) : errorLista ? (
+        <p className="aviso">
+          No se pudo cargar el listado de activos
+          {errorLista.status === 403 ? ' — su cuenta no tiene acceso al módulo Inventario' : ''}.
+        </p>
       ) : (
         <table>
           <thead>

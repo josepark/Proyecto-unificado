@@ -203,7 +203,7 @@ REST_FRAMEWORK = {
         'inventario.permisos.RolPermiso',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        'inventario.sesion_plataforma.SesionPlataformaAuthentication',
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',

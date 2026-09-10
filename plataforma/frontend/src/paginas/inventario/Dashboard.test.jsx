@@ -43,7 +43,7 @@ function ok(data) {
   return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => data };
 }
 
-function renderDashboard(contexto = { puedeEditar: true }) {
+function renderDashboard(contexto = { puedeEditar: true, usuario: 'test' }) {
   return render(
     <MemoryRouter initialEntries={['/inventario/dashboard']}>
       <Routes>

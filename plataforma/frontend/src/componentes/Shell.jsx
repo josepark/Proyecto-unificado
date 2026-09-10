@@ -108,6 +108,7 @@ export default function Shell() {
 
   const outletContext = {
     autenticado,
+    usuario,
     puedeEditar,
     puedeEliminar,
     cargando,

@@ -12,9 +12,15 @@ export function useApi(fn, deps = []) {
     let vivo = true;
     setCargando(true);
     setError(null);
+    setDatos(null);
     fn()
       .then((d) => vivo && setDatos(d))
-      .catch((e) => vivo && setError(e))
+      .catch((e) => {
+        if (vivo) {
+          setDatos(null);
+          setError(e);
+        }
+      })
       .finally(() => vivo && setCargando(false));
     return () => {
       vivo = false;

@@ -33,6 +33,13 @@ class AuthCheckRBACTest(TestCase):
 
         cls.superusuario = User.objects.create_superuser("super_test", password="x")
 
+        from inventario.models import PerfilPlataforma
+        modulos_demo = ["inventario", "rbac", "riesgos"]
+        for u in (cls.consultor, cls.dinamizador, cls.administrador):
+            PerfilPlataforma.objects.update_or_create(
+                user=u, defaults={"modulos_acceso": modulos_demo},
+            )
+
     def test_anonimo_no_autorizado(self):
         r = self.client.get(self.URL)
         self.assertEqual(r.status_code, 401)
@@ -109,6 +116,36 @@ class AuthCheckRBACTest(TestCase):
         r = self.client.get(self.URL)
         self.assertEqual(r.status_code, 204)
         self.assertEqual(r.headers.get("X-Usuario-Autorizado"), "admin_test")
+
+
+class SesionPlataformaActivosTest(TestCase):
+    """GET /api/activos/* debe aceptar la misma sesión por cookie que /api/sesion/."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from inventario.models import PerfilPlataforma
+        from inventario.espacio_datos import asignar_espacio_usuario_nuevo
+
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.user = User.objects.create_user("usuario_cookie_api", password="x")
+        cls.user.groups.add(cls.grupo_consultor)
+        PerfilPlataforma.objects.filter(user=cls.user).update(
+            modulos_acceso=["inventario"],
+        )
+        asignar_espacio_usuario_nuevo(cls.user)
+
+    def test_estadisticas_con_solo_cookie_de_sesion(self):
+        sesion = SessionStore()
+        sesion["_auth_user_id"] = str(self.user.pk)
+        sesion.save()
+
+        from django.test import Client
+        cliente = Client()
+        cliente.cookies[settings.SESSION_COOKIE_NAME] = sesion.session_key
+
+        r = cliente.get("/api/activos/estadisticas/")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()["total_activos"], 0)
 
 
 class PanelEjecutivoUnificadoTest(TestCase):
