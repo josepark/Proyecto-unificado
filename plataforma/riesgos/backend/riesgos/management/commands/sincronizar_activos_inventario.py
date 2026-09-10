@@ -84,8 +84,42 @@ class Command(BaseCommand):
         parser.add_argument(
             "--espacio", type=str, default="organizacion",
             help="Código de espacio de datos (debe coincidir con el del inventario).")
+        parser.add_argument(
+            "--todos-espacios", action="store_true",
+            help="Sincroniza cada espacio registrado en el Inventario (organizacion + personales).")
 
     def handle(self, *args, **options):
+        if options.get("todos_espacios"):
+            espacios = self._listar_espacios_inventario(options)
+            if not espacios:
+                self.stderr.write(self.style.ERROR(
+                    "No se pudieron listar espacios del inventario."))
+                return
+            for codigo in espacios:
+                self.stdout.write(self.style.NOTICE(f"→ Espacio «{codigo}»"))
+                opts = {**options, "espacio": codigo, "todos_espacios": False}
+                self._sync_espacio(opts)
+            return
+        self._sync_espacio(options)
+
+    def _listar_espacios_inventario(self, options):
+        base_url = (options.get("url") or settings.INVENTARIO_API_URL).rstrip("/")
+        timeout = options.get("timeout", 15)
+        url = f"{base_url}/interno/espacios/"
+        try:
+            resp = inventario_get(url, timeout=timeout)
+            if resp.status_code == 404:
+                return ["organizacion"]
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, list):
+                codigos = [e["codigo"] for e in data if e.get("codigo")]
+                return codigos or ["organizacion"]
+            return ["organizacion"]
+        except requests.RequestException:
+            return ["organizacion"]
+
+    def _sync_espacio(self, options):
         base_url = (options.get("url") or settings.INVENTARIO_API_URL).rstrip("/")
         timeout = options["timeout"]
         espacio = (options.get("espacio") or "organizacion").strip()

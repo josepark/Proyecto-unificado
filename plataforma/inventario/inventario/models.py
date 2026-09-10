@@ -317,6 +317,7 @@ class Activo(models.Model):
         if not self.id_activo:
             self.id_activo = Activo.siguiente_codigo(self.clase, espacio=self.espacio)
         if not self.espacio_id:
+            # Respaldo solo para seeds/comandos legacy; la API exige espacio explícito.
             from .espacio_datos import get_espacio_organizacion
 
             self.espacio = get_espacio_organizacion()

@@ -428,9 +428,10 @@ def aplicar_filas(filas, usuario):
     from .serializers import ActivoWriteSerializer
 
     creados, fallidos = [], []
+    ctx = {"user": usuario}
     for f in filas:
         datos = _completar_bloque_detalle(dict(f.get("datos", {})))
-        ser = ActivoWriteSerializer(data=datos)
+        ser = ActivoWriteSerializer(data=datos, context=ctx)
         if ser.is_valid():
             activo = ser.save()
             creados.append({"fila": f.get("fila"), "id": activo.id,

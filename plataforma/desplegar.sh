@@ -234,10 +234,10 @@ else
 fi
 
 if $SINCRONIZAR; then
-    paso "9/10 · Sincronizando activos Inventario → Riesgos"
+    paso "9/10 · Sincronizando activos Inventario → Riesgos (todos los espacios)"
     docker compose exec -T \
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET:-}" \
-        riesgos-backend python manage.py sincronizar_activos_inventario
+        riesgos-backend python manage.py sincronizar_activos_inventario --todos-espacios
 else
     paso "9/10 · (sync activos omitido)"
 fi

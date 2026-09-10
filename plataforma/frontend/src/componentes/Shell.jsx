@@ -89,7 +89,7 @@ export default function Shell() {
     };
   }, [verRbac, cargando, autenticado]);
 
-  const { datos: alertasUni, recargar: recargarAlertas } = useApi(
+  const { datos: alertasUni, recargar: recargarAlertas, error: errorAlertas } = useApi(
     () => (verAlertasInventario && !cargando ? inventarioApi.alertasUnificadas() : Promise.resolve(null)),
     [verAlertasInventario, cargando, usuario],
   );
@@ -117,6 +117,7 @@ export default function Shell() {
     soloLecturaRbac,
     alertasUnificadas: alertasUni,
     recargarAlertasUnificadas: recargarAlertas,
+    alertasError: errorAlertas,
     rbacResumen: rbacDisponible ? { pendientes: pendientesRbac, desglose: desgloseRbac, disponible: true } : { disponible: false },
   };
 
@@ -179,6 +180,15 @@ export default function Shell() {
               {totalAlertas > 0 ? (
                 <span className="badge-modulo" style={{ marginLeft: 6 }} title="Señales operativas (Inventario + RBAC + Riesgos + sync)">
                   {totalAlertas}
+                </span>
+              ) : null}
+              {errorAlertas ? (
+                <span
+                  className="badge-modulo"
+                  style={{ marginLeft: 4, background: 'var(--texto-suave)' }}
+                  title="No se pudieron cargar las alertas unificadas"
+                >
+                  !
                 </span>
               ) : null}
               {pendientesSyncCount > 0 ? (

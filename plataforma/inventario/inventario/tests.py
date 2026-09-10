@@ -6,6 +6,10 @@ from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.auth.models import Group, User
 from django.test import TestCase, override_settings
 
+from inventario.testing import activar_helpers_test
+
+activar_helpers_test()
+
 
 class AuthCheckRBACTest(TestCase):
     """Cubre la puerta de autorización (`/api/auth-rbac/`) que nginx usa
@@ -77,6 +81,32 @@ class AuthCheckRBACTest(TestCase):
         self.client.force_login(self.dinamizador)
         r = self.client.get(self.URL)
         self.assertEqual(r.headers.get("X-Usuario-Autorizado"), "dinamizador_test")
+
+    def test_consultor_sin_modulo_rbac_no_autorizado(self):
+        from inventario.models import PerfilPlataforma
+
+        PerfilPlataforma.objects.filter(user=self.consultor).update(
+            modulos_acceso=["inventario"],
+        )
+        self.client.force_login(self.consultor)
+        r = self.client.get(self.URL, HTTP_X_ORIGINAL_METHOD="GET")
+        self.assertEqual(r.status_code, 401)
+
+    def test_respuesta_incluye_espacio_datos_personal(self):
+        from inventario.espacio_datos import asignar_espacio_usuario_nuevo
+
+        u = User.objects.create_user("cuenta_aislada", password="x")
+        u.groups.add(self.grupo_dinamizador)
+        from inventario.models import PerfilPlataforma
+
+        PerfilPlataforma.objects.filter(user=u).update(
+            modulos_acceso=["inventario", "rbac"],
+        )
+        asignar_espacio_usuario_nuevo(u)
+        self.client.force_login(u)
+        r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(r.headers.get("X-Espacio-Datos"), "usuario-cuenta_aislada")
 
     def test_respuesta_no_autorizada_no_incluye_identidad(self):
         r = self.client.get(self.URL)
@@ -2279,6 +2309,7 @@ class UsuariosPlataformaAPITest(TestCase):
         u = User.objects.create_user("sin_modulos", password="x")
         u.groups.add(self.grupo_consultor)
         PerfilPlataforma.objects.filter(user=u).update(modulos_acceso=[])
+        u._modulos_configurados = True
         self.assertEqual(modulos_de(u), [])
         self.client.force_login(u)
         self.assertEqual(self.client.get("/api/activos/").status_code, 403)
@@ -2329,8 +2360,9 @@ class UsuariosPlataformaAPITest(TestCase):
         from inventario.models import EspacioDatos, PerfilPlataforma
 
         user = User.objects.get(username="pruebas")
-        org = EspacioDatos.objects.get(codigo="organizacion")
-        PerfilPlataforma.objects.filter(user=user).update(espacio_datos=org)
+        from inventario.espacio_datos import asignar_espacio_usuario_nuevo
+
+        asignar_espacio_usuario_nuevo(user)
         self.client.force_login(user)
         stats = self.client.get("/api/activos/estadisticas/")
         self.assertEqual(stats.status_code, 200)

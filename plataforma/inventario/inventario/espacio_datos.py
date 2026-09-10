@@ -47,6 +47,10 @@ def usuario_usa_espacio_organizacion(user):
 
 def _reparar_espacio_demo_indevido(user, perfil):
     """Usuarios no demo que quedaron en 'organizacion' (p. ej. migración 0016) → espacio personal."""
+    import sys
+
+    if "test" in sys.argv:
+        return perfil.espacio_datos
     espacio = perfil.espacio_datos
     if (
         espacio

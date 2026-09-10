@@ -7,6 +7,7 @@ from riesgos.models import TecnicaMitre
 pytestmark = pytest.mark.django_db
 
 BASE_URL = "http://inventario-test/api"
+MITRE_URL = f"{BASE_URL}/interno/catalogo-mitre/"
 
 
 def _tecnica(codigo, nombre, tipo="TE", tacticas="Initial Access"):
@@ -19,7 +20,7 @@ def _tecnica(codigo, nombre, tipo="TE", tacticas="Initial Access"):
 class TestComandoSincronizarTecnicasMitre:
     @responses.activate
     def test_crea_tecnicas_nuevas(self):
-        responses.add(responses.GET, f"{BASE_URL}/amenazas/", json={
+        responses.add(responses.GET, MITRE_URL, json={
             "count": 2, "next": None, "previous": None,
             "results": [_tecnica("T1190", "Exploit Public-Facing Application"),
                         _tecnica("T1040", "Network Sniffing")],
@@ -35,7 +36,7 @@ class TestComandoSincronizarTecnicasMitre:
     @responses.activate
     def test_actualiza_una_tecnica_existente(self):
         TecnicaMitre.objects.create(codigo="T1190", nombre="Nombre viejo")
-        responses.add(responses.GET, f"{BASE_URL}/amenazas/", json={
+        responses.add(responses.GET, MITRE_URL, json={
             "count": 1, "next": None, "previous": None,
             "results": [_tecnica("T1190", "Nombre actualizado")],
         }, status=200)
@@ -47,11 +48,11 @@ class TestComandoSincronizarTecnicasMitre:
 
     @responses.activate
     def test_pagina_hasta_agotar_resultados(self):
-        responses.add(responses.GET, f"{BASE_URL}/amenazas/", json={
-            "count": 2, "next": f"{BASE_URL}/amenazas/?page=2", "previous": None,
+        responses.add(responses.GET, MITRE_URL, json={
+            "count": 2, "next": f"{MITRE_URL}?page=2", "previous": None,
             "results": [_tecnica("T1001", "Uno")],
         }, status=200)
-        responses.add(responses.GET, f"{BASE_URL}/amenazas/?page=2", json={
+        responses.add(responses.GET, f"{MITRE_URL}?page=2", json={
             "count": 2, "next": None, "previous": None,
             "results": [_tecnica("T1002", "Dos")],
         }, status=200)
@@ -62,7 +63,7 @@ class TestComandoSincronizarTecnicasMitre:
     @responses.activate
     def test_error_de_conexion_no_lanza_excepcion(self):
         import requests
-        responses.add(responses.GET, f"{BASE_URL}/amenazas/",
+        responses.add(responses.GET, MITRE_URL,
                        body=requests.exceptions.ConnectionError("caído"))
         call_command("sincronizar_tecnicas_mitre", url=BASE_URL)  # no debe lanzar
         assert TecnicaMitre.objects.count() == 0

@@ -338,11 +338,20 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
                ["amenazas_codigos", "controles_codigos", "dependencias_ids"]
                if k in validated}
         request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        if user is None or not getattr(user, "is_authenticated", False):
+            user = self.context.get("user")
         espacio = None
-        if request and request.user.is_authenticated:
+        if user is not None and getattr(user, "pk", None):
             from .espacio_datos import espacio_datos_de
 
-            espacio = espacio_datos_de(request.user)
+            espacio = espacio_datos_de(user)
+        if espacio is None:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError(
+                {"detail": "No se pudo determinar el espacio de datos del usuario."}
+            )
         activo = Activo.objects.create(espacio=espacio, **validated)
         if infra:
             ser = InfraestructuraWriteSerializer(

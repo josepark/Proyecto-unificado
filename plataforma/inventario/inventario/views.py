@@ -255,7 +255,8 @@ class DatacenterViewSet(viewsets.ModelViewSet):
     @action(detail=True)
     def activos(self, request, pk=None):
         dc = self.get_object()
-        data = ActivoListSerializer(dc.activos.all(), many=True).data
+        qs = queryset_activos(request).filter(datacenter=dc)
+        data = ActivoListSerializer(qs, many=True).data
         return Response(data)
 
     @action(detail=True)
@@ -315,11 +316,17 @@ class DiagramaViewSet(viewsets.ModelViewSet):
 
 
 class HojaVidaViewSet(viewsets.ModelViewSet):
-    queryset = EventoHojaVida.objects.all().select_related("activo")
+    queryset = EventoHojaVida.objects.none()
     serializer_class = EventoHojaVidaSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filterset_fields = ["activo", "tipo_evento"]
     ordering_fields = ["fecha"]
+
+    def get_queryset(self):
+        from .espacio_datos import queryset_activos
+
+        ids = queryset_activos(self.request).values_list("pk", flat=True)
+        return EventoHojaVida.objects.filter(activo_id__in=ids).select_related("activo")
 
     def perform_create(self, serializer):
         usuario = (self.request.user.get_username()
@@ -1309,6 +1316,20 @@ def catalogo_mitre_interno(request):
         "previous": _url(page - 1) if page > 1 else None,
         "results": resultados,
     })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def espacios_interno(request):
+    """Lista espacios de datos para sync servidor-a-servidor (Riesgos)."""
+    from django.conf import settings
+    from .models import EspacioDatos
+
+    secreto = request.headers.get("X-Plataforma-Secret", "")
+    if not settings.JWT_SHARED_SECRET or secreto != settings.JWT_SHARED_SECRET:
+        return Response({"detail": "Acceso denegado."}, status=403)
+    espacios = EspacioDatos.objects.order_by("codigo").values("codigo", "nombre", "es_compartido")
+    return Response(list(espacios))
 
 
 @api_view(["GET"])
