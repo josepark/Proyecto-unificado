@@ -81,11 +81,16 @@ class Command(BaseCommand):
         parser.add_argument(
             "--timeout", type=int, default=15,
             help="Segundos de espera por solicitud HTTP antes de abortar (default: 15).")
+        parser.add_argument(
+            "--espacio", type=str, default="organizacion",
+            help="Código de espacio de datos (debe coincidir con el del inventario).")
 
     def handle(self, *args, **options):
         base_url = (options.get("url") or settings.INVENTARIO_API_URL).rstrip("/")
         timeout = options["timeout"]
+        espacio = (options.get("espacio") or "organizacion").strip()
         protector = ProtectorSincronizacion(forzar=options["forzar_sobrescritura"])
+        self.espacio_codigo = espacio
 
         if protector.forzar:
             self.stdout.write(self.style.WARNING(
@@ -124,7 +129,9 @@ class Command(BaseCommand):
             for linea in vinculados_por_nombre:
                 self.stdout.write(f"    · {linea}")
 
-        huerfanos = Activo.objects.filter(inventario_id__isnull=True).count()
+        huerfanos = Activo.objects.filter(
+            inventario_id__isnull=True, espacio_codigo=espacio,
+        ).count()
         if huerfanos:
             self.stdout.write(self.style.WARNING(
                 f"ℹ {huerfanos} activo(s) en riesgos sin vínculo al inventario tras la "
@@ -142,7 +149,7 @@ class Command(BaseCommand):
         url = f"{base_url}/activos/"
         params = {"page_size": 100}
         while url:
-            resp = inventario_get(url, params=params, timeout=timeout)
+            resp = inventario_get(url, espacio_codigo=self.espacio_codigo, params=params, timeout=timeout)
             resp.raise_for_status()
             data = resp.json()
             # DRF pagination o, si el endpoint no pagina, una lista directa.
@@ -152,7 +159,11 @@ class Command(BaseCommand):
         return activos
 
     def _obtener_detalle(self, base_url, inventario_id, timeout):
-        resp = inventario_get(f"{base_url}/activos/{inventario_id}/", timeout=timeout)
+        resp = inventario_get(
+            f"{base_url}/activos/{inventario_id}/",
+            espacio_codigo=self.espacio_codigo,
+            timeout=timeout,
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -179,25 +190,28 @@ class Command(BaseCommand):
             tipo=CLASE_TIPO_MAP.get(clase, clase or ""),
             valor=valor if valor is not None else 0,
             clasificacion_si=clasificacion,
+            espacio_codigo=self.espacio_codigo,
         )
         if ip_principal:
             defaults["ip_principal"] = ip_principal
         if vlan:
             defaults["vlan"] = vlan
 
+        esp = self.espacio_codigo
         # 1) Ya vinculado de una sincronización anterior.
-        existente = Activo.objects.filter(inventario_id=inv_id).first()
+        existente = Activo.objects.filter(inventario_id=inv_id, espacio_codigo=esp).first()
         vinculo_por_nombre = None
 
         # 2) Coincide el código exacto (típico de RED-XXX).
         if not existente:
             existente = Activo.objects.filter(
-                id_activo=id_activo, inventario_id__isnull=True).first()
+                id_activo=id_activo, inventario_id__isnull=True, espacio_codigo=esp,
+            ).first()
 
         # 3) Coincide el nombre, normalizado (típico de SI-XX <-> SIS-XXX).
         if not existente:
             candidatos_exactos = [
-                a for a in Activo.objects.filter(inventario_id__isnull=True)
+                a for a in Activo.objects.filter(inventario_id__isnull=True, espacio_codigo=esp)
                 if normalizar(a.nombre) == normalizar(nombre)
             ]
             if len(candidatos_exactos) == 1:
@@ -213,7 +227,7 @@ class Command(BaseCommand):
         if not existente:
             nom_norm = normalizar(nombre)
             candidatos_parciales = [
-                a for a in Activo.objects.filter(inventario_id__isnull=True)
+                a for a in Activo.objects.filter(inventario_id__isnull=True, espacio_codigo=esp)
                 if nom_norm and normalizar(a.nombre)
                 and (normalizar(a.nombre) in nom_norm or nom_norm in normalizar(a.nombre))
             ]

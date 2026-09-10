@@ -40,15 +40,17 @@ CREATE TABLE categoria_sistema (
     nombre  TEXT NOT NULL UNIQUE               -- INFRA CRÍTICA, SISTEMAS, DATOS, COMUNIC, EQUIPOS
 );
 
--- Sistemas y recursos protegidos
+-- Sistemas y recursos protegidos (aislados por espacio_codigo — ver espacio.py)
 CREATE TABLE sistema (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre           TEXT NOT NULL UNIQUE,
+    nombre           TEXT NOT NULL,
     categoria_id     INTEGER NOT NULL REFERENCES categoria_sistema(id),
     clasificacion    TEXT NOT NULL CHECK (clasificacion IN
                        ('Altamente Confidencial','Confidencial','Interna','Pública')),
     tecnicas_attack  TEXT,                     -- Técnicas MITRE ATT&CK asociadas (IDs separados por /)
-    activo           INTEGER NOT NULL DEFAULT 1    -- 0 = desactivado (baja lógica)
+    activo           INTEGER NOT NULL DEFAULT 1,   -- 0 = desactivado (baja lógica)
+    espacio_codigo   TEXT NOT NULL DEFAULT 'organizacion',
+    UNIQUE (espacio_codigo, nombre)
 );
 
 -- Catálogo de técnicas MITRE ATT&CK (Enterprise) — sincronizado desde
@@ -90,6 +92,7 @@ CREATE TABLE usuario (
     fecha_inicio  TEXT,                        -- ISO 8601; obligatoria para acceso Temporal
     fecha_fin     TEXT,                        -- obligatoria para acceso Temporal (nivel T)
     notas         TEXT,
+    espacio_codigo TEXT NOT NULL DEFAULT 'organizacion',
     creado        TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     actualizado   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
@@ -104,6 +107,7 @@ CREATE TABLE acceso_excepcion (
     nivel_codigo TEXT NOT NULL REFERENCES nivel_acceso(codigo),
     motivo       TEXT NOT NULL,
     fecha_fin    TEXT,                       -- recomendada; obligatoria si amplía privilegios
+    espacio_codigo TEXT NOT NULL DEFAULT 'organizacion',
     creado       TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     PRIMARY KEY (usuario_id, sistema_id)
 );
@@ -162,6 +166,8 @@ WHERE u.estado IN ('Activo','Temporal')
   AND r.activo = 1;
 
 CREATE INDEX idx_matriz_sistema ON matriz_acceso(sistema_id);
+CREATE INDEX idx_sistema_espacio ON sistema(espacio_codigo);
+CREATE INDEX idx_usuario_espacio ON usuario(espacio_codigo);
 CREATE INDEX idx_usuario_rol ON usuario(rol_id);
 CREATE INDEX idx_log_fecha ON log_auditoria(fecha);
 CREATE INDEX idx_excepcion_sistema ON acceso_excepcion(sistema_id);

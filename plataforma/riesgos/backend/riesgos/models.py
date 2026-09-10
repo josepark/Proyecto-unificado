@@ -108,6 +108,8 @@ NIVEL_RIESGO_CHOICES = [
     ("SIN_DATO", "—"),
 ]
 
+ESPACIO_ORGANIZACION = "organizacion"
+
 CLASIFICACION_SI_CHOICES = [
     ("ALTAMENTE_CONFIDENCIAL", "Altamente Confidencial"),
     ("CONFIDENCIAL", "Confidencial"),
@@ -156,7 +158,11 @@ def _dias_restantes(fecha):
 
 class CampanaRedTeam(TimeStampedModel):
     """Hoja 07_Red_Team_Detalle — una campaña de Red Team por host objetivo."""
-    nombre = models.CharField(max_length=100, unique=True, help_text="Ej. SUIIN-CENSO")
+    espacio_codigo = models.CharField(
+        max_length=60, default=ESPACIO_ORGANIZACION, db_index=True,
+        help_text="Espacio de datos del usuario (aislamiento multi-tenant ligero).",
+    )
+    nombre = models.CharField(max_length=100, help_text="Ej. SUIIN-CENSO")
     host_ip = models.GenericIPAddressField(protocol="IPv4")
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
@@ -185,6 +191,12 @@ class CampanaRedTeam(TimeStampedModel):
         verbose_name = "Campaña Red Team"
         verbose_name_plural = "Campañas Red Team"
         ordering = ["fecha_inicio"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["espacio_codigo", "nombre"],
+                name="uniq_campana_espacio_nombre",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.nombre} ({self.host_ip})"
@@ -216,9 +228,13 @@ class CampanaRedTeam(TimeStampedModel):
 
 class Activo(TimeStampedModel):
     """Hoja 01_Resumen_Triple (+ campos de 04_Activos_Sin_Cobertura)."""
-    id_activo = models.CharField(max_length=20, unique=True, help_text="Ej. RED-012, SI-06")
+    espacio_codigo = models.CharField(
+        max_length=60, default=ESPACIO_ORGANIZACION, db_index=True,
+        help_text="Espacio de datos del usuario (aislamiento multi-tenant ligero).",
+    )
+    id_activo = models.CharField(max_length=20, help_text="Ej. RED-012, SI-06")
     inventario_id = models.PositiveIntegerField(
-        null=True, blank=True, unique=True,
+        null=True, blank=True,
         help_text="PK del activo correspondiente en la Plataforma SUIIN (Inventario) — "
                    "null si aún no está vinculado. Ver comando sincronizar_activos_inventario.")
     nombre = models.CharField(max_length=255)
@@ -259,6 +275,17 @@ class Activo(TimeStampedModel):
         verbose_name = "Activo"
         verbose_name_plural = "Activos"
         ordering = ["id_activo"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["espacio_codigo", "id_activo"],
+                name="uniq_activo_espacio_id",
+            ),
+            models.UniqueConstraint(
+                fields=["espacio_codigo", "inventario_id"],
+                name="uniq_activo_espacio_inventario",
+                condition=models.Q(inventario_id__isnull=False),
+            ),
+        ]
 
     def __str__(self):
         return f"{self.id_activo} — {self.nombre}"
@@ -425,7 +452,10 @@ class RiesgoContextual(TimeStampedModel):
     Hoja 10_Matriz de riesgos de segurid — riesgos RC-01..RC-07 del contexto organizacional
     (ISO 27001 cláusula 4.1/4.2). No detectables por escáneres técnicos; escala propia 1-5.
     """
-    id_riesgo_contextual = models.CharField(max_length=10, unique=True, help_text="Ej. RC-03")
+    espacio_codigo = models.CharField(
+        max_length=60, default=ESPACIO_ORGANIZACION, db_index=True,
+    )
+    id_riesgo_contextual = models.CharField(max_length=10, help_text="Ej. RC-03")
     escenario_amenaza = models.CharField(max_length=500)
     actor_amenaza = models.TextField(blank=True)
     activos_afectados_texto = models.TextField(blank=True)
@@ -469,6 +499,12 @@ class RiesgoContextual(TimeStampedModel):
         verbose_name = "Riesgo Contextual"
         verbose_name_plural = "Riesgos Contextuales"
         ordering = ["id_riesgo_contextual"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["espacio_codigo", "id_riesgo_contextual"],
+                name="uniq_rc_espacio_codigo",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         self.score = self.probabilidad * self.impacto
@@ -506,7 +542,10 @@ class PlanTratamientoRiesgos(TimeStampedModel):
     Portada del PTR (Plan de Tratamiento de Riesgos). Un PTR se emite por host/campaña
     comprometida (ej. SUIIN-SGSI-PTR-001 para CENSO), siguiendo la codificación institucional.
     """
-    referencia = models.CharField(max_length=50, unique=True, help_text="Ej. SUIIN-SGSI-PTR-001 v1.0")
+    espacio_codigo = models.CharField(
+        max_length=60, default=ESPACIO_ORGANIZACION, db_index=True,
+    )
+    referencia = models.CharField(max_length=50, help_text="Ej. SUIIN-SGSI-PTR-001 v1.0")
     titulo = models.CharField(max_length=255)
     campana_red_team = models.ForeignKey(CampanaRedTeam, on_delete=models.PROTECT,
                                           related_name="planes_tratamiento")
@@ -527,6 +566,12 @@ class PlanTratamientoRiesgos(TimeStampedModel):
         verbose_name = "Plan de Tratamiento de Riesgos"
         verbose_name_plural = "Planes de Tratamiento de Riesgos"
         ordering = ["-fecha_emision"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["espacio_codigo", "referencia"],
+                name="uniq_ptr_espacio_referencia",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.referencia} — {self.titulo}"

@@ -19,6 +19,7 @@ import jwt
 from django.conf import settings
 
 from .permisos import roles_de, ROL_DINAMIZADOR, ROL_ADMIN
+from .espacio_datos import espacio_datos_de
 from .modulos_plataforma import modulos_de
 from .signals import jwt_version_de
 
@@ -34,12 +35,14 @@ def emitir_jwt(user):
             "antes de habilitar la sesión única con otros módulos.")
 
     ahora = datetime.datetime.now(datetime.timezone.utc)
+    espacio = espacio_datos_de(user)
     payload = {
         "iss": settings.JWT_ISSUER,
         "sub": str(user.pk),
         "username": user.get_username(),
         "roles": sorted(roles_de(user)),
         "modulos": modulos_de(user),
+        "espacio_codigo": espacio.codigo if espacio else "",
         "ver": jwt_version_de(user),
         "iat": ahora,
         "exp": ahora + datetime.timedelta(minutes=settings.JWT_EXPIRACION_MINUTOS),

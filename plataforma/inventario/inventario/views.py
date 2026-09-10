@@ -59,7 +59,10 @@ class ActivoViewSet(viewsets.ModelViewSet):
         """Mapa inventario_id → espejo en Riesgos (una sola llamada por petición list)."""
         if not hasattr(self, "_mapa_riesgos_cache"):
             from .integracion_riesgos import mapa_activos_por_inventario
-            self._mapa_riesgos_cache = mapa_activos_por_inventario()
+            from .espacio_datos import codigo_espacio_request
+            self._mapa_riesgos_cache = mapa_activos_por_inventario(
+                espacio_codigo=codigo_espacio_request(self.request),
+            )
         return self._mapa_riesgos_cache
 
     def get_serializer_context(self):
@@ -104,8 +107,10 @@ class ActivoViewSet(viewsets.ModelViewSet):
     def resumen_riesgos(self, request, pk=None):
         """KPIs del activo espejo en SUIIN-SGSI-RIESGOS (Ola 5 — flujo unificado)."""
         from .integracion_riesgos import mapa_activos_por_inventario, resumen_activo_por_inventario
+        from .espacio_datos import codigo_espacio_request
+        esp = codigo_espacio_request(request)
         activo = self.get_object()
-        data = resumen_activo_por_inventario(activo.pk)
+        data = resumen_activo_por_inventario(activo.pk, espacio_codigo=esp)
         if data:
             return Response({
                 "vinculado": True,
@@ -115,7 +120,7 @@ class ActivoViewSet(viewsets.ModelViewSet):
                 "url_gestion": f"/gestion-riesgos/activos/{data['id']}",
                 "url_inventario": f"/inventario/activos/{activo.pk}",
             })
-        if mapa_activos_por_inventario() is None:
+        if mapa_activos_por_inventario(espacio_codigo=esp) is None:
             return Response({
                 "vinculado": False,
                 "modulo_disponible": False,
@@ -488,8 +493,12 @@ def alertas(request):
 def integracion_vinculacion(request):
     """Panel de sincronización Inventario ↔ Riesgos (Ola 6)."""
     from .integracion_riesgos import detalle_vinculacion
+    from .espacio_datos import codigo_espacio_request
 
-    return Response(detalle_vinculacion(queryset_activos(request).order_by("id_activo")))
+    return Response(detalle_vinculacion(
+        queryset_activos(request).order_by("id_activo"),
+        espacio_codigo=codigo_espacio_request(request),
+    ))
 
 
 @api_view(["GET"])
@@ -498,11 +507,15 @@ def exportar_vinculacion_csv(request):
     """Export CSV de activos sin espejo y huérfanos en Riesgos (Ola 6)."""
     from django.http import HttpResponse
     from .integracion_riesgos import detalle_vinculacion, generar_csv_vinculacion
+    from .espacio_datos import codigo_espacio_request
 
     tipo = request.GET.get("tipo", "todos")
     if tipo not in ("todos", "sin_espejo", "huerfanos"):
         return Response({"detail": "tipo debe ser todos, sin_espejo o huerfanos."}, status=400)
-    detalle = detalle_vinculacion(queryset_activos(request).order_by("id_activo"))
+    detalle = detalle_vinculacion(
+        queryset_activos(request).order_by("id_activo"),
+        espacio_codigo=codigo_espacio_request(request),
+    )
     if not detalle.get("disponible"):
         return Response({"detail": "Módulo de Riesgos no disponible."}, status=503)
     csv_text = generar_csv_vinculacion(detalle, tipo=tipo)
@@ -517,14 +530,15 @@ def alertas_unificadas(request):
     """Centro de alertas Ola 5: Inventario + RBAC + Riesgos en una sola respuesta."""
     from .integracion_rbac import resumen_rbac
     from .integracion_riesgos import alertas_riesgos_resumen, kpis_riesgos_dashboard
+    from .espacio_datos import codigo_espacio_request
 
+    esp = codigo_espacio_request(request)
     inv = calcular_alertas(request)
-    rbac = resumen_rbac() or {}
-    ries_alertas = alertas_riesgos_resumen()
-    ries_kpis = kpis_riesgos_dashboard()
+    rbac = resumen_rbac(espacio_codigo=esp) or {}
+    ries_alertas = alertas_riesgos_resumen(espacio_codigo=esp)
+    ries_kpis = kpis_riesgos_dashboard(espacio_codigo=esp)
     from .integracion_riesgos import resumen_vinculacion
-    from .models import Activo
-    vinculacion = resumen_vinculacion(queryset_activos(request).count())
+    vinculacion = resumen_vinculacion(queryset_activos(request).count(), espacio_codigo=esp)
     sync_ops = 0
     if vinculacion.get("disponible"):
         sync_ops = vinculacion.get("sin_espejo_riesgos", 0) + vinculacion.get("huerfanos_riesgos", 0)
@@ -592,10 +606,12 @@ def calcular_riesgos(request=None):
     matriz. Extraída de la vista riesgos() para que el reporte consolidado
     (reporte_consolidado.py) pueda reusar el mismo cálculo."""
     from .integracion_riesgos import mapa_activos_por_inventario, resumen_vinculacion
+    from .espacio_datos import codigo_espacio_request
 
     qs = _activos_full(request)
     total = qs.count()
-    mapa = mapa_activos_por_inventario() or {}
+    esp = codigo_espacio_request(request) if request else "organizacion"
+    mapa = mapa_activos_por_inventario(espacio_codigo=esp) or {}
     filas = []
     matriz = defaultdict(int)          # (prob, impacto) -> conteo
     conteo_nivel = Counter()
@@ -619,7 +635,7 @@ def calcular_riesgos(request=None):
     return {
         "activos": filas, "matriz": dict(matriz), "por_nivel": dict(conteo_nivel),
         "sin_valorar": conteo_nivel.get("SIN", 0),
-        "vinculacion": resumen_vinculacion(total),
+        "vinculacion": resumen_vinculacion(total, espacio_codigo=esp),
     }
 
 
@@ -675,6 +691,7 @@ from .integracion_rbac import catalogo_sistemas_rbac
 from .integracion_rbac import resumen_rbac as _resumen_rbac
 from .integracion_riesgos import resumen_riesgos_panel as _resumen_riesgos
 from .integracion_riesgos import resumen_vinculacion as _resumen_vinculacion
+from .espacio_datos import codigo_espacio_request
 
 
 def calcular_panel_ejecutivo(request=None):
@@ -707,6 +724,7 @@ def calcular_panel_ejecutivo(request=None):
         )
     )
     total_activos_count = qs.count()
+    esp = codigo_espacio_request(request) if request else "organizacion"
     return {
         "total_activos": total_activos_count,
         "completitud": {
@@ -723,9 +741,9 @@ def calcular_panel_ejecutivo(request=None):
         "por_ciclo_vida": por_ciclo,
         "cambios_30dias": cambios30,
         "datacenters": datacenters_resumen,
-        "rbac": _resumen_rbac(),
-        "riesgos": _resumen_riesgos(),
-        "vinculacion": _resumen_vinculacion(total_activos_count),
+        "rbac": _resumen_rbac(espacio_codigo=esp),
+        "riesgos": _resumen_riesgos(espacio_codigo=esp),
+        "vinculacion": _resumen_vinculacion(total_activos_count, espacio_codigo=esp),
     }
 
 
@@ -1281,8 +1299,13 @@ def auth_check_rbac(request):
     puede_editar = bool(rs & {ROL_DINAMIZADOR, ROL_ADMIN})
     puede_leer = puede_editar or (ROL_CONSULTOR in rs and metodo_original == "GET")
     if puede_leer:
+        from .espacio_datos import espacio_datos_de
+
+        espacio = espacio_datos_de(user)
         resp = Response(status=204, headers={"Cache-Control": "no-store"})
         resp["X-Usuario-Autorizado"] = user.get_username()
+        if espacio:
+            resp["X-Espacio-Datos"] = espacio.codigo
         return resp
     return Response(status=401, headers={"Cache-Control": "no-store"})
 

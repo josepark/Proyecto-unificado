@@ -65,18 +65,26 @@ class SistemaSerializer(serializers.ModelSerializer):
     def get_accesos_rbac(self, obj):
         """Accesos reales según la Matriz RBAC (fuente canónica)."""
         from .integracion_rbac import accesos_rbac_por_sistema
+        from .espacio_datos import codigo_espacio_request
         if not obj.sistema_rbac_id and not (obj.sistema_mca_equivalente or "").strip():
             return None
+        request = self.context.get("request")
+        esp = codigo_espacio_request(request) if request else "organizacion"
         return accesos_rbac_por_sistema(
             nombre_sistema=obj.sistema_mca_equivalente,
             sistema_rbac_id=obj.sistema_rbac_id,
+            espacio_codigo=esp,
         )
 
     def get_sistema_rbac_nombre(self, obj):
         from .integracion_rbac import sistema_rbac_resumen
+        from .espacio_datos import codigo_espacio_request
+        request = self.context.get("request")
+        esp = codigo_espacio_request(request) if request else "organizacion"
         s = sistema_rbac_resumen(
             nombre_sistema=obj.sistema_mca_equivalente,
             sistema_rbac_id=obj.sistema_rbac_id,
+            espacio_codigo=esp,
         )
         return s.get("nombre") if s else None
 
@@ -117,6 +125,7 @@ class ActivoListSerializer(serializers.ModelSerializer):
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     vinculado_riesgos = serializers.SerializerMethodField()
     riesgos_id = serializers.SerializerMethodField()
+    espacio_codigo = serializers.CharField(source="espacio.codigo", read_only=True, default="")
 
     class Meta:
         model = Activo
@@ -125,7 +134,7 @@ class ActivoListSerializer(serializers.ModelSerializer):
                   "disponibilidad", "valor", "nivel_riesgo",
                   "nivel_riesgo_display", "estado", "estado_display",
                   "propietario", "procesa_datos_personales",
-                  "vinculado_riesgos", "riesgos_id")
+                  "espacio_codigo", "vinculado_riesgos", "riesgos_id")
 
     def get_clase_display(self, obj):
         return obj.nombre_clase()

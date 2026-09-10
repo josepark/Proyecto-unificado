@@ -12,6 +12,12 @@ from flask import jsonify, request
 
 from db import audit, db, verificar_cadena
 import negocio
+from espacio import (
+    espacio_codigo_actual,
+    sql_filtro_espacio,
+    verificar_sistema_espacio,
+    verificar_usuario_espacio,
+)
 
 
 # --------------------------------------------------------------- adaptador
@@ -63,6 +69,7 @@ def registrar(app):
     @app.route("/api/sistemas")
     def api_sistemas():
         c = db()
+        esp = espacio_codigo_actual()
         q = request.args.get("q", "").strip()
         categoria_f = request.args.get("categoria", "")
         clasif_f = request.args.get("clasificacion", "")
@@ -73,8 +80,8 @@ def registrar(app):
                  FROM sistema s
                  JOIN categoria_sistema cs ON cs.id = s.categoria_id
                  LEFT JOIN matriz_acceso ma ON ma.sistema_id = s.id
-                 WHERE 1=1"""
-        p = []
+                 WHERE s.espacio_codigo = ?"""
+        p = [esp]
         if not incluir_inactivos:
             sql += " AND s.activo = 1"
         if q:
@@ -94,7 +101,9 @@ def registrar(app):
                       ma.nivel_codigo nivel
                FROM matriz_acceso ma
                JOIN rol r ON r.id = ma.rol_id
-               WHERE ma.nivel_codigo <> '—' AND r.activo = 1"""
+               JOIN sistema s ON s.id = ma.sistema_id
+               WHERE ma.nivel_codigo <> '—' AND r.activo = 1 AND s.espacio_codigo = ?""",
+            (esp,),
         ).fetchall()
         por_sistema = {}
         for a in accesos:
@@ -103,8 +112,10 @@ def registrar(app):
                  "nivel": a["nivel"]})
         excepciones_vigentes = dict(c.execute(
             """SELECT sistema_id, COUNT(*) n FROM acceso_excepcion
-               WHERE fecha_fin IS NULL OR date(fecha_fin) >= date('now')
-               GROUP BY sistema_id"""
+               WHERE espacio_codigo = ?
+                 AND (fecha_fin IS NULL OR date(fecha_fin) >= date('now'))
+               GROUP BY sistema_id""",
+            (esp,),
         ).fetchall())
         return jsonify([
             {"id": s["id"], "nombre": s["nombre"], "categoria": s["categoria"],
@@ -120,19 +131,30 @@ def registrar(app):
     @app.route("/api/resumen")
     def api_resumen():
         c = db()
+        esp = espacio_codigo_actual()
         roles_total = c.execute(
             "SELECT COUNT(*) n FROM rol WHERE activo=1").fetchone()["n"]
         sistemas_total = c.execute(
-            "SELECT COUNT(*) n FROM sistema WHERE activo=1").fetchone()["n"]
+            "SELECT COUNT(*) n FROM sistema WHERE activo=1 AND espacio_codigo=?",
+            (esp,),
+        ).fetchone()["n"]
         usuarios_activos = c.execute(
-            "SELECT COUNT(*) n FROM usuario WHERE estado IN ('Activo','Temporal')"
+            "SELECT COUNT(*) n FROM usuario WHERE estado IN ('Activo','Temporal') "
+            "AND espacio_codigo=?",
+            (esp,),
         ).fetchone()["n"]
 
-        alertas_mfa = c.execute("SELECT COUNT(*) n FROM v_alertas_mfa").fetchone()["n"]
+        alertas_mfa = c.execute(
+            """SELECT COUNT(*) n FROM v_alertas_mfa v
+               JOIN usuario u ON u.id = v.id WHERE u.espacio_codigo=?""",
+            (esp,),
+        ).fetchone()["n"]
         mfa_total = c.execute(
             "SELECT COUNT(*) n FROM usuario u JOIN rol r ON r.id=u.rol_id "
             "WHERE u.estado IN ('Activo','Temporal') AND r.mfa_requerido "
-            "LIKE 'Sí%'").fetchone()["n"]
+            "LIKE 'Sí%' AND u.espacio_codigo=?",
+            (esp,),
+        ).fetchone()["n"]
         mfa_ok = mfa_total - alertas_mfa
         mfa_pct = round(100 * mfa_ok / mfa_total) if mfa_total else 100
 
@@ -140,24 +162,28 @@ def registrar(app):
             """SELECT COUNT(*) n FROM (
                  SELECT u.id FROM usuario u
                  WHERE u.estado='Temporal' AND u.fecha_fin IS NOT NULL
+                   AND u.espacio_codigo=?
                    AND date(u.fecha_fin) BETWEEN date('now','localtime')
                                               AND date('now','localtime',?)
                  UNION ALL
                  SELECT e.usuario_id FROM acceso_excepcion e
-                 WHERE e.fecha_fin IS NOT NULL
+                 WHERE e.espacio_codigo=?
+                   AND e.fecha_fin IS NOT NULL
                    AND date(e.fecha_fin) BETWEEN date('now','localtime')
                                               AND date('now','localtime',?))""",
-            (f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days",
-             f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days")
+            (esp, f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days",
+             esp, f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days"),
         ).fetchone()["n"]
 
         excepciones_vigentes = c.execute(
             "SELECT COUNT(*) n FROM acceso_excepcion "
-            "WHERE fecha_fin IS NULL OR date(fecha_fin) >= date('now')"
+            "WHERE espacio_codigo=? AND (fecha_fin IS NULL OR date(fecha_fin) >= date('now'))",
+            (esp,),
         ).fetchone()["n"]
         excepciones_vencidas = c.execute(
             "SELECT COUNT(*) n FROM acceso_excepcion "
-            "WHERE fecha_fin IS NOT NULL AND date(fecha_fin) < date('now')"
+            "WHERE espacio_codigo=? AND fecha_fin IS NOT NULL AND date(fecha_fin) < date('now')",
+            (esp,),
         ).fetchone()["n"]
 
         roles_certificacion_vencida = c.execute(
@@ -195,28 +221,47 @@ def registrar(app):
         temporales, revocados, ultimos movimientos, grafico de riesgo por
         rol y vencimientos proximos), reutilizando las mismas consultas."""
         c = db()
+        esp = espacio_codigo_actual()
         stats = {
             "roles": c.execute("SELECT COUNT(*) n FROM rol").fetchone()["n"],
-            "sistemas": c.execute("SELECT COUNT(*) n FROM sistema").fetchone()["n"],
+            "sistemas": c.execute(
+                "SELECT COUNT(*) n FROM sistema WHERE espacio_codigo=?", (esp,),
+            ).fetchone()["n"],
             "usuarios": c.execute(
-                "SELECT COUNT(*) n FROM usuario WHERE estado IN ('Activo','Temporal')"
+                "SELECT COUNT(*) n FROM usuario WHERE estado IN ('Activo','Temporal') "
+                "AND espacio_codigo=?",
+                (esp,),
             ).fetchone()["n"],
             "accesos": c.execute(
-                "SELECT COUNT(*) n FROM matriz_acceso WHERE nivel_codigo<>'—'"
+                """SELECT COUNT(*) n FROM matriz_acceso ma
+                   JOIN sistema s ON s.id = ma.sistema_id
+                   WHERE ma.nivel_codigo<>'—' AND s.espacio_codigo=?""",
+                (esp,),
             ).fetchone()["n"],
         }
-        alertas_mfa = [dict(r) for r in c.execute("SELECT * FROM v_alertas_mfa")]
+        alertas_mfa = [dict(r) for r in c.execute(
+            """SELECT v.* FROM v_alertas_mfa v
+               JOIN usuario u ON u.id = v.id WHERE u.espacio_codigo=?""",
+            (esp,),
+        )]
         criticos = [dict(r) for r in c.execute(
             """SELECT r.abreviatura, r.denominacion, COUNT(*) n_admin
                FROM matriz_acceso ma JOIN rol r ON r.id = ma.rol_id
-               WHERE ma.nivel_codigo='A'
-               GROUP BY r.id ORDER BY n_admin DESC""")]
+               JOIN sistema s ON s.id = ma.sistema_id
+               WHERE ma.nivel_codigo='A' AND s.espacio_codigo=?
+               GROUP BY r.id ORDER BY n_admin DESC""",
+            (esp,),
+        )]
         temporales = [dict(r) for r in c.execute(
             "SELECT u.nombre, r.abreviatura rol, u.fecha_fin FROM usuario u "
-            "JOIN rol r ON r.id=u.rol_id WHERE u.estado='Temporal'")]
+            "JOIN rol r ON r.id=u.rol_id WHERE u.estado='Temporal' AND u.espacio_codigo=?",
+            (esp,),
+        )]
         revocados = [dict(r) for r in c.execute(
             "SELECT u.nombre, r.abreviatura rol, u.notas FROM usuario u "
-            "JOIN rol r ON r.id=u.rol_id WHERE u.estado='Revocado'")]
+            "JOIN rol r ON r.id=u.rol_id WHERE u.estado='Revocado' AND u.espacio_codigo=?",
+            (esp,),
+        )]
         log = [dict(r) for r in c.execute(
             "SELECT * FROM log_auditoria ORDER BY id DESC LIMIT 8")]
 
@@ -233,7 +278,9 @@ def registrar(app):
         mfa_total = c.execute(
             "SELECT COUNT(*) n FROM usuario u JOIN rol r ON r.id=u.rol_id "
             "WHERE u.estado IN ('Activo','Temporal') AND r.mfa_requerido "
-            "LIKE 'Sí%'").fetchone()["n"]
+            "LIKE 'Sí%' AND u.espacio_codigo=?",
+            (esp,),
+        ).fetchone()["n"]
         mfa_ok = mfa_total - len(alertas_mfa)
         mfa_pct = round(100 * mfa_ok / mfa_total) if mfa_total else 100
 
@@ -244,6 +291,7 @@ def registrar(app):
                            AS INTEGER) dias
                FROM usuario u JOIN rol r ON r.id=u.rol_id
                WHERE u.estado='Temporal' AND u.fecha_fin IS NOT NULL
+                 AND u.espacio_codigo=?
                  AND date(u.fecha_fin) BETWEEN date('now','localtime')
                                             AND date('now','localtime',?)
                UNION ALL
@@ -254,11 +302,14 @@ def registrar(app):
                FROM acceso_excepcion e
                JOIN usuario us ON us.id=e.usuario_id
                JOIN sistema s ON s.id=e.sistema_id
-               WHERE e.fecha_fin IS NOT NULL
+               WHERE e.espacio_codigo=?
+                 AND e.fecha_fin IS NOT NULL
                  AND date(e.fecha_fin) BETWEEN date('now','localtime')
                                             AND date('now','localtime',?)
                ORDER BY fecha_fin""",
-            (f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days", f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days"))]
+            (esp, f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days",
+             esp, f"+{negocio.DIAS_ALERTA_VENCIMIENTO} days"),
+        )]
 
         return jsonify({
             "stats": stats, "alertas_mfa": alertas_mfa, "criticos": criticos,
@@ -331,10 +382,11 @@ def registrar(app):
                JOIN sistema s ON s.id=ma.sistema_id
                JOIN categoria_sistema cat ON cat.id=s.categoria_id
                JOIN nivel_acceso n ON n.codigo=ma.nivel_codigo
-               WHERE ma.rol_id=? AND ma.nivel_codigo<>'—'
-               ORDER BY n.orden, s.id""", (rid,))]
+               WHERE ma.rol_id=? AND ma.nivel_codigo<>'—' AND s.espacio_codigo=?
+               ORDER BY n.orden, s.id""", (rid, espacio_codigo_actual()))]
         usuarios = [dict(r) for r in c.execute(
-            "SELECT * FROM usuario WHERE rol_id=? ORDER BY estado, nombre", (rid,))]
+            "SELECT * FROM usuario WHERE rol_id=? AND espacio_codigo=? "
+            "ORDER BY estado, nombre", (rid, espacio_codigo_actual()))]
         data = dict(rol)
         data["accesos"] = accesos
         data["usuarios"] = usuarios
@@ -488,10 +540,13 @@ def registrar(app):
         — solo escritura (PUT/DELETE/activo). Sin esto, un formulario de
         edición en React no tenía forma de precargar sus datos."""
         c = db()
+        esp = espacio_codigo_actual()
         sis = c.execute(
             "SELECT s.*, c.nombre categoria FROM sistema s "
-            "JOIN categoria_sistema c ON c.id=s.categoria_id WHERE s.id=?",
-            (sid,)).fetchone()
+            "JOIN categoria_sistema c ON c.id=s.categoria_id "
+            "WHERE s.id=? AND s.espacio_codigo=?",
+            (sid, esp),
+        ).fetchone()
         if not sis:
             return jsonify({"detail": "Sistema no encontrado."}), 404
         roles_acc = [dict(r) for r in c.execute(
@@ -515,7 +570,8 @@ def registrar(app):
                     AND (e.fecha_fin IS NULL OR date(e.fecha_fin) >= date('now'))
                WHERE COALESCE(e.nivel_codigo, ma.nivel_codigo) <> '—'
                  AND u.estado IN ('Activo','Temporal') AND r.activo=1
-               ORDER BY u.nombre""", (sid, sid))]
+                 AND u.espacio_codigo=?
+               ORDER BY u.nombre""", (sid, sid, esp))]
         data = dict(sis)
         data["roles"] = roles_acc
         data["usuarios"] = usuarios
@@ -524,13 +580,17 @@ def registrar(app):
     @app.route("/api/sistemas", methods=["POST"])
     def api_sistema_crear():
         c = db()
+        esp = espacio_codigo_actual()
         datos, error = negocio._validar_datos_sistema(_json_body(), c)
         if error:
             return jsonify({"detail": error}), 400
         try:
             cur = c.execute(
-                """INSERT INTO sistema (nombre, categoria_id, clasificacion, tecnicas_attack)
-                   VALUES (:nombre,:categoria_id,:clasificacion,:tecnicas_attack)""", datos)
+                """INSERT INTO sistema (nombre, categoria_id, clasificacion,
+                                        tecnicas_attack, espacio_codigo)
+                   VALUES (:nombre,:categoria_id,:clasificacion,:tecnicas_attack, :espacio_codigo)""",
+                {**datos, "espacio_codigo": esp},
+            )
         except sqlite3.IntegrityError:
             return jsonify({"detail": "Ya existe un sistema con ese nombre."}), 409
         sid_nuevo = cur.lastrowid
@@ -545,7 +605,7 @@ def registrar(app):
     @app.route("/api/sistemas/<int:sid>", methods=["PUT"])
     def api_sistema_editar(sid):
         c = db()
-        if not c.execute("SELECT 1 FROM sistema WHERE id=?", (sid,)).fetchone():
+        if not verificar_sistema_espacio(c, sid):
             return jsonify({"detail": "Sistema no encontrado."}), 404
         datos, error = negocio._validar_datos_sistema(_json_body(), c)
         if error:
@@ -565,7 +625,11 @@ def registrar(app):
     @app.route("/api/sistemas/<int:sid>/activo", methods=["DELETE", "POST"])
     def api_sistema_toggle_activo(sid):
         c = db()
-        s = c.execute("SELECT nombre, activo FROM sistema WHERE id=?", (sid,)).fetchone()
+        esp = espacio_codigo_actual()
+        s = c.execute(
+            "SELECT nombre, activo FROM sistema WHERE id=? AND espacio_codigo=?",
+            (sid, esp),
+        ).fetchone()
         if not s:
             return jsonify({"detail": "Sistema no encontrado."}), 404
         nuevo = 0 if s["activo"] else 1
@@ -579,7 +643,11 @@ def registrar(app):
     @app.route("/api/sistemas/<int:sid>", methods=["DELETE"])
     def api_sistema_eliminar(sid):
         c = db()
-        s = c.execute("SELECT nombre FROM sistema WHERE id=?", (sid,)).fetchone()
+        esp = espacio_codigo_actual()
+        s = c.execute(
+            "SELECT nombre FROM sistema WHERE id=? AND espacio_codigo=?",
+            (sid, esp),
+        ).fetchone()
         if not s:
             return jsonify({"detail": "Sistema no encontrado."}), 404
         n = c.execute("SELECT COUNT(*) n FROM acceso_excepcion WHERE sistema_id=?",
@@ -637,6 +705,7 @@ def registrar(app):
     @app.route("/api/usuarios")
     def api_usuarios_lista():
         c = db()
+        esp = espacio_codigo_actual()
         q = request.args.get("q", "").strip()
         estado_f = request.args.get("estado", "")
         rol_f = request.args.get("rol", "")
@@ -645,8 +714,9 @@ def registrar(app):
                          WHERE v.usuario_id = u.id) n_sistemas,
                         (SELECT COUNT(*) FROM acceso_excepcion e
                          WHERE e.usuario_id = u.id) n_excepciones
-                 FROM usuario u JOIN rol r ON r.id=u.rol_id WHERE 1=1"""
-        p = []
+                 FROM usuario u JOIN rol r ON r.id=u.rol_id
+                 WHERE u.espacio_codigo=?"""
+        p = [esp]
         if q:
             sql += " AND (u.nombre LIKE ? OR r.abreviatura LIKE ? OR r.denominacion LIKE ?)"
             p += [f"%{q}%"] * 3
@@ -663,9 +733,13 @@ def registrar(app):
     @app.route("/api/usuarios/<int:uid>")
     def api_usuario_detalle(uid):
         c = db()
+        esp = espacio_codigo_actual()
         u = c.execute(
             "SELECT u.*, r.abreviatura rol_abrev, r.denominacion, r.mfa_requerido "
-            "FROM usuario u JOIN rol r ON r.id=u.rol_id WHERE u.id=?", (uid,)).fetchone()
+            "FROM usuario u JOIN rol r ON r.id=u.rol_id "
+            "WHERE u.id=? AND u.espacio_codigo=?",
+            (uid, esp),
+        ).fetchone()
         if not u:
             return jsonify({"detail": "Usuario no encontrado."}), 404
         accesos = [dict(r) for r in c.execute(
@@ -679,8 +753,8 @@ def registrar(app):
                     AND ma.rol_id = (SELECT rol_id FROM usuario WHERE id=?)
                LEFT JOIN acceso_excepcion e
                       ON e.usuario_id = ? AND e.sistema_id = s.id
-               WHERE s.activo = 1
-               ORDER BY cat.id, s.id""", (uid, uid))]
+               WHERE s.activo = 1 AND s.espacio_codigo=?
+               ORDER BY cat.id, s.id""", (uid, uid, esp))]
         data = dict(u)
         data["accesos"] = accesos
         return jsonify(data)
@@ -688,6 +762,7 @@ def registrar(app):
     @app.route("/api/usuarios", methods=["POST"])
     def api_usuario_crear():
         c = db()
+        esp = espacio_codigo_actual()
         datos, error = _validar_datos_usuario(_json_body(), c)
         if error:
             return jsonify({"detail": error}), 400
@@ -695,9 +770,11 @@ def registrar(app):
                         (datos["rol_id"],)).fetchone()
         cur = c.execute(
             """INSERT INTO usuario (nombre, rol_id, mfa_activo, nda, estado,
-                                    fecha_inicio, fecha_fin, notas)
-               VALUES (:nombre,:rol_id,:mfa_activo,:nda,:estado,:fecha_inicio,:fecha_fin,:notas)""",
-            datos)
+                                    fecha_inicio, fecha_fin, notas, espacio_codigo)
+               VALUES (:nombre,:rol_id,:mfa_activo,:nda,:estado,:fecha_inicio,:fecha_fin,
+                       :notas, :espacio_codigo)""",
+            {**datos, "espacio_codigo": esp},
+        )
         c.commit()
         uid_nuevo = cur.lastrowid
         audit("usuario", "ALTA",
@@ -709,7 +786,7 @@ def registrar(app):
     @app.route("/api/usuarios/<int:uid>", methods=["PUT"])
     def api_usuario_editar(uid):
         c = db()
-        if not c.execute("SELECT 1 FROM usuario WHERE id=?", (uid,)).fetchone():
+        if not verificar_usuario_espacio(c, uid):
             return jsonify({"detail": "Usuario no encontrado."}), 404
         datos, error = _validar_datos_usuario(_json_body(), c, uid_actual=uid)
         if error:
@@ -736,7 +813,9 @@ def registrar(app):
             return jsonify({"detail": "Estado no reconocido."}), 400
         u = c.execute(
             "SELECT u.nombre, r.abreviatura rol FROM usuario u "
-            "JOIN rol r ON r.id=u.rol_id WHERE u.id=?", (uid,)).fetchone()
+            "JOIN rol r ON r.id=u.rol_id WHERE u.id=? AND u.espacio_codigo=?",
+            (uid, espacio_codigo_actual()),
+        ).fetchone()
         if not u:
             return jsonify({"detail": "Usuario no encontrado."}), 404
         motivo = cuerpo.get("motivo", "").strip()
@@ -756,7 +835,9 @@ def registrar(app):
         c = db()
         u = c.execute(
             "SELECT u.nombre, r.abreviatura rol FROM usuario u "
-            "JOIN rol r ON r.id=u.rol_id WHERE u.id=?", (uid,)).fetchone()
+            "JOIN rol r ON r.id=u.rol_id WHERE u.id=? AND u.espacio_codigo=?",
+            (uid, espacio_codigo_actual()),
+        ).fetchone()
         if not u:
             return jsonify({"detail": "Usuario no encontrado."}), 404
         c.execute("DELETE FROM usuario WHERE id=?", (uid,))
@@ -770,6 +851,7 @@ def registrar(app):
     @app.route("/api/matriz")
     def api_matriz():
         c = db()
+        esp = espacio_codigo_actual()
         grupo = request.args.get("grupo", "")
         categoria = request.args.get("categoria", "")
 
@@ -782,15 +864,18 @@ def registrar(app):
         roles = [dict(r) for r in c.execute(q_rol + " ORDER BY r.id", p)]
 
         q_sis = ("SELECT s.*, c.nombre categoria FROM sistema s "
-                 "JOIN categoria_sistema c ON c.id=s.categoria_id WHERE s.activo=1")
-        p2 = []
+                 "JOIN categoria_sistema c ON c.id=s.categoria_id "
+                 "WHERE s.activo=1 AND s.espacio_codigo=?")
+        p2 = [esp]
         if categoria:
             q_sis += " AND c.nombre=?"
             p2.append(categoria)
         sistemas = [dict(r) for r in c.execute(q_sis + " ORDER BY s.id", p2)]
+        sis_ids = {s["id"] for s in sistemas}
 
         celdas = {f"{m['rol_id']}:{m['sistema_id']}": m["nivel_codigo"]
-                  for m in c.execute("SELECT * FROM matriz_acceso")}
+                  for m in c.execute("SELECT * FROM matriz_acceso")
+                  if m["sistema_id"] in sis_ids}
         niveles = [dict(r) for r in c.execute("SELECT * FROM nivel_acceso ORDER BY orden")]
         return jsonify({"roles": roles, "sistemas": sistemas, "celdas": celdas, "niveles": niveles})
 
@@ -798,6 +883,7 @@ def registrar(app):
     def api_matriz_heatmap():
         """Accesos nivel Admin (A) por categoría de sistema — vista resumida."""
         c = db()
+        esp = espacio_codigo_actual()
         filas = c.execute(
             """SELECT cat.nombre categoria,
                       COUNT(DISTINCT s.id) sistemas,
@@ -807,8 +893,9 @@ def registrar(app):
                JOIN categoria_sistema cat ON cat.id = s.categoria_id
                JOIN matriz_acceso ma ON ma.sistema_id = s.id
                JOIN rol r ON r.id = ma.rol_id AND r.activo = 1
-               WHERE s.activo = 1
-               GROUP BY cat.id ORDER BY n_admin DESC, cat.nombre"""
+               WHERE s.activo = 1 AND s.espacio_codigo=?
+               GROUP BY cat.id ORDER BY n_admin DESC, cat.nombre""",
+            (esp,),
         ).fetchall()
         return jsonify([dict(r) for r in filas])
 
@@ -838,7 +925,10 @@ def registrar(app):
         sistemas = c.execute(
             """SELECT s.id, s.nombre, cat.nombre categoria FROM sistema s
                JOIN categoria_sistema cat ON cat.id=s.categoria_id
-               WHERE s.activo=1 ORDER BY cat.nombre, s.nombre""").fetchall()
+               WHERE s.activo=1 AND s.espacio_codigo=?
+               ORDER BY cat.nombre, s.nombre""",
+            (espacio_codigo_actual(),),
+        ).fetchall()
 
         filas = []
         for s in sistemas:
@@ -865,7 +955,10 @@ def registrar(app):
         if not c.execute("SELECT 1 FROM nivel_acceso WHERE codigo=?", (nivel,)).fetchone():
             return jsonify({"detail": "Nivel de acceso no reconocido."}), 400
         rol = c.execute("SELECT abreviatura FROM rol WHERE id=?", (rol_id,)).fetchone()
-        sis = c.execute("SELECT nombre FROM sistema WHERE id=?", (sistema_id,)).fetchone()
+        sis = c.execute(
+            "SELECT nombre FROM sistema WHERE id=? AND espacio_codigo=?",
+            (sistema_id, espacio_codigo_actual()),
+        ).fetchone()
         if not rol or not sis:
             return jsonify({"detail": "Rol o sistema no encontrado."}), 404
         prev = c.execute(
@@ -914,8 +1007,12 @@ def registrar(app):
     @app.route("/api/export/matriz.csv")
     def api_export_matriz():
         c = db()
+        esp = espacio_codigo_actual()
         roles = c.execute("SELECT id, abreviatura FROM rol ORDER BY id").fetchall()
-        sistemas = c.execute("SELECT id, nombre FROM sistema ORDER BY id").fetchall()
+        sistemas = c.execute(
+            "SELECT id, nombre FROM sistema WHERE espacio_codigo=? ORDER BY id",
+            (esp,),
+        ).fetchall()
         celdas = {(m["rol_id"], m["sistema_id"]): m["nivel_codigo"]
                   for m in c.execute("SELECT * FROM matriz_acceso")}
         filas = [[s["nombre"]] + [celdas.get((r["id"], s["id"]), "—")
@@ -926,10 +1023,17 @@ def registrar(app):
 
     @app.route("/api/export/accesos_usuarios.csv")
     def api_export_accesos():
+        esp = espacio_codigo_actual()
         filas = db().execute(
-            "SELECT usuario, estado, rol, sistema, categoria, clasificacion, nivel, "
-            "CASE es_excepcion WHEN 1 THEN 'Sí' ELSE '' END "
-            "FROM v_accesos_usuario ORDER BY usuario, sistema").fetchall()
+            """SELECT v.usuario, v.estado, v.rol, v.sistema, v.categoria, v.clasificacion,
+                      v.nivel, CASE v.es_excepcion WHEN 1 THEN 'Sí' ELSE '' END
+               FROM v_accesos_usuario v
+               JOIN usuario u ON u.id = v.usuario_id
+               JOIN sistema s ON s.nombre = v.sistema AND s.espacio_codigo = u.espacio_codigo
+               WHERE u.espacio_codigo = ?
+               ORDER BY v.usuario, v.sistema""",
+            (esp,),
+        ).fetchall()
         return negocio.csv_response(
             "SUIIN-SGSI-MCA-001_accesos_efectivos.csv",
             ["Usuario", "Estado", "Rol", "Sistema", "Categoría",
@@ -945,6 +1049,7 @@ def registrar(app):
         vista HTML. Se iguala aquí para que la pantalla de React tenga la
         misma información."""
         c = db()
+        esp = espacio_codigo_actual()
         incluir_vencidas = request.args.get("vencidas") == "1"
         sql = """SELECT u.id usuario_id, u.nombre usuario, u.estado usuario_estado,
                         s.id sistema_id, s.nombre sistema, r.abreviatura rol,
@@ -958,22 +1063,28 @@ def registrar(app):
                  JOIN sistema s ON s.id = e.sistema_id
                  JOIN rol r ON r.id = u.rol_id
                  LEFT JOIN matriz_acceso ma
-                        ON ma.rol_id = u.rol_id AND ma.sistema_id = e.sistema_id"""
+                        ON ma.rol_id = u.rol_id AND ma.sistema_id = e.sistema_id
+                 WHERE e.espacio_codigo=?"""
+        params = [esp]
         if not incluir_vencidas:
-            sql += " WHERE e.fecha_fin IS NULL OR date(e.fecha_fin) >= date('now')"
+            sql += " AND (e.fecha_fin IS NULL OR date(e.fecha_fin) >= date('now'))"
         sql += """ ORDER BY
                  CASE WHEN e.fecha_fin IS NOT NULL AND date(e.fecha_fin) < date('now')
                       THEN 1 ELSE 0 END DESC,
                  e.fecha_fin IS NULL, e.fecha_fin, u.nombre"""
-        filas = [dict(r) for r in c.execute(sql)]
+        filas = [dict(r) for r in c.execute(sql, params)]
         for f in filas:
             f["vencida"] = bool(f["vencida"])
         total_vigentes = c.execute(
             "SELECT COUNT(*) n FROM acceso_excepcion "
-            "WHERE fecha_fin IS NULL OR date(fecha_fin) >= date('now')").fetchone()["n"]
+            "WHERE espacio_codigo=? AND (fecha_fin IS NULL OR date(fecha_fin) >= date('now'))",
+            (esp,),
+        ).fetchone()["n"]
         total_vencidas = c.execute(
             "SELECT COUNT(*) n FROM acceso_excepcion "
-            "WHERE fecha_fin IS NOT NULL AND date(fecha_fin) < date('now')").fetchone()["n"]
+            "WHERE espacio_codigo=? AND fecha_fin IS NOT NULL AND date(fecha_fin) < date('now')",
+            (esp,),
+        ).fetchone()["n"]
         return jsonify({"filas": filas, "total_vigentes": total_vigentes,
                         "total_vencidas": total_vencidas})
 
@@ -982,6 +1093,7 @@ def registrar(app):
         """Version en JSON de excepcion_masiva_aplicar() — no existia
         ningun endpoint API para la asignacion masiva, solo la vista HTML."""
         c = db()
+        esp = espacio_codigo_actual()
         cuerpo = request.get_json(silent=True) or {}
         motivo = (cuerpo.get("motivo") or "").strip()
         if not motivo:
@@ -994,7 +1106,10 @@ def registrar(app):
         fecha_fin = cuerpo.get("fecha_fin") or None
         if not negocio._fecha_valida(fecha_fin):
             return jsonify({"detail": "La fecha debe tener el formato AAAA-MM-DD."}), 400
-        s = c.execute("SELECT nombre FROM sistema WHERE id=?", (sistema_id,)).fetchone()
+        s = c.execute(
+            "SELECT nombre FROM sistema WHERE id=? AND espacio_codigo=?",
+            (sistema_id, esp),
+        ).fetchone()
         if not s or not c.execute("SELECT 1 FROM nivel_acceso WHERE codigo=?", (nivel,)).fetchone():
             return jsonify({"detail": "Sistema o nivel no válido."}), 404
         ids = [i for i in (cuerpo.get("usuario_ids") or []) if isinstance(i, int)]
@@ -1005,7 +1120,9 @@ def registrar(app):
         for uid in ids:
             u = c.execute(
                 "SELECT u.nombre, u.rol_id, r.abreviatura rol FROM usuario u "
-                "JOIN rol r ON r.id=u.rol_id WHERE u.id=?", (uid,)).fetchone()
+                "JOIN rol r ON r.id=u.rol_id WHERE u.id=? AND u.espacio_codigo=?",
+                (uid, esp),
+            ).fetchone()
             if not u:
                 continue
             fila_rol = c.execute(
@@ -1014,12 +1131,13 @@ def registrar(app):
             nivel_rol = fila_rol["nivel_codigo"] if fila_rol else "—"
             c.execute(
                 """INSERT INTO acceso_excepcion (usuario_id, sistema_id, nivel_codigo,
-                                                 motivo, fecha_fin)
-                   VALUES (?,?,?,?,?)
+                                                 motivo, fecha_fin, espacio_codigo)
+                   VALUES (?,?,?,?,?,?)
                    ON CONFLICT(usuario_id, sistema_id) DO UPDATE SET
                      nivel_codigo=excluded.nivel_codigo, motivo=excluded.motivo,
-                     fecha_fin=excluded.fecha_fin""",
-                (uid, sistema_id, nivel, motivo, fecha_fin))
+                     fecha_fin=excluded.fecha_fin, espacio_codigo=excluded.espacio_codigo""",
+                (uid, sistema_id, nivel, motivo, fecha_fin, esp),
+            )
             audit("usuario", "MODIFICACION",
                   f"Excepción de acceso (asignación masiva vía API): {u['nombre']} sobre "
                   f"«{s['nombre']}» → {nivel} (el rol {u['rol']} otorga {nivel_rol}). "
@@ -1031,6 +1149,7 @@ def registrar(app):
     @app.route("/api/usuarios/<int:uid>/excepciones", methods=["POST"])
     def api_excepcion_crear(uid):
         c = db()
+        esp = espacio_codigo_actual()
         cuerpo = request.get_json(silent=True) or {}
         motivo = cuerpo.get("motivo", "").strip()
         if not motivo:
@@ -1046,8 +1165,13 @@ def registrar(app):
 
         u = c.execute(
             "SELECT u.nombre, u.rol_id, r.abreviatura rol FROM usuario u "
-            "JOIN rol r ON r.id=u.rol_id WHERE u.id=?", (uid,)).fetchone()
-        s = c.execute("SELECT nombre FROM sistema WHERE id=?", (sistema_id,)).fetchone()
+            "JOIN rol r ON r.id=u.rol_id WHERE u.id=? AND u.espacio_codigo=?",
+            (uid, esp),
+        ).fetchone()
+        s = c.execute(
+            "SELECT nombre FROM sistema WHERE id=? AND espacio_codigo=?",
+            (sistema_id, esp),
+        ).fetchone()
         if not u or not s or not c.execute(
                 "SELECT 1 FROM nivel_acceso WHERE codigo=?", (nivel,)).fetchone():
             return jsonify({"detail": "Usuario, sistema o nivel no válido."}), 404
@@ -1056,12 +1180,14 @@ def registrar(app):
             (u["rol_id"], sistema_id)).fetchone()
         nivel_rol = fila_rol["nivel_codigo"] if fila_rol else "—"
         c.execute(
-            """INSERT INTO acceso_excepcion (usuario_id, sistema_id, nivel_codigo, motivo, fecha_fin)
-               VALUES (?,?,?,?,?)
+            """INSERT INTO acceso_excepcion (usuario_id, sistema_id, nivel_codigo, motivo,
+                                             fecha_fin, espacio_codigo)
+               VALUES (?,?,?,?,?,?)
                ON CONFLICT(usuario_id, sistema_id) DO UPDATE SET
                  nivel_codigo=excluded.nivel_codigo, motivo=excluded.motivo,
-                 fecha_fin=excluded.fecha_fin""",
-            (uid, sistema_id, nivel, motivo, fecha_fin))
+                 fecha_fin=excluded.fecha_fin, espacio_codigo=excluded.espacio_codigo""",
+            (uid, sistema_id, nivel, motivo, fecha_fin, esp),
+        )
         c.commit()
         audit("usuario", "MODIFICACION",
               f"Excepción de acceso vía API: {u['nombre']} sobre «{s['nombre']}» → "
@@ -1071,11 +1197,21 @@ def registrar(app):
     @app.route("/api/usuarios/<int:uid>/excepciones/<int:sid>", methods=["DELETE"])
     def api_excepcion_eliminar(uid, sid):
         c = db()
-        u = c.execute("SELECT nombre FROM usuario WHERE id=?", (uid,)).fetchone()
-        s = c.execute("SELECT nombre FROM sistema WHERE id=?", (sid,)).fetchone()
+        esp = espacio_codigo_actual()
+        u = c.execute(
+            "SELECT nombre FROM usuario WHERE id=? AND espacio_codigo=?",
+            (uid, esp),
+        ).fetchone()
+        s = c.execute(
+            "SELECT nombre FROM sistema WHERE id=? AND espacio_codigo=?",
+            (sid, esp),
+        ).fetchone()
         if not u or not s:
             return jsonify({"detail": "Usuario o sistema no encontrado."}), 404
-        c.execute("DELETE FROM acceso_excepcion WHERE usuario_id=? AND sistema_id=?", (uid, sid))
+        c.execute(
+            "DELETE FROM acceso_excepcion WHERE usuario_id=? AND sistema_id=? AND espacio_codigo=?",
+            (uid, sid, esp),
+        )
         c.commit()
         audit("usuario", "MODIFICACION",
               f"Excepción retirada vía API: {u['nombre']} sobre «{s['nombre']}» "

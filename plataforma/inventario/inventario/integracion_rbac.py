@@ -17,19 +17,30 @@ RBAC_INTERNAL_URL = os.environ.get("RBAC_INTERNAL_URL", "http://rbac:5000")
 _TIMEOUT = 2  # segundos — corto a propósito: esto no debe demorar una petición del navegador
 
 
-def resumen_rbac():
+def _headers_espacio(espacio_codigo=None):
+    headers = {}
+    if espacio_codigo:
+        headers["X-Espacio-Datos"] = espacio_codigo
+    return headers
+
+
+def resumen_rbac(espacio_codigo="organizacion"):
     """KPIs consolidados (roles, sistemas, MFA, vencimientos, excepciones,
     certificación de roles). Usado por el badge de la pestaña "Matriz RBAC"
     y por el Panel ejecutivo."""
     try:
-        r = requests.get(f"{RBAC_INTERNAL_URL}/api/resumen", timeout=_TIMEOUT)
+        r = requests.get(
+            f"{RBAC_INTERNAL_URL}/api/resumen",
+            headers=_headers_espacio(espacio_codigo),
+            timeout=_TIMEOUT,
+        )
         r.raise_for_status()
         return r.json()
     except requests.RequestException:
         return None
 
 
-def inicio_rbac():
+def inicio_rbac(espacio_codigo="organizacion"):
     """Detalle del tablero de Inicio de RBAC (no solo conteos, como
     resumen_rbac): quién exactamente tiene el MFA pendiente, qué vence
     pronto, roles críticos. Usado por el resumen semanal por correo
@@ -37,30 +48,39 @@ def inicio_rbac():
     ("3 vencimientos") no le dice al Dinamizador qué hacer; el detalle
     con nombres sí."""
     try:
-        r = requests.get(f"{RBAC_INTERNAL_URL}/api/inicio", timeout=_TIMEOUT)
+        r = requests.get(
+            f"{RBAC_INTERNAL_URL}/api/inicio",
+            headers=_headers_espacio(espacio_codigo),
+            timeout=_TIMEOUT,
+        )
         r.raise_for_status()
         return r.json()
     except requests.RequestException:
         return None
 
 
-def catalogo_sistemas_rbac():
+def catalogo_sistemas_rbac(espacio_codigo="organizacion"):
     """Catálogo completo de sistemas de la matriz MCA con sus accesos por
     rol. None si RBAC no responde."""
     try:
-        r = requests.get(f"{RBAC_INTERNAL_URL}/api/sistemas", timeout=_TIMEOUT)
+        r = requests.get(
+            f"{RBAC_INTERNAL_URL}/api/sistemas",
+            headers=_headers_espacio(espacio_codigo),
+            timeout=_TIMEOUT,
+        )
         r.raise_for_status()
         return r.json()
     except requests.RequestException:
         return None
 
 
-def auditoria_rbac(limite=80):
+def auditoria_rbac(limite=80, espacio_codigo="organizacion"):
     """Últimas filas de log_auditoria de RBAC — para el panel unificado."""
     try:
         r = requests.get(
             f"{RBAC_INTERNAL_URL}/api/auditoria",
             params={"limite": limite},
+            headers=_headers_espacio(espacio_codigo),
             timeout=_TIMEOUT,
         )
         r.raise_for_status()
@@ -72,12 +92,12 @@ def auditoria_rbac(limite=80):
         return None
 
 
-def accesos_rbac_por_sistema(nombre_sistema=None, sistema_rbac_id=None):
+def accesos_rbac_por_sistema(nombre_sistema=None, sistema_rbac_id=None, espacio_codigo="organizacion"):
     """Busca accesos en el catálogo canónico de RBAC por ID (prioritario) o
     por nombre normalizado de `sistema_mca_equivalente`."""
     if not sistema_rbac_id and not nombre_sistema:
         return None
-    catalogo = catalogo_sistemas_rbac()
+    catalogo = catalogo_sistemas_rbac(espacio_codigo=espacio_codigo)
     if catalogo is None:
         return None
     if sistema_rbac_id:
@@ -93,11 +113,11 @@ def accesos_rbac_por_sistema(nombre_sistema=None, sistema_rbac_id=None):
     return None
 
 
-def sistema_rbac_resumen(nombre_sistema=None, sistema_rbac_id=None):
+def sistema_rbac_resumen(nombre_sistema=None, sistema_rbac_id=None, espacio_codigo="organizacion"):
     """Metadatos del sistema RBAC vinculado (excepciones, nombre canónico)."""
     if not sistema_rbac_id and not nombre_sistema:
         return None
-    catalogo = catalogo_sistemas_rbac()
+    catalogo = catalogo_sistemas_rbac(espacio_codigo=espacio_codigo)
     if catalogo is None:
         return None
     if sistema_rbac_id:

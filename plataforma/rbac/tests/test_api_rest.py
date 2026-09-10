@@ -659,3 +659,27 @@ def test_auditoria_verificar_cadena_integra(cliente):
     r = cliente.get("/api/auditoria/verificar")
     assert r.status_code == 200
     assert r.get_json()["integra"] is True
+
+
+def test_resumen_filtra_por_espacio_datos(cliente):
+    """Un espacio personal vacío no debe heredar sistemas/usuarios de organizacion."""
+    import db as capa_db
+    import sqlite3
+
+    con = sqlite3.connect(capa_db.DB)
+    cat_id = con.execute("SELECT id FROM categoria_sistema LIMIT 1").fetchone()[0]
+    con.execute(
+        "INSERT INTO sistema (nombre, categoria_id, clasificacion, espacio_codigo) "
+        "VALUES ('Sistema privado test', ?, 'Interna', 'usuario-aislado')",
+        (cat_id,),
+    )
+    con.commit()
+    con.close()
+
+    r_org = cliente.get("/api/resumen")
+    r_priv = cliente.get("/api/resumen", headers={"X-Espacio-Datos": "usuario-aislado"})
+    assert r_org.status_code == 200
+    assert r_priv.status_code == 200
+    assert r_priv.get_json()["sistemas_total"] == 1
+    assert r_priv.get_json()["usuarios_activos"] == 0
+    assert r_org.get_json()["sistemas_total"] > r_priv.get_json()["sistemas_total"]

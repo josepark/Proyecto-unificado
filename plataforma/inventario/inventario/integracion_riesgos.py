@@ -6,17 +6,28 @@ corto, None si el módulo no responde (el Inventario no debe caer por ello).
 import os
 
 import requests
+from django.conf import settings
 
 RIESGOS_INTERNAL_URL = os.environ.get("RIESGOS_INTERNAL_URL", "http://riesgos-backend:8000")
 _TIMEOUT = 2
 
 
-def resumen_activo_por_inventario(inventario_id):
+def _headers_internos(espacio_codigo=None):
+    headers = {}
+    if settings.JWT_SHARED_SECRET:
+        headers["X-Plataforma-Secret"] = settings.JWT_SHARED_SECRET
+    if espacio_codigo:
+        headers["X-Espacio-Datos"] = espacio_codigo
+    return headers
+
+
+def resumen_activo_por_inventario(inventario_id, espacio_codigo="organizacion"):
     """KPIs del activo espejo en Riesgos (vulns, riesgo matriz). None si no hay vínculo."""
     try:
         r = requests.get(
             f"{RIESGOS_INTERNAL_URL}/api/activos/",
             params={"inventario_id": inventario_id, "page_size": 1},
+            headers=_headers_internos(espacio_codigo),
             timeout=_TIMEOUT,
         )
         r.raise_for_status()
@@ -39,10 +50,14 @@ def resumen_activo_por_inventario(inventario_id):
         return None
 
 
-def alertas_riesgos_resumen():
+def alertas_riesgos_resumen(espacio_codigo="organizacion"):
     """Conteos operativos de vencimientos en el módulo Riesgos."""
     try:
-        r = requests.get(f"{RIESGOS_INTERNAL_URL}/api/alertas/resumen/", timeout=_TIMEOUT)
+        r = requests.get(
+            f"{RIESGOS_INTERNAL_URL}/api/alertas/resumen/",
+            headers=_headers_internos(espacio_codigo),
+            timeout=_TIMEOUT,
+        )
         r.raise_for_status()
         data = r.json()
         return {
@@ -54,10 +69,14 @@ def alertas_riesgos_resumen():
         return {"total_vencidas": 0, "total_por_vencer": 0, "disponible": False}
 
 
-def kpis_riesgos_dashboard():
+def kpis_riesgos_dashboard(espacio_codigo="organizacion"):
     """KPIs agregados del panel de Riesgos (para centro de alertas unificado)."""
     try:
-        r = requests.get(f"{RIESGOS_INTERNAL_URL}/api/dashboard/resumen/", timeout=_TIMEOUT)
+        r = requests.get(
+            f"{RIESGOS_INTERNAL_URL}/api/dashboard/resumen/",
+            headers=_headers_internos(espacio_codigo),
+            timeout=_TIMEOUT,
+        )
         r.raise_for_status()
         data = r.json()
         kpis = data.get("kpis") or {}
@@ -71,7 +90,7 @@ def kpis_riesgos_dashboard():
         return {"disponible": False}
 
 
-def mapa_activos_por_inventario():
+def mapa_activos_por_inventario(espacio_codigo="organizacion"):
     """Mapa inventario_id → metadatos del activo espejo en Riesgos."""
     try:
         mapa = {}
@@ -80,6 +99,7 @@ def mapa_activos_por_inventario():
             r = requests.get(
                 f"{RIESGOS_INTERNAL_URL}/api/activos/",
                 params={"page": page, "page_size": 200},
+                headers=_headers_internos(espacio_codigo),
                 timeout=_TIMEOUT,
             )
             r.raise_for_status()
@@ -102,11 +122,12 @@ def mapa_activos_por_inventario():
         return None
 
 
-def _contar_huerfanos_riesgos():
+def _contar_huerfanos_riesgos(espacio_codigo="organizacion"):
     try:
         r = requests.get(
             f"{RIESGOS_INTERNAL_URL}/api/activos/",
             params={"sin_vinculo_inventario": "true", "page_size": 1},
+            headers=_headers_internos(espacio_codigo),
             timeout=_TIMEOUT,
         )
         r.raise_for_status()
@@ -115,7 +136,7 @@ def _contar_huerfanos_riesgos():
         return 0
 
 
-def listar_huerfanos_riesgos():
+def listar_huerfanos_riesgos(espacio_codigo="organizacion"):
     """Activos en Riesgos sin inventario_id (solo lectura vía API interna)."""
     try:
         filas = []
@@ -124,6 +145,7 @@ def listar_huerfanos_riesgos():
             r = requests.get(
                 f"{RIESGOS_INTERNAL_URL}/api/activos/",
                 params={"sin_vinculo_inventario": "true", "page": page, "page_size": 200},
+                headers=_headers_internos(espacio_codigo),
                 timeout=_TIMEOUT,
             )
             r.raise_for_status()
@@ -144,9 +166,9 @@ def listar_huerfanos_riesgos():
         return None
 
 
-def resumen_vinculacion(total_inventario):
+def resumen_vinculacion(total_inventario, espacio_codigo="organizacion"):
     """Conteos de sincronización Inventario ↔ Riesgos."""
-    mapa = mapa_activos_por_inventario()
+    mapa = mapa_activos_por_inventario(espacio_codigo=espacio_codigo)
     if mapa is None:
         return {"disponible": False}
     vinculados = len(mapa)
@@ -155,20 +177,20 @@ def resumen_vinculacion(total_inventario):
         "total_inventario": total_inventario,
         "vinculados": vinculados,
         "sin_espejo_riesgos": max(0, total_inventario - vinculados),
-        "huerfanos_riesgos": _contar_huerfanos_riesgos(),
+        "huerfanos_riesgos": _contar_huerfanos_riesgos(espacio_codigo=espacio_codigo),
     }
 
 
-def detalle_vinculacion(activos_qs):
+def detalle_vinculacion(activos_qs, espacio_codigo="organizacion"):
     """Estado de sincronización con listados para panel operativo (Ola 6)."""
     from .models import Activo
 
     total = activos_qs.count() if hasattr(activos_qs, "count") else Activo.objects.count()
-    resumen = resumen_vinculacion(total)
+    resumen = resumen_vinculacion(total, espacio_codigo=espacio_codigo)
     if not resumen.get("disponible"):
         return {"disponible": False, "resumen": resumen}
 
-    mapa = mapa_activos_por_inventario() or {}
+    mapa = mapa_activos_por_inventario(espacio_codigo=espacio_codigo) or {}
     sin_espejo = []
     for a in activos_qs.only("id", "id_activo", "nombre", "clase", "nivel_riesgo"):
         if a.pk not in mapa:
@@ -179,7 +201,7 @@ def detalle_vinculacion(activos_qs):
                 "clase": a.clase,
                 "nivel_riesgo": a.nivel_riesgo,
             })
-    huerfanos = listar_huerfanos_riesgos()
+    huerfanos = listar_huerfanos_riesgos(espacio_codigo=espacio_codigo)
     if huerfanos is None:
         return {"disponible": False, "resumen": resumen}
 
@@ -234,10 +256,10 @@ def generar_csv_vinculacion(detalle, tipo="todos"):
     return buf.getvalue()
 
 
-def resumen_riesgos_panel():
+def resumen_riesgos_panel(espacio_codigo="organizacion"):
     """KPIs de Riesgos para panel ejecutivo y badges del Shell."""
-    alertas = alertas_riesgos_resumen()
-    kpis = kpis_riesgos_dashboard()
+    alertas = alertas_riesgos_resumen(espacio_codigo=espacio_codigo)
+    kpis = kpis_riesgos_dashboard(espacio_codigo=espacio_codigo)
     if not alertas.get("disponible") and not kpis.get("disponible"):
         return None
     pendientes = 0

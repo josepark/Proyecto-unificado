@@ -9,6 +9,11 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import authenticate
 
 from .auth_jwt import ROLES_CON_ESCRITURA
+from .espacio_riesgos import (
+    FiltrarEspacioMixin,
+    FiltrarEspacioPorActivoMixin,
+    espacio_codigo_de_request,
+)
 from .models import (
     Activo, PuertoServicio, Vulnerabilidad, RiesgoActivo, RiesgoContextual,
     CampanaRedTeam, PlanTratamientoRiesgos, AccionTratamiento, ControlISO27001,
@@ -56,7 +61,7 @@ class HistorialMixin:
         return Response(resultado)
 
 
-class ActivoViewSet(HistorialMixin, viewsets.ModelViewSet):
+class ActivoViewSet(FiltrarEspacioMixin, HistorialMixin, viewsets.ModelViewSet):
     queryset = Activo.objects.all().select_related("campana_red_team").annotate(
         total_vulnerabilidades_ann=Count("vulnerabilidades", distinct=True),
         vulnerabilidades_criticas_ann=Count(
@@ -103,14 +108,14 @@ class ActivoViewSet(HistorialMixin, viewsets.ModelViewSet):
         return resp
 
 
-class PuertoServicioViewSet(viewsets.ModelViewSet):
+class PuertoServicioViewSet(FiltrarEspacioPorActivoMixin, viewsets.ModelViewSet):
     queryset = PuertoServicio.objects.select_related("activo").all()
     serializer_class = PuertoServicioSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["activo"]
 
 
-class VulnerabilidadViewSet(HistorialMixin, viewsets.ModelViewSet):
+class VulnerabilidadViewSet(FiltrarEspacioPorActivoMixin, HistorialMixin, viewsets.ModelViewSet):
     queryset = Vulnerabilidad.objects.select_related("activo").all()
     serializer_class = VulnerabilidadSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -156,7 +161,7 @@ class VulnerabilidadViewSet(HistorialMixin, viewsets.ModelViewSet):
         return Response({"actualizados": actualizados, "campos_aplicados": campos_validos})
 
 
-class RiesgoActivoViewSet(HistorialMixin, viewsets.ModelViewSet):
+class RiesgoActivoViewSet(FiltrarEspacioPorActivoMixin, HistorialMixin, viewsets.ModelViewSet):
     queryset = RiesgoActivo.objects.select_related("activo").all()
     serializer_class = RiesgoActivoSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -164,7 +169,7 @@ class RiesgoActivoViewSet(HistorialMixin, viewsets.ModelViewSet):
     ordering_fields = ["score"]
 
 
-class RiesgoContextualViewSet(HistorialMixin, viewsets.ModelViewSet):
+class RiesgoContextualViewSet(FiltrarEspacioMixin, HistorialMixin, viewsets.ModelViewSet):
     queryset = RiesgoContextual.objects.prefetch_related("activos_relacionados").all()
     serializer_class = RiesgoContextualSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -172,12 +177,12 @@ class RiesgoContextualViewSet(HistorialMixin, viewsets.ModelViewSet):
     ordering_fields = ["score"]
 
 
-class CampanaRedTeamViewSet(HistorialMixin, viewsets.ModelViewSet):
+class CampanaRedTeamViewSet(FiltrarEspacioMixin, HistorialMixin, viewsets.ModelViewSet):
     queryset = CampanaRedTeam.objects.all()
     serializer_class = CampanaRedTeamSerializer
 
 
-class PlanTratamientoRiesgosViewSet(HistorialMixin, viewsets.ModelViewSet):
+class PlanTratamientoRiesgosViewSet(FiltrarEspacioMixin, HistorialMixin, viewsets.ModelViewSet):
     queryset = PlanTratamientoRiesgos.objects.select_related("campana_red_team").prefetch_related("acciones")
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["estado_plan", "campana_red_team"]
@@ -213,6 +218,11 @@ class AccionTratamientoViewSet(HistorialMixin, viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["fase", "estado", "nivel_riesgo", "opcion_tratamiento", "plan"]
     ordering_fields = ["score", "id_riesgo"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        codigo = espacio_codigo_de_request(self.request)
+        return qs.filter(plan__espacio_codigo=codigo)
 
 
 class ControlISO27001ViewSet(HistorialMixin, viewsets.ModelViewSet):
@@ -362,11 +372,15 @@ def alertas_resumen(request):
     con fecha real definida y no cerrados — es la contraparte "operativa" del
     dashboard de riesgo.
     """
-    acciones = AccionTratamiento.objects.exclude(fecha_limite=None).exclude(
+    esp = espacio_codigo_de_request(request)
+    acciones = AccionTratamiento.objects.filter(plan__espacio_codigo=esp).exclude(
+        fecha_limite=None).exclude(
         estado__in=["CERRADO", "FALSO_POSITIVO", "ACEPTADO"]).select_related("plan")
-    riesgos = RiesgoActivo.objects.exclude(fecha_objetivo=None).exclude(
+    riesgos = RiesgoActivo.objects.filter(activo__espacio_codigo=esp).exclude(
+        fecha_objetivo=None).exclude(
         estado__in=["CERRADO", "FALSO_POSITIVO", "ACEPTADO"]).select_related("activo")
-    riesgos_ctx = RiesgoContextual.objects.exclude(fecha_limite=None).exclude(
+    riesgos_ctx = RiesgoContextual.objects.filter(espacio_codigo=esp).exclude(
+        fecha_limite=None).exclude(
         estado__in=["CERRADO", "FALSO_POSITIVO", "ACEPTADO"])
 
     acciones_vencidas = [a for a in acciones if a.esta_vencida]
@@ -458,11 +472,12 @@ def dashboard_resumen(request):
     Agregaciones para el panel principal: KPIs, mapa de calor Probabilidad x Impacto
     (ISO/IEC 27005), distribución por nivel de riesgo y avance global de tratamiento.
     """
-    activos = Activo.objects.all()
-    vulns = Vulnerabilidad.objects.all()
-    riesgos_activo = RiesgoActivo.objects.all()
-    riesgos_contextuales = RiesgoContextual.objects.all()
-    acciones = AccionTratamiento.objects.all()
+    esp = espacio_codigo_de_request(request)
+    activos = Activo.objects.filter(espacio_codigo=esp)
+    vulns = Vulnerabilidad.objects.filter(activo__espacio_codigo=esp)
+    riesgos_activo = RiesgoActivo.objects.filter(activo__espacio_codigo=esp)
+    riesgos_contextuales = RiesgoContextual.objects.filter(espacio_codigo=esp)
+    acciones = AccionTratamiento.objects.filter(plan__espacio_codigo=esp)
 
     def distribucion_nivel(qs):
         agregados = qs.values("nivel_riesgo").annotate(total=Count("id"))
@@ -485,7 +500,7 @@ def dashboard_resumen(request):
         for (p, i), total in heatmap.items()
     ]
 
-    campanas = CampanaRedTeam.objects.annotate(num_activos=Count("activos"))
+    campanas = CampanaRedTeam.objects.filter(espacio_codigo=esp).annotate(num_activos=Count("activos"))
 
     data = {
         "kpis": {
@@ -512,7 +527,7 @@ def dashboard_resumen(request):
             } for c in campanas
         ],
         "activos_criticos_top": ActivoListSerializer(
-            Activo.objects.filter(riesgo_matriz="CRITICO").annotate(
+            activos.filter(riesgo_matriz="CRITICO").annotate(
                 total_vulnerabilidades_ann=Count("vulnerabilidades", distinct=True),
                 vulnerabilidades_criticas_ann=Count(
                     "vulnerabilidades", filter=Q(vulnerabilidades__severidad_ov="CRITICAL"), distinct=True),

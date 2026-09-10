@@ -78,6 +78,9 @@ def queryset_activos(request):
     from .permisos import es_peticion_servicio_interno
 
     if es_peticion_servicio_interno(request):
+        codigo = (request.headers.get("X-Espacio-Datos") or "").strip()
+        if codigo:
+            return Activo.objects.filter(espacio__codigo=codigo)
         return Activo.objects.filter(espacio__codigo=ESPACIO_ORGANIZACION)
     if not request.user.is_authenticated:
         return Activo.objects.none()
@@ -98,3 +101,11 @@ def asignar_espacio_usuario_nuevo(user):
     perfil.espacio_datos = espacio
     perfil.save(update_fields=["espacio_datos"])
     return espacio
+
+
+def codigo_espacio_request(request):
+    """Slug del espacio del usuario autenticado (p. ej. organizacion, usuario-pruebas)."""
+    if request is None or not getattr(request.user, "is_authenticated", False):
+        return ESPACIO_ORGANIZACION
+    espacio = espacio_datos_de(request.user)
+    return espacio.codigo if espacio else ESPACIO_ORGANIZACION

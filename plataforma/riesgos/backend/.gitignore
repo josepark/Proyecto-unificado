@@ -10,3 +10,4 @@ media/
 .coverage
 htmlcov/
 test_db.sqlite3
+db.sqlite3
