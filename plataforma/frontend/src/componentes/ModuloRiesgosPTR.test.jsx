@@ -4,7 +4,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ModuloRiesgosPTR from './ModuloRiesgosPTR';
 
 function ShellConSesion({ autenticado = true, cargando = false }) {
-  return <Outlet context={{ autenticado, cargando, puedeEditar: autenticado, puedeEliminar: false }} />;
+  return (
+    <Outlet
+      context={{
+        autenticado,
+        cargando,
+        puedeEditar: autenticado,
+        puedeEliminar: false,
+        modulos: ['riesgos'],
+      }}
+    />
+  );
 }
 
 beforeEach(() => {

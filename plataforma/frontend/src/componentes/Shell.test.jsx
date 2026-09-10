@@ -74,6 +74,7 @@ describe('Shell — pestañas de módulo', () => {
       puedeEditar: true,
       puedeEliminar: false,
       cargando: false,
+      modulos: ['inventario', 'rbac', 'riesgos'],
       recargar: vi.fn(),
     });
     renderShell();
@@ -90,6 +91,7 @@ describe('Shell — pestañas de módulo', () => {
       puedeEliminar: false,
       cargando: false,
       roles: ['Dinamizador'],
+      modulos: ['inventario', 'rbac', 'riesgos'],
       recargar: vi.fn(),
     });
     renderShell();
@@ -105,6 +107,7 @@ describe('Shell — pestañas de módulo', () => {
       puedeEliminar: false,
       cargando: false,
       roles: ['Consultor'],
+      modulos: ['inventario', 'rbac', 'riesgos'],
       recargar: vi.fn(),
     });
     renderShell();
@@ -120,6 +123,7 @@ describe('Shell — pestañas de módulo', () => {
       puedeEliminar: false,
       cargando: false,
       roles: ['Dinamizador'],
+      modulos: ['inventario', 'rbac', 'riesgos'],
       recargar: vi.fn(),
     });
     renderShell();
@@ -137,9 +141,27 @@ describe('Shell — pestañas de módulo', () => {
       puedeEliminar: false,
       cargando: false,
       roles: ['Dinamizador'],
+      modulos: ['inventario', 'rbac', 'riesgos'],
       recargar: vi.fn(),
     });
     renderShell();
     expect(await screen.findByText('↻3')).toHaveClass('badge-modulo');
+  });
+
+  it('oculta pestañas no asignadas cuando el usuario solo tiene rbac', () => {
+    vi.mocked(useSesion).mockReturnValue({
+      autenticado: true,
+      usuario: 'solo_rbac',
+      puedeEditar: false,
+      puedeEliminar: false,
+      cargando: false,
+      roles: ['Consultor'],
+      modulos: ['rbac'],
+      recargar: vi.fn(),
+    });
+    renderShell('/rbac/inicio');
+    expect(screen.queryByRole('link', { name: /Inventario/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Matriz RBAC/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Gestión de Riesgos/i })).not.toBeInTheDocument();
   });
 });

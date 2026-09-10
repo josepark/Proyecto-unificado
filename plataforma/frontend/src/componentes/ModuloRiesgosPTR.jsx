@@ -26,7 +26,7 @@ function RedirigirPanelRiesgos() {
 export default function ModuloRiesgosPTR() {
   const { autenticado, cargando, modulos } = useOutletContext() ?? {};
 
-  if (autenticado && !cargando && !tieneModulo(modulos, 'riesgos')) {
+  if (autenticado && !cargando && !tieneModulo(modulos, 'riesgos', { autenticado })) {
     return (
       <div className="card">
         <div className="cuerpo">

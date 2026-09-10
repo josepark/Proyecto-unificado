@@ -539,10 +539,8 @@ class UsuarioPlataformaSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_modulos_acceso(self, obj):
-        perfil = getattr(obj, "perfil_plataforma", None)
-        if perfil:
-            return normalizar_modulos(perfil.modulos_acceso or [])
-        return []
+        from .modulos_plataforma import modulos_de
+        return modulos_de(obj)
 
     def get_rol(self, obj):
         rs = roles_de(obj) & set(ROLES_PLATAFORMA)
@@ -710,6 +708,8 @@ def actualizar_usuario_plataforma(instance, validated_data):
     instance.save()
     if rol is not None:
         instance.groups.set([_grupo_por_rol(rol)])
+        if rol == ROL_ADMIN:
+            modulos = list(MODULOS_PLATAFORMA)
     if area is not None or modulos is not None:
         _guardar_perfil(instance, area=area, modulos_acceso=modulos)
     return instance

@@ -5,20 +5,27 @@ export const MODULOS_PLATAFORMA = [
   { id: 'riesgos', etiqueta: 'Gestión de Riesgos y PTR', ruta: '/gestion-riesgos' },
 ];
 
-export function tieneModulo(modulos, id) {
-  if (!modulos?.length) return true;
+/**
+ * ¿El usuario puede acceder al módulo?
+ * - Sin sesión: todos visibles (consulta pública del shell).
+ * - Con sesión y lista vacía: ninguno (cuenta sin proyectos asignados).
+ */
+export function tieneModulo(modulos, id, { autenticado = true } = {}) {
+  if (!autenticado) return true;
+  if (!modulos?.length) return false;
   return modulos.includes(id);
 }
 
 /** Primera ruta accesible tras login o redirección por defecto. */
-export function rutaInicioModulos(modulos) {
-  const primero = MODULOS_PLATAFORMA.find((m) => tieneModulo(modulos, m.id));
+export function rutaInicioModulos(modulos, { autenticado = true } = {}) {
+  if (autenticado && !modulos?.length) return '/';
+  const primero = MODULOS_PLATAFORMA.find((m) => tieneModulo(modulos, m.id, { autenticado }));
   return primero?.ruta ?? '/inventario/dashboard';
 }
 
-export function etiquetasModulos(modulos) {
+export function etiquetasModulos(modulos, { efectivos = true } = {}) {
   if (!modulos?.length) {
-    return MODULOS_PLATAFORMA.map((m) => m.etiqueta);
+    return efectivos ? ['Sin proyectos asignados'] : MODULOS_PLATAFORMA.map((m) => m.etiqueta);
   }
   return MODULOS_PLATAFORMA.filter((m) => modulos.includes(m.id)).map((m) => m.etiqueta);
 }

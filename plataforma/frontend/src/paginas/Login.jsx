@@ -7,7 +7,7 @@ import { sincronizarUsuarioActivo } from '../lib/sesionLocal';
 
 function rutaSegura(next, modulos) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
-    return rutaInicioModulos(modulos);
+    return rutaInicioModulos(modulos, { autenticado: true });
   }
   return next;
 }

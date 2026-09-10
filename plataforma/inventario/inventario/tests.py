@@ -2220,3 +2220,32 @@ class UsuariosPlataformaAPITest(TestCase):
         self.client.force_login(u)
         self.assertEqual(self.client.get("/api/activos/").status_code, 403)
 
+    def test_admin_lista_muestra_todos_los_modulos(self):
+        from inventario.models import PerfilPlataforma
+        self.client.force_login(self.administrador)
+        PerfilPlataforma.objects.filter(user=self.administrador).update(modulos_acceso=[])
+        r = self.client.get(f"{self.BASE}{self.administrador.pk}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(set(r.json()["modulos_acceso"]), {"inventario", "rbac", "riesgos"})
+
+    def test_promover_a_admin_asigna_tres_modulos(self):
+        self.client.force_login(self.administrador)
+        crear = self.client.post(
+            self.BASE,
+            {
+                "username": "futuro_admin",
+                "password": "ClaveSegura1",
+                "rol": "Consultor",
+                "modulos_acceso": ["inventario"],
+            },
+            content_type="application/json",
+        )
+        uid = crear.json()["id"]
+        r = self.client.patch(
+            f"{self.BASE}{uid}/",
+            {"rol": "Administrador"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(set(r.json()["modulos_acceso"]), {"inventario", "rbac", "riesgos"})
+

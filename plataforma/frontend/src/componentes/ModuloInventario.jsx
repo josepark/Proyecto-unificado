@@ -20,7 +20,7 @@ export default function ModuloInventario() {
   const ubicacion = useLocation();
   const pestanas = puedeEliminar ? [...PESTANAS_BASE, PESTANA_USUARIOS] : PESTANAS_BASE;
   const gestionUsuarios = ubicacion.pathname.includes('/inventario/usuarios');
-  const sinInventario = autenticado && !tieneModulo(modulos, 'inventario');
+  const sinInventario = autenticado && !tieneModulo(modulos, 'inventario', { autenticado });
 
   if (sinInventario && !gestionUsuarios) {
     return (

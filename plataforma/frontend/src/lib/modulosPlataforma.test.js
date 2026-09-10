@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { tieneModulo, rutaInicioModulos, etiquetasModulos } from './modulosPlataforma';
 
 describe('modulosPlataforma', () => {
-  it('tieneModulo acepta lista vacía como todos', () => {
-    expect(tieneModulo([], 'rbac')).toBe(true);
+  it('sin sesión muestra todos los módulos', () => {
+    expect(tieneModulo([], 'rbac', { autenticado: false })).toBe(true);
+  });
+
+  it('con sesión y lista vacía no concede acceso', () => {
+    expect(tieneModulo([], 'rbac', { autenticado: true })).toBe(false);
   });
 
   it('filtra módulos explícitos', () => {
@@ -14,9 +18,11 @@ describe('modulosPlataforma', () => {
   it('rutaInicioModulos respeta acceso', () => {
     expect(rutaInicioModulos(['riesgos'])).toBe('/gestion-riesgos');
     expect(rutaInicioModulos(['inventario', 'rbac'])).toBe('/inventario/dashboard');
+    expect(rutaInicioModulos([], { autenticado: true })).toBe('/');
   });
 
   it('etiquetasModulos', () => {
     expect(etiquetasModulos(['rbac'])).toEqual(['Matriz RBAC']);
+    expect(etiquetasModulos([])).toEqual(['Sin proyectos asignados']);
   });
 });

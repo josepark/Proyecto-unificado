@@ -2,18 +2,19 @@ import { Link, useOutletContext } from 'react-router-dom';
 import ModuloRBAC from './ModuloRBAC';
 import { puedeVerRbac } from '../paginas/rbac/rbacUtil';
 import { tieneModulo } from '../lib/modulosPlataforma';
+import { prepararCierreSesion } from '../lib/sesionLocal';
 
 /** Puerta RBAC: edición Dinamizador/Administrador; consulta Consultor. */
 export default function PuertaRBAC() {
   const ctx = useOutletContext() ?? {};
   const { puedeEditar, autenticado, roles, soloLecturaRbac, modulos } = ctx;
-  const verRbac = puedeVerRbac(ctx) && tieneModulo(modulos, 'rbac');
+  const verRbac = puedeVerRbac(ctx) && tieneModulo(modulos, 'rbac', { autenticado });
 
   if (!verRbac) {
     return (
       <div className="modulo-restringido">
         <p>
-          {!tieneModulo(modulos, 'rbac') && autenticado ? (
+          {!tieneModulo(modulos, 'rbac', { autenticado }) && autenticado ? (
             <>
               Su cuenta no tiene acceso al proyecto <b>Matriz RBAC</b>. Contacte al administrador del SGSI
               si necesita permiso.
@@ -32,7 +33,7 @@ export default function PuertaRBAC() {
         ) : (
           <p className="sub">
             Su sesión no tiene permisos para RBAC.{' '}
-            <a href="/logout/">Cierre sesión</a> e ingrese con una cuenta autorizada.
+            <a href="/logout/" onClick={() => prepararCierreSesion()}>Cierre sesión</a> e ingrese con una cuenta autorizada.
           </p>
         )}
       </div>

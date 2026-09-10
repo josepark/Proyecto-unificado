@@ -67,7 +67,7 @@ Tras varios intentos de login incorrectos, el sistema puede bloquear temporalmen
 
 ## 3. Roles y permisos
 
-Los permisos se asignan mediante **grupos de Django** vinculados a su usuario.
+Los permisos se asignan mediante **grupos de Django** vinculados a su usuario. Además, cada cuenta puede tener **proyectos específicos** (Inventario, Matriz RBAC, Gestión de Riesgos); solo verá las pestañas de los proyectos asignados. Véase [§5.10 Cuentas de acceso](#510-cuentas-de-acceso-administrador).
 
 | Acción | Consultor | Dinamizador | Administrador |
 |--------|:---------:|:-----------:|:-------------:|
@@ -93,7 +93,7 @@ Si tiene rol **Consultor**, verá un aviso de **modo consulta** en formularios d
 El encabezado muestra:
 
 - **Logo e identidad** SUIIN/CRIC
-- **Pestañas de módulo:** Inventario · Matriz RBAC · Gestión de Riesgos
+- **Pestañas de módulo:** Inventario · Matriz RBAC · Gestión de Riesgos (solo las asignadas a su cuenta)
 - **Badge de alertas** (número rojo) cuando hay pendientes críticos
 - **Usuario actual** y enlace de cierre de sesión
 
@@ -264,7 +264,9 @@ Solo visible para rol **Administrador**. Permite:
 | Matriz RBAC | Control de acceso MCA-001 |
 | Gestión de Riesgos y PTR | Vulnerabilidades, PTR, Red Team |
 
-Marque solo los proyectos que el usuario necesite. Los Administradores tienen acceso a los tres automáticamente. Tras guardar, el usuario solo verá las pestañas de los proyectos asignados.
+Marque solo los proyectos que el usuario necesite. Los Administradores tienen acceso a los tres automáticamente. Tras guardar, el usuario solo verá las pestañas de los proyectos asignados. Si una cuenta queda sin ningún proyecto, al ingresar verá un aviso para contactar al administrador.
+
+Al **cerrar sesión** o **cambiar de usuario** en el mismo navegador, la plataforma descarta credenciales locales para que no se mezclen datos entre cuentas.
 
 ### 5.11 Bitácora
 

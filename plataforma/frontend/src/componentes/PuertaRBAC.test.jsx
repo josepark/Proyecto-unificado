@@ -22,6 +22,7 @@ describe('PuertaRBAC', () => {
       autenticado: true,
       roles: ['Consultor'],
       soloLecturaRbac: true,
+      modulos: ['rbac'],
     });
     expect(screen.getByText(/Modo consulta RBAC/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Roles$/i })).toBeInTheDocument();
@@ -36,7 +37,7 @@ describe('PuertaRBAC', () => {
   });
 
   it('Dinamizador entra al módulo cuando la sesión confirma puedeEditar', () => {
-    renderConContexto({ puedeEditar: true, autenticado: true });
+    renderConContexto({ puedeEditar: true, autenticado: true, modulos: ['rbac'] });
     expect(screen.getByRole('link', { name: /^Roles$/i })).toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@ import { rbacApi } from '../api/rbac';
 import { pendientesSync } from '../lib/integracionUi';
 import { tieneModulo } from '../lib/modulosPlataforma';
 import { puedeVerRbac, ENLACES_ALERTAS_RBAC } from '../paginas/rbac/rbacUtil';
-import { limpiarCredencialesLocales } from '../lib/sesionLocal';
+import { prepararCierreSesion } from '../lib/sesionLocal';
 
 function moduloDeRuta(pathname) {
   if (pathname.startsWith('/rbac')) return 'rbac';
@@ -30,9 +30,11 @@ export default function Shell() {
   const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
   const moduloActivo = useMemo(() => moduloDeRuta(ubicacion.pathname), [ubicacion.pathname]);
   const soloLecturaRbac = autenticado && !puedeEditar && (roles ?? []).includes('Consultor');
-  const verRbac = puedeVerRbac({ autenticado, puedeEditar, roles }) && tieneModulo(modulos, 'rbac');
-  const verInventario = !autenticado || tieneModulo(modulos, 'inventario');
-  const verRiesgos = !autenticado || tieneModulo(modulos, 'riesgos');
+  const verRbac = puedeVerRbac({ autenticado, puedeEditar, roles })
+    && tieneModulo(modulos, 'rbac', { autenticado });
+  const verInventario = !autenticado || tieneModulo(modulos, 'inventario', { autenticado });
+  const verRiesgos = !autenticado || tieneModulo(modulos, 'riesgos', { autenticado });
+  const verAlertasInventario = autenticado && tieneModulo(modulos, 'inventario', { autenticado });
 
   useEffect(() => {
     function alVencer() {
@@ -88,8 +90,8 @@ export default function Shell() {
   }, [verRbac, cargando, autenticado]);
 
   const { datos: alertasUni, recargar: recargarAlertas } = useApi(
-    () => (autenticado && !cargando ? inventarioApi.alertasUnificadas() : Promise.resolve(null)),
-    [autenticado, cargando],
+    () => (verAlertasInventario && !cargando ? inventarioApi.alertasUnificadas() : Promise.resolve(null)),
+    [verAlertasInventario, cargando],
   );
   const totalAlertas = alertasUni?.total_consolidado ?? 0;
   const pendientesRiesgos = alertasUni?.resumen?.riesgos ?? 0;
@@ -98,11 +100,11 @@ export default function Shell() {
 
   useEffect(() => {
     function actualizarAlertas() {
-      if (autenticado && !cargando) recargarAlertas();
+      if (verAlertasInventario && !cargando) recargarAlertas();
     }
     eventosApi.addEventListener('alertas-actualizadas', actualizarAlertas);
     return () => eventosApi.removeEventListener('alertas-actualizadas', actualizarAlertas);
-  }, [autenticado, cargando, recargarAlertas]);
+  }, [verAlertasInventario, cargando, recargarAlertas]);
 
   const outletContext = {
     autenticado,
@@ -130,7 +132,7 @@ export default function Shell() {
         <div className="auth">
           {cargando && !autenticado ? null : autenticado ? (
             <>
-              {totalAlertas > 0 ? (
+              {verAlertasInventario && totalAlertas > 0 ? (
                 <Link
                   to="/inventario/alertas"
                   style={{ fontSize: 12, marginRight: 8, textDecoration: 'none' }}
@@ -147,7 +149,7 @@ export default function Shell() {
                 href="/logout/"
                 className="btn btn-sec"
                 style={{ padding: '2px 10px', fontSize: 12, marginLeft: 4 }}
-                onClick={() => limpiarCredencialesLocales()}
+                onClick={() => prepararCierreSesion()}
               >
                 Cerrar sesión
               </a>
