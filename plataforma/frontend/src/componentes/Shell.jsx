@@ -91,7 +91,7 @@ export default function Shell() {
 
   const { datos: alertasUni, recargar: recargarAlertas } = useApi(
     () => (verAlertasInventario && !cargando ? inventarioApi.alertasUnificadas() : Promise.resolve(null)),
-    [verAlertasInventario, cargando],
+    [verAlertasInventario, cargando, usuario],
   );
   const totalAlertas = alertasUni?.total_consolidado ?? 0;
   const pendientesRiesgos = alertasUni?.resumen?.riesgos ?? 0;

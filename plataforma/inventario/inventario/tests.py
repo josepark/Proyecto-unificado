@@ -147,6 +147,20 @@ class SesionPlataformaActivosTest(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(r.json()["total_activos"], 0)
 
+    def test_estadisticas_tras_login_json(self):
+        """Flujo real de la SPA: POST /api/auth/login/ y luego GET estadísticas."""
+        r_login = self.client.post(
+            "/api/auth/login/",
+            {"username": "usuario_cookie_api", "password": "x"},
+            content_type="application/json",
+        )
+        self.assertEqual(r_login.status_code, 200, r_login.content)
+        r_stats = self.client.get("/api/activos/estadisticas/")
+        self.assertEqual(r_stats.status_code, 200, r_stats.content)
+        self.assertEqual(r_stats.json()["total_activos"], 0)
+        r_lista = self.client.get("/api/activos/")
+        self.assertEqual(r_lista.status_code, 200, r_lista.content)
+        self.assertEqual(r_lista.json()["count"], 0)
 
 class PanelEjecutivoUnificadoTest(TestCase):
     """El Panel ejecutivo consolida indicadores propios del Inventario con

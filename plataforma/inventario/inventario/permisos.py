@@ -30,6 +30,20 @@ def roles_de(user):
     return set(user.groups.values_list("name", flat=True))
 
 
+def usuario_efectivo(request):
+    """Misma resolución de sesión que /api/sesion/ y auth_request de nginx."""
+    from .sesion_plataforma import http_request, usuario_desde_sesion
+
+    req = http_request(request)
+    user = getattr(req, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        return user
+    user = usuario_desde_sesion(req)
+    if user is not None:
+        req.user = user
+    return user
+
+
 class RolPermiso(BasePermission):
     """
     Lectura: cualquier usuario autenticado (Consultor incluido).
@@ -37,16 +51,17 @@ class RolPermiso(BasePermission):
     Eliminacion (DELETE): solo Administrador.
     """
     def has_permission(self, request, view):
-        if request.user.is_authenticated:
+        user = usuario_efectivo(request)
+        if user is not None and getattr(user, "is_authenticated", False):
             from .modulos_plataforma import (
                 MODULO_INVENTARIO, ruta_exenta_modulo_inventario, tiene_modulo,
             )
             if not ruta_exenta_modulo_inventario(request.path):
-                if not tiene_modulo(request.user, MODULO_INVENTARIO):
+                if not tiene_modulo(user, MODULO_INVENTARIO):
                     return False
         if request.method in SAFE_METHODS:
-            return request.user.is_authenticated
-        roles = roles_de(request.user)
+            return user is not None and getattr(user, "is_authenticated", False)
+        roles = roles_de(user)
         if request.method == "DELETE":
             return ROL_ADMIN in roles
         return bool(roles & {ROL_DINAMIZADOR, ROL_ADMIN})

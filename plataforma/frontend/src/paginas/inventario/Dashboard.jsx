@@ -76,7 +76,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
+    <div key={usuario ?? 'anon'}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 16px', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0, color: 'var(--verde-profundo)' }}>Dashboard</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

@@ -1,11 +1,13 @@
+import { useOutletContext } from 'react-router-dom';
 import { useApi } from './useApi';
 import { inventarioApi } from '../api/inventario';
 
-/** Metadatos del inventario (clases, colores, enums) — cache por sesión de componente. */
+/** Metadatos del inventario (clases, colores, enums) — se recargan al cambiar de usuario. */
 export function useInventarioMeta() {
+  const { usuario } = useOutletContext() ?? {};
   const { datos, cargando, error, recargar } = useApi(
     () => inventarioApi.metaInventario(),
-    [],
+    [usuario],
   );
   return {
     meta: datos,

@@ -8,6 +8,11 @@ from django.db.utils import OperationalError
 from rest_framework.authentication import SessionAuthentication
 
 
+def http_request(request):
+    """DRF envuelve HttpRequest; la sesión y cookies viven en el objeto interno."""
+    return getattr(request, "_request", request)
+
+
 def _uid_desde_sesion(sesion):
     return sesion.get("_auth_user_id")
 
@@ -43,16 +48,17 @@ def _usuario_por_id(uid):
 
 def usuario_desde_sesion(request):
     """Usuario de la sesión Django — respaldo si DRF no re-hidrato request.user."""
-    user = get_user(request)
+    req = http_request(request)
+    user = get_user(req)
     if getattr(user, "is_authenticated", False):
         return user
 
     uid = None
-    if request.session.session_key:
-        uid = _uid_desde_sesion(request.session)
+    if req.session.session_key:
+        uid = _uid_desde_sesion(req.session)
 
     if not uid:
-        clave = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
+        clave = req.COOKIES.get(settings.SESSION_COOKIE_NAME)
         if clave:
             uid = _cargar_sesion_por_cookie(clave)
 
@@ -65,10 +71,13 @@ class SesionPlataformaAuthentication(SessionAuthentication):
     """SessionAuthentication + respaldo por cookie (igual que /api/sesion/)."""
 
     def authenticate(self, request):
-        resultado = super().authenticate(request)
-        if resultado is not None:
-            return resultado
-        user = usuario_desde_sesion(request)
-        if user is None:
+        req = http_request(request)
+        if not getattr(req.user, "is_authenticated", False):
+            user = usuario_desde_sesion(req)
+            if user is not None:
+                req.user = user
+        user = req.user
+        if not getattr(user, "is_authenticated", False):
             return None
+        self.enforce_csrf(request)
         return (user, None)

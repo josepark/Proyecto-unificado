@@ -82,9 +82,12 @@ def queryset_activos(request):
         if codigo:
             return Activo.objects.filter(espacio__codigo=codigo)
         return Activo.objects.filter(espacio__codigo=ESPACIO_ORGANIZACION)
-    if not request.user.is_authenticated:
+    from .permisos import usuario_efectivo
+
+    user = usuario_efectivo(request)
+    if user is None or not getattr(user, "is_authenticated", False):
         return Activo.objects.none()
-    espacio = espacio_datos_de(request.user)
+    espacio = espacio_datos_de(user)
     if espacio is None:
         return Activo.objects.none()
     return Activo.objects.filter(espacio=espacio)
@@ -105,7 +108,10 @@ def asignar_espacio_usuario_nuevo(user):
 
 def codigo_espacio_request(request):
     """Slug del espacio del usuario autenticado (p. ej. organizacion, usuario-pruebas)."""
-    if request is None or not getattr(request.user, "is_authenticated", False):
+    from .permisos import usuario_efectivo
+
+    user = usuario_efectivo(request) if request is not None else None
+    if user is None or not getattr(user, "is_authenticated", False):
         return ESPACIO_ORGANIZACION
-    espacio = espacio_datos_de(request.user)
+    espacio = espacio_datos_de(user)
     return espacio.codigo if espacio else ESPACIO_ORGANIZACION
