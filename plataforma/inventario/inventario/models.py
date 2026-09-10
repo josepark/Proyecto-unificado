@@ -703,6 +703,12 @@ class PerfilPlataforma(models.Model):
     user = models.OneToOneField(
         "auth.User", on_delete=models.CASCADE, related_name="perfil_plataforma")
     jwt_version = models.PositiveIntegerField(default=1)
+    area = models.CharField(
+        "Área organizacional",
+        max_length=120,
+        blank=True,
+        help_text="Dependencia o área del CRIC/SUIIN a la que pertenece el usuario.",
+    )
 
     class Meta:
         verbose_name = "Perfil de plataforma"

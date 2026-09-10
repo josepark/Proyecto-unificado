@@ -2,10 +2,12 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from django.contrib.auth import views as auth_views
 from . import views
+from .usuarios_plataforma import UsuarioPlataformaViewSet
 
 router = DefaultRouter()
 router.register(r"clases-activo", views.ClaseActivoViewSet)
 router.register(r"activos", views.ActivoViewSet)
+router.register(r"usuarios-plataforma", UsuarioPlataformaViewSet, basename="usuarios-plataforma")
 router.register(r"amenazas", views.AmenazaViewSet)
 router.register(r"controles", views.ControlViewSet)
 router.register(r"zonas", views.ZonaViewSet)

@@ -2064,3 +2064,88 @@ class IntegracionRiesgosOla8Test(TestCase):
         fila = r.json()["results"][0]
         self.assertIsNone(fila["vinculado_riesgos"])
 
+
+class UsuariosPlataformaAPITest(TestCase):
+    """CRUD de cuentas de login — solo Administrador."""
+
+    BASE = "/api/usuarios-plataforma/"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_consultor, _ = Group.objects.get_or_create(name="Consultor")
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.grupo_admin, _ = Group.objects.get_or_create(name="Administrador")
+
+        cls.consultor = User.objects.create_user("up_consultor", password="x")
+        cls.consultor.groups.add(cls.grupo_consultor)
+
+        cls.dinamizador = User.objects.create_user("up_dinamizador", password="x")
+        cls.dinamizador.groups.add(cls.grupo_dinamizador)
+
+        cls.administrador = User.objects.create_user("up_admin", password="x")
+        cls.administrador.groups.add(cls.grupo_admin)
+
+    def test_dinamizador_no_puede_listar(self):
+        self.client.force_login(self.dinamizador)
+        r = self.client.get(self.BASE)
+        self.assertEqual(r.status_code, 403)
+
+    def test_admin_crea_usuario_con_area(self):
+        self.client.force_login(self.administrador)
+        r = self.client.post(
+            self.BASE,
+            {
+                "username": "usuario_uaiin",
+                "password": "ClaveSegura1",
+                "first_name": "Ana",
+                "last_name": "Mesa",
+                "email": "ana@cric.org.co",
+                "rol": "Consultor",
+                "area": "UAIIN",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+        data = r.json()
+        self.assertEqual(data["username"], "usuario_uaiin")
+        self.assertEqual(data["rol"], "Consultor")
+        self.assertEqual(data["area"], "UAIIN")
+        self.assertTrue(data["is_active"])
+
+    def test_admin_actualiza_rol_y_contrasena(self):
+        self.client.force_login(self.administrador)
+        crear = self.client.post(
+            self.BASE,
+            {
+                "username": "temp_user",
+                "password": "ClaveSegura1",
+                "rol": "Consultor",
+                "area": "TIC",
+            },
+            content_type="application/json",
+        )
+        uid = crear.json()["id"]
+        r = self.client.patch(
+            f"{self.BASE}{uid}/",
+            {"rol": "Dinamizador", "password": "OtraClave9"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["rol"], "Dinamizador")
+
+    def test_meta_devuelve_roles(self):
+        self.client.force_login(self.administrador)
+        r = self.client.get(f"{self.BASE}meta/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Consultor", r.json()["roles"])
+
+    def test_no_degrada_ultimo_admin(self):
+        self.client.force_login(self.administrador)
+        r = self.client.patch(
+            f"{self.BASE}{self.administrador.pk}/",
+            {"rol": "Consultor"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("Administrador", str(r.json()))
+

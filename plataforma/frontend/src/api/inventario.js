@@ -79,7 +79,14 @@ export const inventarioApi = {
   // --- Sesión ---
   sesion: () => api.get('/sesion/'),
 
-  /** Login JSON — no usa peticion() para no disparar 'sesion-vencida' en 401. */
+  // --- Cuentas de acceso (solo Administrador) ---
+  listarUsuariosPlataforma: (params) => api.get('/usuarios-plataforma/', params),
+  obtenerUsuarioPlataforma: (id) => api.get(`/usuarios-plataforma/${id}/`),
+  metaUsuariosPlataforma: () => api.get('/usuarios-plataforma/meta/'),
+  crearUsuarioPlataforma: (datos) => api.post('/usuarios-plataforma/', datos),
+  editarUsuarioPlataforma: (id, datos) => api.patch(`/usuarios-plataforma/${id}/`, datos),
+  eliminarUsuarioPlataforma: (id) => api.delete(`/usuarios-plataforma/${id}/`),
+
   login: async (username, password) => {
     await fetch('/api/auth/login/', { credentials: 'same-origin' });
     const match = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/);

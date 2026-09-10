@@ -2,7 +2,7 @@ import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
 
 import { pendientesSync } from '../lib/integracionUi';
 
-const PESTANAS = [
+const PESTANAS_BASE = [
   { to: 'dashboard', etiqueta: 'Dashboard' },
   { to: 'panel-ejecutivo', etiqueta: 'Panel ejecutivo' },
   { to: 'riesgos', etiqueta: 'Valoración inherente' },
@@ -12,8 +12,11 @@ const PESTANAS = [
   { to: 'bitacora', etiqueta: 'Bitácora' },
 ];
 
+const PESTANA_USUARIOS = { to: 'usuarios', etiqueta: 'Cuentas de acceso' };
+
 export default function ModuloInventario() {
-  const { alertasUnificadas, ...contexto } = useOutletContext() ?? {};
+  const { alertasUnificadas, puedeEliminar, ...resto } = useOutletContext() ?? {};
+  const pestanas = puedeEliminar ? [...PESTANAS_BASE, PESTANA_USUARIOS] : PESTANAS_BASE;
   const vinc = alertasUnificadas?.vinculacion;
   const pendientesSyncCount = pendientesSync(vinc);
   const totalAlertas = alertasUnificadas?.total_consolidado ?? 0;
@@ -21,7 +24,7 @@ export default function ModuloInventario() {
   return (
     <div>
       <div className="tabs">
-        {PESTANAS.map((p) => (
+        {pestanas.map((p) => (
           <NavLink key={p.to} to={p.to} className={({ isActive }) => `tab${isActive ? ' activa' : ''}`}>
             {p.etiqueta}
             {p.to === 'alertas' && totalAlertas > 0 ? (
@@ -41,7 +44,7 @@ export default function ModuloInventario() {
           </NavLink>
         ))}
       </div>
-      <Outlet context={contexto} />
+      <Outlet context={{ ...resto, alertasUnificadas, puedeEliminar }} />
     </div>
   );
 }

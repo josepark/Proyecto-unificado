@@ -236,7 +236,27 @@ Desde aquí puede crear y editar datacenters y diagramas (Dinamizador+).
 
 Catálogo de las tres clases principales (Infraestructura, Sistemas, Equipos) con sus campos y reglas de codificación.
 
-### 5.9 Bitácora
+### 5.10 Cuentas de acceso (Administrador)
+
+**Ruta:** `/inventario/usuarios`
+
+> **No confundir** con **Usuarios** del módulo RBAC (`/rbac/usuarios`). Las cuentas de acceso son los usuarios que **inician sesión** en la plataforma; el registro RBAC documenta personas del control MCA-001.
+
+Solo visible para rol **Administrador**. Permite:
+
+- Crear cuentas con usuario, contraseña, nombre, correo, **área organizacional** y rol SGSI (Consultor, Dinamizador o Administrador)
+- Editar datos, cambiar rol, restablecer contraseña o desactivar cuentas
+- Filtrar por área, rol o búsqueda de texto
+
+**Roles disponibles:**
+
+| Rol | Acceso en la plataforma |
+|-----|-------------------------|
+| Consultor | Solo lectura (Inventario y RBAC) |
+| Dinamizador | Lectura y escritura |
+| Administrador | Control total, incluye gestión de cuentas |
+
+### 5.11 Bitácora
 
 **Ruta:** `/inventario/bitacora`
 

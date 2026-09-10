@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Q
 from .models import (Activo, ActivoInfraestructura, SistemaInformacion,
                      EquipoComputo, ClaseActivo, Zona, VLAN, AmenazaMITRE, ControlISO,
                      Rack, Datacenter)
@@ -509,3 +510,161 @@ class EventoHojaVidaSerializer(serializers.ModelSerializer):
 
     def get_documento_url(self, obj):
         return obj.documento.url if obj.documento else None
+
+
+# ---------------------------------------------------------------------------
+# Cuentas de plataforma (auth.User + PerfilPlataforma)
+# ---------------------------------------------------------------------------
+from django.contrib.auth.models import User
+from .models import PerfilPlataforma
+from .permisos import ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN, roles_de
+
+ROLES_PLATAFORMA = (ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN)
+
+
+class UsuarioPlataformaSerializer(serializers.ModelSerializer):
+    rol = serializers.SerializerMethodField()
+    area = serializers.SerializerMethodField()
+    nombre_completo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            "id", "username", "email", "first_name", "last_name",
+            "nombre_completo", "rol", "area", "is_active",
+            "last_login", "date_joined", "is_superuser",
+        )
+        read_only_fields = fields
+
+    def get_rol(self, obj):
+        rs = roles_de(obj) & set(ROLES_PLATAFORMA)
+        if ROL_ADMIN in rs:
+            return ROL_ADMIN
+        if ROL_DINAMIZADOR in rs:
+            return ROL_DINAMIZADOR
+        if ROL_CONSULTOR in rs:
+            return ROL_CONSULTOR
+        return None
+
+    def get_area(self, obj):
+        perfil = getattr(obj, "perfil_plataforma", None)
+        return perfil.area if perfil else ""
+
+    def get_nombre_completo(self, obj):
+        nombre = obj.get_full_name().strip()
+        return nombre or obj.username
+
+
+class UsuarioPlataformaWriteSerializer(serializers.Serializer):
+    username = serializers.RegexField(r"^[\w.@+-]+$", max_length=150)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True, default="")
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
+    rol = serializers.ChoiceField(choices=ROLES_PLATAFORMA)
+    area = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    is_active = serializers.BooleanField(default=True)
+
+    def validate_username(self, value):
+        qs = User.objects.filter(username__iexact=value)
+        instance = self.context.get("instance")
+        if instance:
+            qs = qs.exclude(pk=instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Ya existe un usuario con ese nombre.")
+        return value
+
+    def validate(self, attrs):
+        view = self.context.get("view")
+        instance = self.context.get("instance")
+        creando = instance is None
+        password = (attrs.get("password") or "").strip()
+
+        if creando and not password:
+            raise serializers.ValidationError({"password": "La contraseña es obligatoria al crear."})
+        if password and len(password) < 8:
+            raise serializers.ValidationError({"password": "Mínimo 8 caracteres."})
+
+        actor = view.request.user if view else None
+        if instance and actor and instance.pk == actor.pk:
+            nuevo_rol = attrs.get("rol")
+            if nuevo_rol and nuevo_rol != ROL_ADMIN:
+                raise serializers.ValidationError(
+                    {"rol": "No puede quitarse el rol Administrador a sí mismo."}
+                )
+            if attrs.get("is_active") is False:
+                raise serializers.ValidationError(
+                    {"is_active": "No puede desactivar su propia cuenta."}
+                )
+
+        if instance and attrs.get("rol") is not None and attrs["rol"] != ROL_ADMIN:
+            if _es_ultimo_admin(instance):
+                raise serializers.ValidationError(
+                    {"rol": "No puede retirar el último Administrador de la plataforma."}
+                )
+        if instance and attrs.get("is_active") is False and _es_ultimo_admin(instance):
+            raise serializers.ValidationError(
+                {"is_active": "No puede desactivar al último Administrador."}
+            )
+
+        return attrs
+
+
+def _es_ultimo_admin(user):
+    from .permisos import user_es_admin
+    if not user_es_admin(user):
+        return False
+    admins = User.objects.filter(
+        Q(is_superuser=True) | Q(groups__name=ROL_ADMIN),
+        is_active=True,
+    ).distinct()
+    return admins.count() <= 1
+
+
+def _grupo_por_rol(rol):
+    from django.contrib.auth.models import Group
+    return Group.objects.get(name=rol)
+
+
+def _guardar_perfil(user, area):
+    perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
+    perfil.area = area or ""
+    perfil.save(update_fields=["area"])
+
+
+def crear_usuario_plataforma(validated_data):
+    from django.contrib.auth.models import User
+    password = validated_data.pop("password")
+    rol = validated_data.pop("rol")
+    area = validated_data.pop("area", "")
+    is_active = validated_data.pop("is_active", True)
+    username = validated_data.pop("username")
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        email=validated_data.get("email", ""),
+        first_name=validated_data.get("first_name", ""),
+        last_name=validated_data.get("last_name", ""),
+        is_active=is_active,
+    )
+    user.groups.set([_grupo_por_rol(rol)])
+    _guardar_perfil(user, area)
+    return user
+
+
+def actualizar_usuario_plataforma(instance, validated_data):
+    password = validated_data.pop("password", None)
+    rol = validated_data.pop("rol", None)
+    area = validated_data.pop("area", None)
+    for campo in ("email", "first_name", "last_name", "is_active"):
+        if campo in validated_data:
+            setattr(instance, campo, validated_data[campo])
+    if password:
+        instance.set_password(password)
+    instance.save()
+    if rol is not None:
+        instance.groups.set([_grupo_por_rol(rol)])
+    if area is not None:
+        _guardar_perfil(instance, area)
+    return instance
+
