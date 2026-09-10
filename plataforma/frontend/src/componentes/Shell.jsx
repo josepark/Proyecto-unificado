@@ -20,7 +20,7 @@ function moduloDeRuta(pathname) {
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
   const sesion = useSesion();
-  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, roles, modulos } = sesion;
+  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, roles, modulos, recargar } = sesion;
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const [desgloseRbac, setDesgloseRbac] = useState(null);
@@ -47,6 +47,10 @@ export default function Shell() {
   useEffect(() => {
     setSesionVencida(false);
   }, [moduloActivo]);
+
+  useEffect(() => {
+    recargar({ silencioso: true });
+  }, [moduloActivo, recargar]);
 
   useEffect(() => {
     if (!verRbac || cargando) {

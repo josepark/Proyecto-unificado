@@ -49,6 +49,16 @@ export async function consultarSesionInventario() {
   }
 }
 
+/** Reintento breve — evita marcar sesión cerrada por lecturas puntuales (SQLite/nginx). */
+export async function leerSesionConfirmada() {
+  let s = await consultarSesionInventario();
+  if (!s.autenticado) {
+    await esperar(250);
+    s = await consultarSesionInventario();
+  }
+  return s;
+}
+
 async function notificar401(url) {
   // RBAC solo expone /rbac/api/ protegida por auth_request de nginx — un 401
   // ahí significa "sin rol Dinamizador/Administrador" o un fallo puntual de la
@@ -61,7 +71,7 @@ async function notificar401(url) {
 
   if (!url.includes('/api/')) return;
 
-  const sesion = await consultarSesionInventario();
+  const sesion = await leerSesionConfirmada();
   eventosApi.dispatchEvent(new CustomEvent('sesion-actualizada', { detail: sesion }));
   if (!sesion.autenticado) {
     eventosApi.dispatchEvent(new CustomEvent('sesion-vencida', { detail: { url } }));
@@ -96,11 +106,6 @@ async function peticion(url, opciones = {}) {
 
     if (respuesta.status === 401) {
       await notificar401(url);
-    } else if (respuesta.status === 403 && url.includes('/api/')) {
-      const sesion = await consultarSesionInventario();
-      if (!sesion.autenticado) {
-        await notificar401(url);
-      }
     }
     if (!respuesta.ok) {
       let cuerpo;

@@ -6,6 +6,7 @@ import ModuloInventario from './ModuloInventario';
 const { contextoBase } = vi.hoisted(() => ({
   contextoBase: {
     autenticado: true,
+    cargando: false,
     modulos: ['inventario'],
     alertasUnificadas: {
       total_consolidado: 3,
@@ -59,6 +60,22 @@ describe('ModuloInventario — badges Ola 6', () => {
       'href',
       '/login?next=%2Finventario%2Fdashboard',
     );
+    expect(screen.queryByTestId('outlet')).not.toBeInTheDocument();
+  });
+
+  it('mientras carga sesión no muestra puerta ni dispara sub-rutas', () => {
+    vi.mocked(useOutletContext).mockReturnValue({
+      autenticado: false,
+      cargando: true,
+      alertasUnificadas: { total_consolidado: 0, vinculacion: { disponible: false } },
+    });
+    render(
+      <MemoryRouter initialEntries={['/inventario/dashboard']}>
+        <ModuloInventario />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Verificando sesión/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Iniciar sesión/i })).not.toBeInTheDocument();
     expect(screen.queryByTestId('outlet')).not.toBeInTheDocument();
   });
 

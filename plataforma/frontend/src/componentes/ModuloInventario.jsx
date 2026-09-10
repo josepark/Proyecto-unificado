@@ -24,13 +24,17 @@ const PESTANAS_BASE = [
 const PESTANA_USUARIOS = { to: 'usuarios', etiqueta: 'Cuentas de acceso' };
 
 export default function ModuloInventario() {
-  const { alertasUnificadas, puedeEliminar, modulos, autenticado, ...resto } = useOutletContext() ?? {};
+  const { alertasUnificadas, puedeEliminar, modulos, autenticado, cargando, ...resto } = useOutletContext() ?? {};
   const ubicacion = useLocation();
   const pestanas = puedeEliminar ? [...PESTANAS_BASE, PESTANA_USUARIOS] : PESTANAS_BASE;
   const gestionUsuarios = ubicacion.pathname.includes('/inventario/usuarios');
   const esPublica = rutaInventarioPublica(ubicacion.pathname);
   const sinInventario = autenticado && !tieneModulo(modulos, 'inventario', { autenticado });
   const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
+
+  if (cargando) {
+    return <p className="sub" style={{ margin: '12px 0' }}>Verificando sesión…</p>;
+  }
 
   if (!autenticado && !esPublica) {
     return (

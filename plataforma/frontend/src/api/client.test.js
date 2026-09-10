@@ -58,6 +58,11 @@ describe('client — manejo de 401', () => {
         ok: true,
         status: 200,
         json: async () => ({ autenticado: false, usuario: null, roles: [], puede_editar: false, puede_eliminar: false }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ autenticado: false, usuario: null, roles: [], puede_editar: false, puede_eliminar: false }),
       });
 
     const inventario = crearCliente({
@@ -71,28 +76,18 @@ describe('client — manejo de 401', () => {
     eventosApi.removeEventListener('sesion-vencida', vencida);
   });
 
-  it('emite sesion-vencida en 403 del Inventario cuando no hay sesión activa', async () => {
+  it('403 del Inventario no cierra la sesión global (permiso, no autenticación)', async () => {
     const vencida = vi.fn();
-
+    const actualizada = vi.fn();
     eventosApi.addEventListener('sesion-vencida', vencida);
+    eventosApi.addEventListener('sesion-actualizada', actualizada);
 
-    vi.mocked(fetch)
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 403,
-        statusText: 'Forbidden',
-        json: async () => ({ detail: 'No tiene permiso' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ autenticado: false, usuario: null, roles: [], puede_editar: false, puede_eliminar: false }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ autenticado: false, usuario: null, roles: [], puede_editar: false, puede_eliminar: false }),
-      });
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      statusText: 'Forbidden',
+      json: async () => ({ detail: 'No tiene permiso' }),
+    });
 
     const inventario = crearCliente({
       base: '/api',
@@ -100,9 +95,11 @@ describe('client — manejo de 401', () => {
     });
 
     await expect(inventario.get('/activos/meta/')).rejects.toMatchObject({ status: 403 });
-    expect(vencida).toHaveBeenCalledTimes(1);
+    expect(vencida).not.toHaveBeenCalled();
+    expect(actualizada).not.toHaveBeenCalled();
 
     eventosApi.removeEventListener('sesion-vencida', vencida);
+    eventosApi.removeEventListener('sesion-actualizada', actualizada);
   });
 
   it('reintenta GET de RBAC tras 401 si la sesión del Inventario sigue activa', async () => {

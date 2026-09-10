@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { inventarioApi } from '../api/inventario';
-import { eventosApi, consultarSesionInventario } from '../api/client';
+import { eventosApi, consultarSesionInventario, leerSesionConfirmada } from '../api/client';
 import { sincronizarUsuarioActivo } from '../lib/sesionLocal';
 
 const VACIA = {
@@ -25,21 +24,6 @@ function mapearSesion(s) {
   };
 }
 
-function esperar(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Lee GET /api/sesion/ con un reintento si la primera respuesta dice "no autenticado"
- * — evita cerrar sesión por lecturas puntuales al cambiar de módulo (SQLite/nginx). */
-async function leerSesionConfirmada() {
-  let s = await inventarioApi.sesion();
-  if (!s.autenticado) {
-    await esperar(250);
-    s = await inventarioApi.sesion();
-  }
-  return s;
-}
-
 /** Sesión actual (rol, permisos) — misma fuente que el tablero anterior
  * (GET /api/sesion/). Expone recargar() para refrescar tras el login React. */
 export function SesionProvider({ children }) {
@@ -50,7 +34,9 @@ export function SesionProvider({ children }) {
     if (!silencioso) setCargando(true);
     return leerSesionConfirmada()
       .then((s) => {
-        sincronizarUsuarioActivo(s.autenticado ? s.usuario : null);
+        if (s.autenticado) {
+          sincronizarUsuarioActivo(s.usuario);
+        }
         setSesion(mapearSesion(s));
       })
       .catch(() => {})
