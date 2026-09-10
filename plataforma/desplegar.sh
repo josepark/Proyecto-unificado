@@ -116,8 +116,9 @@ importar_mitre_si_falta() {
     local count
     count=$(docker compose exec -T inventario python manage.py shell -c \
         "from inventario.models import AmenazaMITRE; print(AmenazaMITRE.objects.count())" \
-        2>/dev/null | tr -d '\r\n' || echo "0")
-    if [ "${count:-0}" -ge 100 ]; then
+        2>/dev/null | grep -Eo '[0-9]+$' | tail -1 || true)
+    count=${count:-0}
+    if [ "$count" -ge 100 ] 2>/dev/null; then
         echo "Catálogo MITRE en Inventario: ${count} entradas (OK)."
         return 0
     fi
@@ -176,7 +177,9 @@ with urllib.request.urlopen(req, timeout=15) as r:
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
         rbac python3 catalogo_attack_desde_inventario.py
 
-    echo "→ RBAC: migrar_v2_1.py"
+    echo "→ RBAC: recuperar + migrar espacio + v2.1"
+    docker compose exec -T rbac python3 recuperar_rbac_db.py
+    docker compose exec -T rbac python3 migrar_espacio_datos.py
     docker compose exec -T rbac python3 migrar_v2_1.py
 }
 
@@ -192,6 +195,23 @@ verificar_login() {
             ;;
         *) echo "GET /api/auth/login/ → $codigo (revise nginx/inventario si no puede entrar)." ;;
     esac
+}
+
+verificar_rbac_resumen() {
+    if docker compose exec -T rbac python3 -c "
+import sqlite3, sys
+c = sqlite3.connect('rbac.db')
+if not c.execute(\"SELECT 1 FROM sqlite_master WHERE type='table' AND name='sistema'\").fetchone():
+    sys.exit(2)
+c.execute('SELECT COUNT(*) FROM sistema')
+" 2>/dev/null; then
+        echo "RBAC: tabla sistema presente (OK)."
+    else
+        echo "ERROR: rbac.db corrupta — falta tabla sistema." >&2
+        echo "       Ejecute: docker compose exec rbac python3 recuperar_rbac_db.py" >&2
+        echo "       Luego:   docker compose exec rbac python3 migrar_espacio_datos.py migrar_v2_1.py" >&2
+        return 1
+    fi
 }
 
 if $SINCRONIZAR_MITRE; then
@@ -223,6 +243,7 @@ else
 fi
 
 paso "10/10 · Verificación final"
+verificar_rbac_resumen || exit 1
 verificar_login || exit 1
 
 paso "Listo"

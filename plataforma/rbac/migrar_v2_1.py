@@ -9,16 +9,38 @@ import hashlib
 import sqlite3
 
 import catalogo_attack
+from recuperar_rbac_db import recuperar_si_corrupta
+
+recuperar_si_corrupta()
 
 c = sqlite3.connect('rbac.db')
 c.row_factory = sqlite3.Row
 
+
+def _tabla_existe(con, nombre):
+    return (
+        con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (nombre,),
+        ).fetchone()
+        is not None
+    )
+
+
+def _columnas(con, tabla):
+    if not _tabla_existe(con, tabla):
+        return []
+    return [r[1] for r in con.execute(f"PRAGMA table_info({tabla})")]
+
+
 for tabla in ('rol', 'sistema'):
-    if 'activo' not in [r[1] for r in c.execute(f"PRAGMA table_info({tabla})")]:
+    if not _tabla_existe(c, tabla):
+        raise SystemExit(f"Tabla '{tabla}' no existe — ejecute recuperar_rbac_db.py.")
+    if 'activo' not in _columnas(c, tabla):
         c.execute(f"ALTER TABLE {tabla} ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
         print(f"Columna 'activo' agregada a {tabla}.")
 
-if 'ultima_revision' not in [r[1] for r in c.execute("PRAGMA table_info(rol)")]:
+if _tabla_existe(c, 'rol') and 'ultima_revision' not in _columnas(c, 'rol'):
     c.execute("ALTER TABLE rol ADD COLUMN ultima_revision TEXT")
     print("Columna 'ultima_revision' agregada a rol (certificación periódica de accesos).")
 

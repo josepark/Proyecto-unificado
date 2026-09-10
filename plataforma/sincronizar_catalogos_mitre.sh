@@ -95,6 +95,8 @@ docker compose exec -T \
     rbac python3 catalogo_attack_desde_inventario.py
 
 paso "3/3 · RBAC — recargar catálogo en rbac.db"
+docker compose exec -T rbac python3 recuperar_rbac_db.py
+docker compose exec -T rbac python3 migrar_espacio_datos.py
 docker compose exec -T rbac python3 migrar_v2_1.py
 
 paso "Listo"

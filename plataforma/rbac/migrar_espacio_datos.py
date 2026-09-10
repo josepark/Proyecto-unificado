@@ -56,7 +56,19 @@ WHERE u.estado IN ('Activo','Temporal')
 """
 
 
+def _tabla_existe(con, nombre):
+    return (
+        con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (nombre,),
+        ).fetchone()
+        is not None
+    )
+
+
 def _columnas(con, tabla):
+    if not _tabla_existe(con, tabla):
+        return []
     return [r[1] for r in con.execute(f"PRAGMA table_info({tabla})")]
 
 
@@ -93,10 +105,29 @@ def _eliminar_vistas(con):
         con.execute(f"DROP VIEW IF EXISTS {vista}")
 
 
+def _completar_migracion_sistema_interrumpida(con):
+    """Tras un DROP TABLE sistema abortado, sistema_new puede quedar sin renombrar."""
+    if _tabla_existe(con, "sistema") or not _tabla_existe(con, "sistema_new"):
+        return False
+    _eliminar_vistas(con)
+    con.execute("ALTER TABLE sistema_new RENAME TO sistema")
+    con.executescript(_RECREAR_VISTAS_SQL)
+    print("Migración interrumpida completada (sistema_new → sistema).")
+    return True
+
+
 def _recrear_sistema_unicidad_espacio(con):
     """Nombre único por espacio, no globalmente."""
     if _sistema_unicidad_por_espacio(con):
         return False
+
+    if _completar_migracion_sistema_interrumpida(con):
+        return True
+
+    if not _tabla_existe(con, "sistema"):
+        raise RuntimeError(
+            "Tabla 'sistema' ausente. Ejecute python3 recuperar_rbac_db.py y reintente."
+        )
 
     _eliminar_vistas(con)
     con.executescript("""
@@ -129,6 +160,11 @@ def migrar(db_path=DB):
     if not os.path.exists(db_path):
         print(f"No existe {db_path} — omitiendo migración de espacio.")
         return
+
+    from recuperar_rbac_db import recuperar_si_corrupta
+
+    recuperar_si_corrupta(db_path)
+
     con = sqlite3.connect(db_path)
     con.execute("PRAGMA foreign_keys = OFF")
     try:
