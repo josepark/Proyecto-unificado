@@ -619,11 +619,18 @@ class UsuarioPlataformaWriteSerializer(serializers.Serializer):
             )
 
         modulos = attrs.get("modulos_acceso")
-        if modulos is not None:
+        rol_efectivo = attrs.get("rol") or (
+            UsuarioPlataformaSerializer().get_rol(instance) if instance else None
+        )
+        if creando and rol_efectivo != ROL_ADMIN:
+            lista = normalizar_modulos(modulos or [])
+            if not lista:
+                raise serializers.ValidationError(
+                    {"modulos_acceso": "Seleccione al menos un proyecto."}
+                )
+            attrs["modulos_acceso"] = lista
+        elif modulos is not None:
             attrs["modulos_acceso"] = normalizar_modulos(modulos)
-            rol_efectivo = attrs.get("rol") or (
-                UsuarioPlataformaSerializer().get_rol(instance) if instance else None
-            )
             if rol_efectivo != ROL_ADMIN and not attrs["modulos_acceso"]:
                 raise serializers.ValidationError(
                     {"modulos_acceso": "Seleccione al menos un proyecto."}
@@ -678,7 +685,11 @@ def crear_usuario_plataforma(validated_data):
         is_active=is_active,
     )
     user.groups.set([_grupo_por_rol(rol)])
-    _guardar_perfil(user, area=area, modulos_acceso=modulos if modulos is not None else list(MODULOS_PLATAFORMA))
+    if rol == ROL_ADMIN:
+        modulos_guardar = list(MODULOS_PLATAFORMA)
+    else:
+        modulos_guardar = modulos or []
+    _guardar_perfil(user, area=area, modulos_acceso=modulos_guardar)
     return user
 
 

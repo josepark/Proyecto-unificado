@@ -256,6 +256,16 @@ Solo visible para rol **Administrador**. Permite:
 | Dinamizador | Lectura y escritura |
 | Administrador | Control total, incluye gestión de cuentas |
 
+**Proyectos (módulos) asignables:**
+
+| Proyecto | Contenido |
+|----------|-----------|
+| Inventario de activos | Dashboard, activos, alertas, panel ejecutivo |
+| Matriz RBAC | Control de acceso MCA-001 |
+| Gestión de Riesgos y PTR | Vulnerabilidades, PTR, Red Team |
+
+Marque solo los proyectos que el usuario necesite. Los Administradores tienen acceso a los tres automáticamente. Tras guardar, el usuario solo verá las pestañas de los proyectos asignados.
+
 ### 5.11 Bitácora
 
 **Ruta:** `/inventario/bitacora`

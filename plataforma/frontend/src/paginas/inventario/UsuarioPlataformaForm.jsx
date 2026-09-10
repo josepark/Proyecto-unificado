@@ -22,7 +22,7 @@ function vacio() {
     last_name: '',
     rol: 'Consultor',
     area: '',
-    modulos_acceso: MODULOS_PLATAFORMA.map((m) => m.id),
+    modulos_acceso: [],
     is_active: true,
   };
 }
@@ -221,7 +221,11 @@ export default function UsuarioPlataformaForm() {
 
           <h3>Proyectos con acceso</h3>
           <p className="sub" style={{ marginTop: 0 }}>
-            Módulos de la plataforma que podrá ver este usuario. Los Administradores tienen acceso a todos.
+            {esAdmin
+              ? 'Los Administradores tienen acceso a todos los proyectos de la plataforma.'
+              : editando
+                ? 'Módulos que puede ver este usuario. Debe haber al menos uno marcado.'
+                : 'Marque los proyectos a los que tendrá acceso. Debe seleccionar al menos uno antes de guardar.'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
             {MODULOS_PLATAFORMA.map((m) => (
@@ -237,7 +241,11 @@ export default function UsuarioPlataformaForm() {
               >
                 <input
                   type="checkbox"
-                  checked={(form.modulos_acceso || []).includes(m.id)}
+                  checked={
+                    esAdmin
+                      ? true
+                      : (form.modulos_acceso || []).includes(m.id)
+                  }
                   onChange={() => alternarModulo(m.id)}
                   disabled={esAdmin}
                 />

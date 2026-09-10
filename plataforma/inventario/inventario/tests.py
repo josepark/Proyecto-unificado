@@ -2102,6 +2102,7 @@ class UsuariosPlataformaAPITest(TestCase):
                 "email": "ana@cric.org.co",
                 "rol": "Consultor",
                 "area": "UAIIN",
+                "modulos_acceso": ["inventario"],
             },
             content_type="application/json",
         )
@@ -2121,6 +2122,7 @@ class UsuariosPlataformaAPITest(TestCase):
                 "password": "ClaveSegura1",
                 "rol": "Consultor",
                 "area": "TIC",
+                "modulos_acceso": ["inventario", "rbac"],
             },
             content_type="application/json",
         )
@@ -2184,6 +2186,21 @@ class UsuariosPlataformaAPITest(TestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn("Administrador", str(r.json()))
+
+    def test_crear_sin_proyectos_rechazado(self):
+        self.client.force_login(self.administrador)
+        r = self.client.post(
+            self.BASE,
+            {
+                "username": "sin_proyectos",
+                "password": "ClaveSegura1",
+                "rol": "Consultor",
+                "modulos_acceso": [],
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("proyecto", str(r.json()).lower())
 
     def test_sesion_incluye_modulos(self):
         self.client.force_login(self.administrador)
