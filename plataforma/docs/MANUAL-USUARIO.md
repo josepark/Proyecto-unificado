@@ -266,6 +266,8 @@ Solo visible para rol **Administrador**. Permite:
 
 Marque solo los proyectos que el usuario necesite. Los Administradores tienen acceso a los tres automáticamente. Tras guardar, el usuario solo verá las pestañas de los proyectos asignados. Si una cuenta queda sin ningún proyecto, al ingresar verá un aviso para contactar al administrador.
 
+Cada cuenta nueva recibe un **espacio de datos propio** en el Inventario (vacío hasta que registre activos). Las cuentas de demostración (`admin`, `dinamizador`, `consultor`) comparten el inventario de ejemplo de la organización.
+
 Al **cerrar sesión** o **cambiar de usuario** en el mismo navegador, la plataforma descarta credenciales locales para que no se mezclen datos entre cuentas.
 
 ### 5.11 Bitácora

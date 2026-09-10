@@ -1,0 +1,100 @@
+"""Espacios de datos por usuario — aísla el inventario de cuentas nuevas."""
+from .permisos import user_es_admin
+
+ESPACIO_ORGANIZACION = "organizacion"
+
+# Cuentas de demostración / administración que comparten el inventario de ejemplo.
+USUARIOS_ESPACIO_ORGANIZACION = frozenset({
+    "admin",
+    "dinamizador",
+    "consultor",
+})
+
+
+def get_espacio_organizacion():
+    from .models import EspacioDatos
+
+    espacio, _ = EspacioDatos.objects.get_or_create(
+        codigo=ESPACIO_ORGANIZACION,
+        defaults={
+            "nombre": "Organización CRIC (demostración)",
+            "es_compartido": True,
+        },
+    )
+    return espacio
+
+
+def crea_espacio_personal(user):
+    from .models import EspacioDatos
+
+    codigo = f"usuario-{user.username}"[:60]
+    espacio, _ = EspacioDatos.objects.get_or_create(
+        codigo=codigo,
+        defaults={
+            "nombre": f"Espacio de {user.get_full_name() or user.username}",
+            "es_compartido": False,
+            "propietario": user,
+        },
+    )
+    return espacio
+
+
+def usuario_usa_espacio_organizacion(user):
+    if user.is_superuser or user_es_admin(user):
+        return True
+    return user.username.lower() in USUARIOS_ESPACIO_ORGANIZACION
+
+
+def espacio_datos_de(user, crear_si_falta=True):
+    if user is None or not getattr(user, "pk", None):
+        return None
+    perfil = getattr(user, "perfil_plataforma", None)
+    if perfil is None:
+        from .models import PerfilPlataforma
+
+        perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
+    if perfil.espacio_datos_id:
+        return perfil.espacio_datos
+    if not crear_si_falta:
+        return None
+    espacio = (
+        get_espacio_organizacion()
+        if usuario_usa_espacio_organizacion(user)
+        else crea_espacio_personal(user)
+    )
+    perfil.espacio_datos = espacio
+    perfil.save(update_fields=["espacio_datos"])
+    return espacio
+
+
+def activos_espacio_organizacion():
+    from .models import Activo
+
+    return Activo.objects.filter(espacio__codigo=ESPACIO_ORGANIZACION)
+
+
+def queryset_activos(request):
+    from .models import Activo
+    from .permisos import es_peticion_servicio_interno
+
+    if es_peticion_servicio_interno(request):
+        return Activo.objects.filter(espacio__codigo=ESPACIO_ORGANIZACION)
+    if not request.user.is_authenticated:
+        return Activo.objects.none()
+    espacio = espacio_datos_de(request.user)
+    if espacio is None:
+        return Activo.objects.none()
+    return Activo.objects.filter(espacio=espacio)
+
+
+def asignar_espacio_usuario_nuevo(user):
+    """Espacio personal vacío para cuentas creadas desde la interfaz."""
+    from .models import PerfilPlataforma
+
+    perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
+    if perfil.espacio_datos_id:
+        return perfil.espacio_datos
+    espacio = crea_espacio_personal(user)
+    perfil.espacio_datos = espacio
+    perfil.save(update_fields=["espacio_datos"])
+    return espacio

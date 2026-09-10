@@ -26,19 +26,34 @@ from .serializers import (ActivoListSerializer, ActivoDetailSerializer,
                           AmenazaMITRESerializer, ControlISOSerializer,
                           HistorialSerializer, ZonaSerializer, VlanSerializer)
 from .meta_inventario import meta_inventario, catalogo_clases_activo
+from .espacio_datos import queryset_activos, activos_espacio_organizacion
+
+
+def _qs_activos(request=None):
+    if request is not None:
+        return queryset_activos(request)
+    return activos_espacio_organizacion()
 
 
 class ActivoViewSet(viewsets.ModelViewSet):
     """CRUD completo de activos. Lectura libre; escritura requiere sesion."""
     permission_classes = [RolPermisoOServicioInterno]
-    queryset = Activo.objects.all().prefetch_related(
-        "amenazas", "controles", "dependencias").select_related(
-        "infraestructura", "sistema")
+    queryset = Activo.objects.none()
     filterset_fields = ["clase", "clasificacion_si", "nivel_riesgo",
                         "estado", "ciclo_vida", "procesa_datos_personales"]
     search_fields = ["id_activo", "nombre", "descripcion", "notas_seguridad",
                      "propietario", "custodio"]
     ordering_fields = ["id_activo", "valor", "nivel_riesgo"]
+
+    def get_queryset(self):
+        qs = queryset_activos(self.request).prefetch_related(
+            "amenazas", "controles", "dependencias").select_related(
+            "infraestructura", "sistema")
+        if self.request.query_params.get("sin_espejo_riesgos", "").lower() in ("1", "true", "yes"):
+            mapa = self._mapa_riesgos()
+            if mapa is not None:
+                qs = qs.exclude(pk__in=mapa.keys())
+        return qs
 
     def _mapa_riesgos(self):
         """Mapa inventario_id → espejo en Riesgos (una sola llamada por petición list)."""
@@ -46,14 +61,6 @@ class ActivoViewSet(viewsets.ModelViewSet):
             from .integracion_riesgos import mapa_activos_por_inventario
             self._mapa_riesgos_cache = mapa_activos_por_inventario()
         return self._mapa_riesgos_cache
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        if self.request.query_params.get("sin_espejo_riesgos", "").lower() in ("1", "true", "yes"):
-            mapa = self._mapa_riesgos()
-            if mapa is not None:
-                qs = qs.exclude(pk__in=mapa.keys())
-        return qs
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -70,7 +77,7 @@ class ActivoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False)
     def estadisticas(self, request):
-        qs = Activo.objects.all()
+        qs = queryset_activos(request)
         por_riesgo = dict(qs.values_list("nivel_riesgo").annotate(n=Count("id")))
         por_clase = dict(qs.values_list("clase").annotate(n=Count("id")))
         por_clasif = dict(qs.values_list("clasificacion_si").annotate(n=Count("id")))
@@ -170,7 +177,7 @@ class ClaseActivoViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()
-        n = Activo.objects.filter(clase=obj.codigo).count()
+        n = queryset_activos(request).filter(clase=obj.codigo).count()
         if n:
             return Response(
                 {"detail": f"No se puede eliminar: hay {n} activo(s) con la clase {obj.codigo}."},
@@ -298,7 +305,7 @@ class DiagramaViewSet(viewsets.ModelViewSet):
             })
 
         sugerencias = deteccion_diagramas.sugerir_activos(
-            contenido, Activo.objects.only("id", "id_activo", "nombre"))
+            contenido, queryset_activos(request).only("id", "id_activo", "nombre"))
         return Response({"soportado": True, "sugerencias": sugerencias})
 
 
@@ -323,7 +330,7 @@ from django.utils import timezone
 from django.db.models import Max
 
 
-def calcular_alertas():
+def calcular_alertas(request=None):
     """
     Calcula alertas operativas del inventario:
       - Ciclo de vida: fin de soporte (EOL) y garantia vencidos o proximos.
@@ -351,7 +358,8 @@ def calcular_alertas():
     eol, garantia, mantenimiento, escaneo = [], [], [], []
     hallazgos, sin_propietario, sin_cid, sin_dc, sin_rack = [], [], [], [], []
 
-    infra = ActivoInfraestructura.objects.select_related("activo").all()
+    qs_act = _qs_activos(request)
+    infra = ActivoInfraestructura.objects.select_related("activo").filter(activo__in=qs_act)
     for inf in infra:
         a = inf.activo
         # EOL
@@ -379,7 +387,7 @@ def calcular_alertas():
             hallazgos.append(item(a, f"{inf.hallazgos_abiertos} hallazgo(s) de vulnerabilidad abiertos", sev))
 
     # Garantia de equipos de computo (mismo criterio que infraestructura)
-    for eq in EquipoComputo.objects.select_related("activo").all():
+    for eq in EquipoComputo.objects.select_related("activo").filter(activo__in=qs_act):
         a = eq.activo
         if eq.fin_garantia:
             if eq.fin_garantia < hoy:
@@ -403,7 +411,7 @@ def calcular_alertas():
             mantenimiento.append(item(a, f"Ultimo mantenimiento hace mas de 12 meses ({u})", "alto"))
 
     # Completitud
-    for a in Activo.objects.all():
+    for a in qs_act:
         if a.nivel_riesgo in ("CRIT", "ALTO") and not a.propietario.strip():
             sin_propietario.append(item(a, f"Activo {a.get_nivel_riesgo_display()} sin propietario asignado (ISO 5.9)", "alto"))
         if a.confidencialidad is None or a.integridad is None or a.disponibilidad is None:
@@ -428,8 +436,7 @@ def calcular_alertas():
     catalogo_rbac = catalogo_sistemas_rbac()
     if catalogo_rbac:
         mapa_rbac = {s["nombre"].strip().lower(): s for s in catalogo_rbac}
-        activos_riesgo = (Activo.objects.filter(nivel_riesgo__in=("CRIT", "ALTO"))
-                          .select_related("sistema"))
+        activos_riesgo = qs_act.filter(nivel_riesgo__in=("CRIT", "ALTO")).select_related("sistema")
         for a in activos_riesgo:
             if not hasattr(a, "sistema"):
                 continue
@@ -473,7 +480,7 @@ def calcular_alertas():
 @api_view(["GET"])
 @permission_classes([RolPermiso])
 def alertas(request):
-    return Response(calcular_alertas())
+    return Response(calcular_alertas(request))
 
 
 @api_view(["GET"])
@@ -482,7 +489,7 @@ def integracion_vinculacion(request):
     """Panel de sincronización Inventario ↔ Riesgos (Ola 6)."""
     from .integracion_riesgos import detalle_vinculacion
 
-    return Response(detalle_vinculacion(Activo.objects.all().order_by("id_activo")))
+    return Response(detalle_vinculacion(queryset_activos(request).order_by("id_activo")))
 
 
 @api_view(["GET"])
@@ -495,7 +502,7 @@ def exportar_vinculacion_csv(request):
     tipo = request.GET.get("tipo", "todos")
     if tipo not in ("todos", "sin_espejo", "huerfanos"):
         return Response({"detail": "tipo debe ser todos, sin_espejo o huerfanos."}, status=400)
-    detalle = detalle_vinculacion(Activo.objects.all().order_by("id_activo"))
+    detalle = detalle_vinculacion(queryset_activos(request).order_by("id_activo"))
     if not detalle.get("disponible"):
         return Response({"detail": "Módulo de Riesgos no disponible."}, status=503)
     csv_text = generar_csv_vinculacion(detalle, tipo=tipo)
@@ -511,13 +518,13 @@ def alertas_unificadas(request):
     from .integracion_rbac import resumen_rbac
     from .integracion_riesgos import alertas_riesgos_resumen, kpis_riesgos_dashboard
 
-    inv = calcular_alertas()
+    inv = calcular_alertas(request)
     rbac = resumen_rbac() or {}
     ries_alertas = alertas_riesgos_resumen()
     ries_kpis = kpis_riesgos_dashboard()
     from .integracion_riesgos import resumen_vinculacion
     from .models import Activo
-    vinculacion = resumen_vinculacion(Activo.objects.count())
+    vinculacion = resumen_vinculacion(queryset_activos(request).count())
     sync_ops = 0
     if vinculacion.get("disponible"):
         sync_ops = vinculacion.get("sin_espejo_riesgos", 0) + vinculacion.get("huerfanos_riesgos", 0)
@@ -575,18 +582,18 @@ from .integridad import verificar_cadena
 from .permisos import roles_de, ROL_DINAMIZADOR, ROL_ADMIN
 
 
-def _activos_full():
-    return Activo.objects.all().prefetch_related(
+def _activos_full(request=None):
+    return _qs_activos(request).prefetch_related(
         "amenazas", "controles").select_related("infraestructura")
 
 
-def calcular_riesgos():
+def calcular_riesgos(request=None):
     """Calcula el riesgo (probabilidad x impacto) de cada activo y la
     matriz. Extraída de la vista riesgos() para que el reporte consolidado
     (reporte_consolidado.py) pueda reusar el mismo cálculo."""
     from .integracion_riesgos import mapa_activos_por_inventario, resumen_vinculacion
 
-    qs = _activos_full()
+    qs = _activos_full(request)
     total = qs.count()
     mapa = mapa_activos_por_inventario() or {}
     filas = []
@@ -619,7 +626,7 @@ def calcular_riesgos():
 @api_view(["GET"])
 @permission_classes([RolPermiso])
 def riesgos(request):
-    return Response(calcular_riesgos())
+    return Response(calcular_riesgos(request))
 
 
 @api_view(["POST"])
@@ -627,7 +634,7 @@ def riesgos(request):
 def recalcular_riesgos(request):
     """Aplica el riesgo calculado al campo nivel_riesgo de cada activo con C-I-D."""
     n = 0
-    for a in _activos_full():
+    for a in _activos_full(request):
         r = motor_riesgo.calcular_activo(a)
         if r["nivel"] != "SIN" and a.nivel_riesgo != r["nivel"]:
             a.nivel_riesgo = r["nivel"]
@@ -636,14 +643,17 @@ def recalcular_riesgos(request):
     return Response({"actualizados": n})
 
 
-def calcular_cobertura():
+def calcular_cobertura(request=None):
     """Declaracion de Aplicabilidad dinamica: cobertura de controles.
     Extraída de la vista para que el reporte consolidado la reuse."""
-    controles = ControlISO.objects.annotate(n=Count("activos")).order_by("-n", "codigo")
+    qs_act = _qs_activos(request)
+    controles = ControlISO.objects.annotate(
+        n=Count("activos", filter=Q(activos__in=qs_act)),
+    ).order_by("-n", "codigo")
     total_ctrl = controles.count()
     usados = sum(1 for c in controles if c.n > 0)
-    total_activos = Activo.objects.count()
-    con_control = Activo.objects.annotate(nc=Count("controles")).filter(nc__gt=0).count()
+    total_activos = qs_act.count()
+    con_control = qs_act.annotate(nc=Count("controles")).filter(nc__gt=0).count()
     detalle = [{"codigo": c.codigo, "descripcion": c.descripcion, "num_activos": c.n}
                for c in controles]
     return {
@@ -656,7 +666,7 @@ def calcular_cobertura():
 @api_view(["GET"])
 @permission_classes([RolPermiso])
 def cobertura_controles(request):
-    return Response(calcular_cobertura())
+    return Response(calcular_cobertura(request))
 
 
 # Despliegue integrado: KPIs de RBAC para el Panel ejecutivo consolidado.
@@ -667,10 +677,10 @@ from .integracion_riesgos import resumen_riesgos_panel as _resumen_riesgos
 from .integracion_riesgos import resumen_vinculacion as _resumen_vinculacion
 
 
-def calcular_panel_ejecutivo():
+def calcular_panel_ejecutivo(request=None):
     """Indicadores gerenciales de madurez del SGSI. Extraída de la vista
     dashboard_ejecutivo() para que el reporte consolidado la reuse."""
-    qs = Activo.objects.all()
+    qs = _qs_activos(request)
     total = qs.count() or 1
     con_cid = qs.exclude(confidencialidad=None).exclude(integridad=None).exclude(disponibilidad=None).count()
     con_prop = qs.exclude(propietario="").count()
@@ -722,7 +732,7 @@ def calcular_panel_ejecutivo():
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def dashboard_ejecutivo(request):
-    return Response(calcular_panel_ejecutivo())
+    return Response(calcular_panel_ejecutivo(request))
 
 
 @api_view(["GET"])
@@ -815,7 +825,7 @@ def exportar_hojavida_pdf(request, pk):
     from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
                                     TableStyle)
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    activo = Activo.objects.select_related("infraestructura", "datacenter").get(pk=pk)
+    activo = queryset_activos(request).select_related("infraestructura", "datacenter").get(pk=pk)
     eventos = activo.hoja_vida.all().order_by("fecha")
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, title=f"Hoja de vida {activo.id_activo}")
@@ -866,7 +876,7 @@ def exportar_hojavida_pdf(request, pk):
 def qr_activo(request, pk):
     """Genera un codigo QR PNG con el enlace a la ficha del activo."""
     import qrcode
-    activo = Activo.objects.get(pk=pk)
+    activo = queryset_activos(request).get(pk=pk)
     base = request.build_absolute_uri("/")[:-1]
     url = f"{base}/?activo={activo.id_activo}"
     img = qrcode.make(url)
@@ -965,7 +975,7 @@ def etiqueta_activo(request, pk):
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas
 
-    activo = Activo.objects.select_related(
+    activo = queryset_activos(request).select_related(
         "datacenter", "infraestructura", "infraestructura__rack_fk",
     ).get(pk=pk)
     base = request.build_absolute_uri("/")[:-1]
@@ -1002,7 +1012,7 @@ def etiquetas_lote(request):
         return JsonResponse(
             {"detail": "Indique al menos un activo valido en ?ids=1,2,3"}, status=400)
 
-    por_pk = {a.pk: a for a in Activo.objects.select_related(
+    por_pk = {a.pk: a for a in queryset_activos(request).select_related(
         "datacenter", "infraestructura").filter(pk__in=ids)}
     activos = [por_pk[i] for i in ids if i in por_pk]
     if not activos:

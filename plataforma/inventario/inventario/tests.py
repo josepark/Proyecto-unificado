@@ -2249,3 +2249,27 @@ class UsuariosPlataformaAPITest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(set(r.json()["modulos_acceso"]), {"inventario", "rbac", "riesgos"})
 
+    def test_usuario_nuevo_ve_inventario_vacio(self):
+        self.client.force_login(self.administrador)
+        r = self.client.post(
+            self.BASE,
+            {
+                "username": "pruebas",
+                "password": "ClaveSegura1",
+                "rol": "Consultor",
+                "modulos_acceso": ["inventario", "rbac"],
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+        from django.contrib.auth.models import User
+
+        user = User.objects.get(username="pruebas")
+        self.client.force_login(user)
+        stats = self.client.get("/api/activos/estadisticas/")
+        self.assertEqual(stats.status_code, 200)
+        self.assertEqual(stats.json()["total_activos"], 0)
+        lista = self.client.get("/api/activos/")
+        self.assertEqual(lista.status_code, 200)
+        self.assertEqual(lista.json()["count"], 0)
+

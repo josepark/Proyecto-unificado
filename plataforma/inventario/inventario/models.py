@@ -151,7 +151,7 @@ class Activo(models.Model):
         MANTENIMIENTO = "MANT", "En mantenimiento"
         RETIRADO = "RETI", "Retirado / Baja"
 
-    id_activo = models.CharField("ID Activo", max_length=30, unique=True, blank=True)
+    id_activo = models.CharField("ID Activo", max_length=30, blank=True)
     nombre = models.CharField("Nombre del activo", max_length=255)
     descripcion = models.TextField("Descripcion / Funcion", blank=True)
     clase = models.CharField(max_length=6, help_text="Código de ClaseActivo (catálogo dinámico)")
@@ -212,6 +212,15 @@ class Activo(models.Model):
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
 
+    espacio = models.ForeignKey(
+        "EspacioDatos",
+        on_delete=models.PROTECT,
+        related_name="activos",
+        verbose_name="Espacio de datos",
+        null=True,
+        blank=True,
+    )
+
     # Bitacora de cambios (quien / cuando / que campo)
     history = HistoricalRecords()
 
@@ -219,6 +228,12 @@ class Activo(models.Model):
         verbose_name = "Activo"
         verbose_name_plural = "Activos"
         ordering = ["id_activo"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["espacio", "id_activo"],
+                name="unique_id_activo_por_espacio",
+            ),
+        ]
 
     # Prefijo legacy retirado (Ola 2) — solo ClaseActivo.prefijo_id.
 
@@ -234,7 +249,7 @@ class Activo(models.Model):
         return self.nombre_clase()
 
     @classmethod
-    def siguiente_codigo(cls, clase):
+    def siguiente_codigo(cls, clase, espacio=None):
         """Calcula el proximo codigo secuencial (ej. RED-023) para la clase."""
         import re
         cat = ClaseActivo.objects.filter(codigo=clase, activo=True).first()
@@ -242,7 +257,10 @@ class Activo(models.Model):
             raise ValueError(f"No hay ClaseActivo activa con código «{clase}».")
         pref = cat.prefijo_id
         maximo = 0
-        for c in cls.objects.filter(id_activo__startswith=pref + "-").values_list("id_activo", flat=True):
+        qs = cls.objects.filter(id_activo__startswith=pref + "-")
+        if espacio is not None:
+            qs = qs.filter(espacio=espacio)
+        for c in qs.values_list("id_activo", flat=True):
             m = re.search(r"-(\d+)$", c)
             if m:
                 maximo = max(maximo, int(m.group(1)))
@@ -297,7 +315,11 @@ class Activo(models.Model):
     def save(self, *args, **kwargs):
         # Autogenerar el ID segun la clase si no se especifico (por orden de creacion)
         if not self.id_activo:
-            self.id_activo = Activo.siguiente_codigo(self.clase)
+            self.id_activo = Activo.siguiente_codigo(self.clase, espacio=self.espacio)
+        if not self.espacio_id:
+            from .espacio_datos import get_espacio_organizacion
+
+            self.espacio = get_espacio_organizacion()
         comps = [self.confidencialidad, self.integridad, self.disponibilidad]
         if all(c is not None for c in comps):
             self.valor = sum(comps)
@@ -697,6 +719,32 @@ class RegistroIntegridad(models.Model):
         return f"{self.fecha} {self.entidad} {self.accion}"
 
 
+class EspacioDatos(models.Model):
+    """Ámbito de datos del inventario — organización compartida o espacio personal por usuario."""
+    codigo = models.SlugField(max_length=60, unique=True)
+    nombre = models.CharField(max_length=120)
+    es_compartido = models.BooleanField(
+        default=False,
+        help_text="True para el espacio de demostración u organización compartida.",
+    )
+    propietario = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="espacios_datos",
+    )
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Espacio de datos"
+        verbose_name_plural = "Espacios de datos"
+        ordering = ["codigo"]
+
+    def __str__(self):
+        return self.nombre
+
+
 class PerfilPlataforma(models.Model):
     """Metadatos de plataforma por usuario — versión de JWT para invalidar
     tokens emitidos antes de un cambio de rol (Ola 1, revocación JWT)."""
@@ -714,6 +762,15 @@ class PerfilPlataforma(models.Model):
         default=list,
         blank=True,
         help_text="Proyectos asignados: inventario, rbac, riesgos. Vacío = sin acceso (salvo Administrador).",
+    )
+    espacio_datos = models.ForeignKey(
+        EspacioDatos,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="perfiles",
+        verbose_name="Espacio de datos",
+        help_text="Inventario y datos operativos visibles para este usuario.",
     )
 
     class Meta:

@@ -147,6 +147,19 @@ export default function Dashboard() {
         <p>No se pudieron cargar los indicadores.</p>
       )}
 
+      {!cargandoStats && stats?.total_activos === 0 ? (
+        <div className="aviso" style={{ marginBottom: 16 }}>
+          <strong>Inventario vacío.</strong> Este espacio de datos es propio de su cuenta. Use{' '}
+          {puedeEditar ? (
+            <Link to="/inventario/activos/nuevo">+ Nuevo activo</Link>
+          ) : (
+            '«Nuevo activo»'
+          )}{' '}
+          o importación Excel para comenzar. Los usuarios de demostración (<code>admin</code>,{' '}
+          <code>consultor</code>) comparten el inventario de ejemplo de la organización.
+        </div>
+      ) : null}
+
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           placeholder="Buscar por ID, nombre, propietario, notas…"

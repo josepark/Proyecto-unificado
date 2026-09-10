@@ -318,7 +318,7 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
             activo.controles.set(objs)
         if "dependencias_ids" in validated:
             ids = validated.pop("dependencias_ids")
-            activo.dependencias.set(Activo.objects.filter(id__in=ids))
+            activo.dependencias.set(Activo.objects.filter(id__in=ids, espacio=activo.espacio))
 
     def create(self, validated):
         infra = validated.pop("infraestructura", None)
@@ -328,7 +328,13 @@ class ActivoWriteSerializer(serializers.ModelSerializer):
         m2m = {k: validated.pop(k) for k in
                ["amenazas_codigos", "controles_codigos", "dependencias_ids"]
                if k in validated}
-        activo = Activo.objects.create(**validated)
+        request = self.context.get("request")
+        espacio = None
+        if request and request.user.is_authenticated:
+            from .espacio_datos import espacio_datos_de
+
+            espacio = espacio_datos_de(request.user)
+        activo = Activo.objects.create(espacio=espacio, **validated)
         if infra:
             ser = InfraestructuraWriteSerializer(
                 data=infra, context={"activo": activo})
@@ -519,6 +525,7 @@ from django.contrib.auth.models import User
 from .models import PerfilPlataforma
 from .permisos import ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN, roles_de
 from .modulos_plataforma import MODULOS_PLATAFORMA, normalizar_modulos
+from .espacio_datos import asignar_espacio_usuario_nuevo
 
 ROLES_PLATAFORMA = (ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN)
 
@@ -692,6 +699,7 @@ def crear_usuario_plataforma(validated_data):
     else:
         modulos_guardar = modulos or []
     _guardar_perfil(user, area=area, modulos_acceso=modulos_guardar)
+    asignar_espacio_usuario_nuevo(user)
     return user
 
 
