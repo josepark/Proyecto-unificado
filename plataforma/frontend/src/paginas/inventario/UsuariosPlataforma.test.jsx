@@ -25,13 +25,15 @@ beforeEach(() => {
         rol: 'Consultor',
         email: 'ana@cric.org.co',
         is_active: true,
-        is_superuser: false,
-      },
+            is_superuser: false,
+            modulos_acceso: ['inventario', 'rbac'],
+          },
     ],
   });
   vi.mocked(inventarioApi.metaUsuariosPlataforma).mockResolvedValue({
     roles: ['Consultor', 'Dinamizador', 'Administrador'],
     areas: ['UAIIN'],
+    modulos: ['inventario', 'rbac', 'riesgos'],
   });
 });
 

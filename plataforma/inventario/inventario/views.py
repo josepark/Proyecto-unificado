@@ -1171,12 +1171,16 @@ def sesion_info_v2(request):
             "roles": [],
             "puede_editar": False,
             "puede_eliminar": False,
+            "modulos": [],
         }, headers={"Cache-Control": "no-store"})
     rs, puede_editar, puede_eliminar = _permisos_plataforma(user)
+    from .modulos_plataforma import modulos_de
     return Response({
         "autenticado": True,
         "usuario": user.get_username(),
-        "roles": rs, "puede_editar": puede_editar, "puede_eliminar": puede_eliminar},
+        "roles": rs, "puede_editar": puede_editar, "puede_eliminar": puede_eliminar,
+        "modulos": modulos_de(user),
+    },
         headers={"Cache-Control": "no-store"})
 
 
@@ -1188,6 +1192,7 @@ from django.shortcuts import redirect
 
 
 def _respuesta_sesion(user):
+    from .modulos_plataforma import modulos_de
     rs, puede_editar, puede_eliminar = _permisos_plataforma(user)
     return {
         "autenticado": True,
@@ -1195,6 +1200,7 @@ def _respuesta_sesion(user):
         "roles": rs,
         "puede_editar": puede_editar,
         "puede_eliminar": puede_eliminar,
+        "modulos": modulos_de(user),
     }
 
 
@@ -1253,9 +1259,12 @@ def logout_view(request):
 @ensure_csrf_cookie
 def auth_check_rbac(request):
     from .permisos import ROL_CONSULTOR
+    from .modulos_plataforma import MODULO_RBAC, tiene_modulo
 
     user = _usuario_desde_sesion(request)
     if user is None:
+        return Response(status=401, headers={"Cache-Control": "no-store"})
+    if not tiene_modulo(user, MODULO_RBAC):
         return Response(status=401, headers={"Cache-Control": "no-store"})
     rs = roles_de(user)
     metodo_original = request.META.get("HTTP_X_ORIGINAL_METHOD", "GET").upper()

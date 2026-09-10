@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models import F
-from django.db.models.signals import m2m_changed, post_save
+from django.db.models.signals import m2m_changed, post_save, pre_save
 from django.dispatch import receiver
 from simple_history.signals import post_create_historical_record
 
@@ -90,6 +90,25 @@ def log_logout(sender, request, user, **kwargs):
 def crear_perfil_plataforma(sender, instance, created, **kwargs):
     if created:
         PerfilPlataforma.objects.get_or_create(user=instance)
+
+
+@receiver(pre_save, sender=PerfilPlataforma)
+def _recordar_modulos_previos(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            prev = PerfilPlataforma.objects.get(pk=instance.pk)
+            instance._modulos_previos = list(prev.modulos_acceso or [])
+        except PerfilPlataforma.DoesNotExist:
+            instance._modulos_previos = None
+    else:
+        instance._modulos_previos = None
+
+
+@receiver(post_save, sender=PerfilPlataforma)
+def invalidar_jwt_por_cambio_modulos(sender, instance, **kwargs):
+    prev = getattr(instance, "_modulos_previos", None)
+    if prev is not None and prev != list(instance.modulos_acceso or []):
+        PerfilPlataforma.objects.filter(pk=instance.pk).update(jwt_version=F("jwt_version") + 1)
 
 
 @receiver(m2m_changed, sender=User.groups.through)

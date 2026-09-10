@@ -31,6 +31,7 @@ import ClasesActivos from './paginas/inventario/ClasesActivos';
 import UsuariosPlataforma from './paginas/inventario/UsuariosPlataforma';
 import UsuarioPlataformaForm from './paginas/inventario/UsuarioPlataformaForm';
 import Login from './paginas/Login';
+import RutaInicio from './componentes/RutaInicio';
 
 // Fase 4 completa: React es la interfaz principal en "/". Login propio en
 // /login (POST /api/auth/login/); logout sigue en Django (/logout/).
@@ -41,7 +42,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
 
         <Route path="/" element={<Shell />}>
-          <Route index element={<Navigate to="/inventario" replace />} />
+          <Route index element={<RutaInicio />} />
 
           <Route path="inventario" element={<ModuloInventario />}>
             <Route index element={<Navigate to="dashboard" replace />} />

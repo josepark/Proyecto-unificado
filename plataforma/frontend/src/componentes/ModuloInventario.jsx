@@ -1,6 +1,7 @@
-import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
+import { NavLink, Outlet, useOutletContext, useLocation } from 'react-router-dom';
 
 import { pendientesSync } from '../lib/integracionUi';
+import { tieneModulo } from '../lib/modulosPlataforma';
 
 const PESTANAS_BASE = [
   { to: 'dashboard', etiqueta: 'Dashboard' },
@@ -15,8 +16,21 @@ const PESTANAS_BASE = [
 const PESTANA_USUARIOS = { to: 'usuarios', etiqueta: 'Cuentas de acceso' };
 
 export default function ModuloInventario() {
-  const { alertasUnificadas, puedeEliminar, ...resto } = useOutletContext() ?? {};
+  const { alertasUnificadas, puedeEliminar, modulos, autenticado, ...resto } = useOutletContext() ?? {};
+  const ubicacion = useLocation();
   const pestanas = puedeEliminar ? [...PESTANAS_BASE, PESTANA_USUARIOS] : PESTANAS_BASE;
+  const gestionUsuarios = ubicacion.pathname.includes('/inventario/usuarios');
+  const sinInventario = autenticado && !tieneModulo(modulos, 'inventario');
+
+  if (sinInventario && !gestionUsuarios) {
+    return (
+      <div className="card">
+        <div className="cuerpo">
+          Su cuenta no tiene acceso al proyecto <b>Inventario de activos</b>.
+        </div>
+      </div>
+    );
+  }
   const vinc = alertasUnificadas?.vinculacion;
   const pendientesSyncCount = pendientesSync(vinc);
   const totalAlertas = alertasUnificadas?.total_consolidado ?? 0;
@@ -44,7 +58,7 @@ export default function ModuloInventario() {
           </NavLink>
         ))}
       </div>
-      <Outlet context={{ ...resto, alertasUnificadas, puedeEliminar }} />
+      <Outlet context={{ ...resto, alertasUnificadas, puedeEliminar, modulos, autenticado }} />
     </div>
   );
 }

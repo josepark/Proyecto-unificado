@@ -6,6 +6,7 @@ import { consultarSesionInventario, eventosApi } from '../api/client';
 import { inventarioApi } from '../api/inventario';
 import { rbacApi } from '../api/rbac';
 import { pendientesSync } from '../lib/integracionUi';
+import { tieneModulo } from '../lib/modulosPlataforma';
 import { puedeVerRbac, ENLACES_ALERTAS_RBAC } from '../paginas/rbac/rbacUtil';
 
 function moduloDeRuta(pathname) {
@@ -18,7 +19,7 @@ function moduloDeRuta(pathname) {
 /** Encabezado + pestañas de módulo — interfaz unificada en React Router. */
 export default function Shell() {
   const sesion = useSesion();
-  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, roles } = sesion;
+  const { autenticado, usuario, puedeEditar, puedeEliminar, cargando, roles, modulos } = sesion;
   const [sesionVencida, setSesionVencida] = useState(false);
   const [pendientesRbac, setPendientesRbac] = useState(0);
   const [desgloseRbac, setDesgloseRbac] = useState(null);
@@ -28,7 +29,9 @@ export default function Shell() {
   const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
   const moduloActivo = useMemo(() => moduloDeRuta(ubicacion.pathname), [ubicacion.pathname]);
   const soloLecturaRbac = autenticado && !puedeEditar && (roles ?? []).includes('Consultor');
-  const verRbac = puedeVerRbac({ autenticado, puedeEditar, roles });
+  const verRbac = puedeVerRbac({ autenticado, puedeEditar, roles }) && tieneModulo(modulos, 'rbac');
+  const verInventario = !autenticado || tieneModulo(modulos, 'inventario');
+  const verRiesgos = !autenticado || tieneModulo(modulos, 'riesgos');
 
   useEffect(() => {
     function alVencer() {
@@ -106,6 +109,7 @@ export default function Shell() {
     puedeEliminar,
     cargando,
     roles,
+    modulos,
     soloLecturaRbac,
     alertasUnificadas: alertasUni,
     recargarAlertasUnificadas: recargarAlertas,
@@ -160,6 +164,7 @@ export default function Shell() {
 
       <div className="contenedor">
         <nav className="pestanas-modulo">
+          {verInventario ? (
           <NavLink to="/inventario" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Inventario
               {totalAlertas > 0 ? (
@@ -177,6 +182,8 @@ export default function Shell() {
                 </span>
               ) : null}
           </NavLink>
+          ) : null}
+          {verRbac ? (
           <span style={{ position: 'relative', display: 'inline-block' }}>
             <NavLink to="/rbac" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
               Matriz RBAC
@@ -247,6 +254,8 @@ export default function Shell() {
               </div>
             )}
           </span>
+          ) : null}
+          {verRiesgos ? (
           <NavLink to="/gestion-riesgos" className={({ isActive }) => `modulo${isActive ? ' activo' : ''}`}>
             Gestión de Riesgos y PTR
             {pendientesRiesgos > 0 ? (
@@ -255,6 +264,7 @@ export default function Shell() {
               </span>
             ) : null}
           </NavLink>
+          ) : null}
         </nav>
 
         <Outlet context={outletContext} />

@@ -14,6 +14,7 @@ import RiesgosActivo from '@riesgos/pages/RiesgosActivo';
 import ImportarExcel from '@riesgos/pages/ImportarExcel';
 import Cumplimiento from '@riesgos/pages/Cumplimiento';
 import Catalogos from '@riesgos/pages/Catalogos';
+import { tieneModulo } from '../lib/modulosPlataforma';
 import '@riesgos/index-plataforma.css';
 
 function RedirigirPanelRiesgos() {
@@ -23,7 +24,17 @@ function RedirigirPanelRiesgos() {
 
 /** PTR nativo en la SPA unificada — sin iframe; comparte sesión vía JWT/cookie. */
 export default function ModuloRiesgosPTR() {
-  const { autenticado, cargando } = useOutletContext() ?? {};
+  const { autenticado, cargando, modulos } = useOutletContext() ?? {};
+
+  if (autenticado && !cargando && !tieneModulo(modulos, 'riesgos')) {
+    return (
+      <div className="card">
+        <div className="cuerpo">
+          Su cuenta no tiene acceso al proyecto <b>Gestión de Riesgos y PTR</b>.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PlataformaProvider anidado>

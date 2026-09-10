@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import { formatearErrorApi } from '../../api/client';
 import { Campo, CampoSelect, Fila } from '../../componentes/CamposFormulario';
+import { MODULOS_PLATAFORMA } from '../../lib/modulosPlataforma';
 
 const ROLES = [
   ['Consultor', 'Consultor — solo lectura'],
@@ -21,6 +22,7 @@ function vacio() {
     last_name: '',
     rol: 'Consultor',
     area: '',
+    modulos_acceso: MODULOS_PLATAFORMA.map((m) => m.id),
     is_active: true,
   };
 }
@@ -35,6 +37,9 @@ function desdeUsuario(u) {
     last_name: u.last_name || '',
     rol: u.rol || 'Consultor',
     area: u.area || '',
+    modulos_acceso: u.modulos_acceso?.length
+      ? u.modulos_acceso
+      : MODULOS_PLATAFORMA.map((m) => m.id),
     is_active: u.is_active !== false,
   };
 }
@@ -60,6 +65,17 @@ export default function UsuarioPlataformaForm() {
   }, [editando, existente]);
 
   const set = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
+
+  function alternarModulo(id) {
+    setForm((f) => {
+      const actuales = new Set(f.modulos_acceso || []);
+      if (actuales.has(id)) actuales.delete(id);
+      else actuales.add(id);
+      return { ...f, modulos_acceso: MODULOS_PLATAFORMA.map((m) => m.id).filter((x) => actuales.has(x)) };
+    });
+  }
+
+  const esAdmin = form?.rol === 'Administrador' || existente?.is_superuser;
 
   if (puedeEliminar === false) {
     return <Navigate to="/inventario/usuarios" replace />;
@@ -88,6 +104,10 @@ export default function UsuarioPlataformaForm() {
       setError('Las contraseñas no coinciden.');
       return;
     }
+    if (!esAdmin && !(form.modulos_acceso || []).length) {
+      setError('Seleccione al menos un proyecto.');
+      return;
+    }
 
     const payload = {
       username: form.username.trim(),
@@ -96,6 +116,7 @@ export default function UsuarioPlataformaForm() {
       last_name: form.last_name.trim(),
       rol: form.rol,
       area: form.area.trim(),
+      modulos_acceso: esAdmin ? MODULOS_PLATAFORMA.map((m) => m.id) : form.modulos_acceso,
       is_active: form.is_active,
     };
     if (form.password) payload.password = form.password;
@@ -197,6 +218,33 @@ export default function UsuarioPlataformaForm() {
               </label>
             </div>
           </Fila>
+
+          <h3>Proyectos con acceso</h3>
+          <p className="sub" style={{ marginTop: 0 }}>
+            Módulos de la plataforma que podrá ver este usuario. Los Administradores tienen acceso a todos.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {MODULOS_PLATAFORMA.map((m) => (
+              <label
+                key={m.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 14,
+                  opacity: esAdmin ? 0.7 : 1,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={(form.modulos_acceso || []).includes(m.id)}
+                  onChange={() => alternarModulo(m.id)}
+                  disabled={esAdmin}
+                />
+                {m.etiqueta}
+              </label>
+            ))}
+          </div>
 
           <h3>{editando ? 'Nueva contraseña (opcional)' : 'Contraseña *'}</h3>
           <Fila columnas={2}>

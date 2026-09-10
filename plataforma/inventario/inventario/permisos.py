@@ -37,6 +37,13 @@ class RolPermiso(BasePermission):
     Eliminacion (DELETE): solo Administrador.
     """
     def has_permission(self, request, view):
+        if request.user.is_authenticated:
+            from .modulos_plataforma import (
+                MODULO_INVENTARIO, ruta_exenta_modulo_inventario, tiene_modulo,
+            )
+            if not ruta_exenta_modulo_inventario(request.path):
+                if not tiene_modulo(request.user, MODULO_INVENTARIO):
+                    return False
         if request.method in SAFE_METHODS:
             return request.user.is_authenticated
         roles = roles_de(request.user)

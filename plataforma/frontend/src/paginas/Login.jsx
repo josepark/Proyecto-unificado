@@ -2,17 +2,20 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { inventarioApi } from '../api/inventario';
 import { useSesion } from '../hooks/useSesion';
+import { rutaInicioModulos } from '../lib/modulosPlataforma';
 
-function rutaSegura(next) {
-  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/inventario/dashboard';
+function rutaSegura(next, modulos) {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) {
+    return rutaInicioModulos(modulos);
+  }
   return next;
 }
 
 export default function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { recargar, autenticado, cargando } = useSesion();
-  const destino = rutaSegura(params.get('next'));
+  const { recargar, autenticado, cargando, modulos } = useSesion();
+  const destino = rutaSegura(params.get('next'), modulos);
 
   const [usuario, setUsuario] = useState('');
   const [clave, setClave] = useState('');
@@ -32,12 +35,10 @@ export default function Login() {
     setError('');
     setEnviando(true);
     try {
-      await inventarioApi.login(usuario, clave);
+      const sesionLogin = await inventarioApi.login(usuario, clave);
       await recargar();
-      // Si el módulo de riesgos sigue montado (p. ej. login en modal futuro),
-      // o tras volver a /gestion-riesgos, dispara SSO sin esperar otro ciclo.
       window.dispatchEvent(new CustomEvent('suiin-sesion-plataforma'));
-      navigate(destino, { replace: true });
+      navigate(rutaSegura(params.get('next'), sesionLogin.modulos), { replace: true });
     } catch (err) {
       if (err.status === 429) {
         setError('Acceso bloqueado temporalmente por demasiados intentos fallidos.');

@@ -2139,6 +2139,42 @@ class UsuariosPlataformaAPITest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn("Consultor", r.json()["roles"])
 
+    def test_admin_crea_usuario_solo_rbac(self):
+        self.client.force_login(self.administrador)
+        r = self.client.post(
+            self.BASE,
+            {
+                "username": "solo_rbac",
+                "password": "ClaveSegura1",
+                "rol": "Consultor",
+                "area": "TIC",
+                "modulos_acceso": ["rbac"],
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json()["modulos_acceso"], ["rbac"])
+
+    def test_usuario_solo_rbac_no_accede_inventario_api(self):
+        from django.contrib.auth.models import User
+        self.client.force_login(self.administrador)
+        self.client.post(
+            self.BASE,
+            {
+                "username": "consultor_rbac",
+                "password": "ClaveSegura1",
+                "rol": "Consultor",
+                "modulos_acceso": ["rbac"],
+            },
+            content_type="application/json",
+        )
+        consultor = User.objects.get(username="consultor_rbac")
+        self.client.force_login(consultor)
+        r = self.client.get("/api/activos/")
+        self.assertEqual(r.status_code, 403)
+        r_rbac = self.client.get("/api/auth-rbac/")
+        self.assertEqual(r_rbac.status_code, 204)
+
     def test_no_degrada_ultimo_admin(self):
         self.client.force_login(self.administrador)
         r = self.client.patch(
@@ -2148,4 +2184,11 @@ class UsuariosPlataformaAPITest(TestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn("Administrador", str(r.json()))
+
+    def test_sesion_incluye_modulos(self):
+        self.client.force_login(self.administrador)
+        r = self.client.get("/api/sesion/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("modulos", r.json())
+        self.assertIn("inventario", r.json()["modulos"])
 

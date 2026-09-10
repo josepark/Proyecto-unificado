@@ -4,6 +4,7 @@ import { useApi } from '../../hooks/useApi';
 import { inventarioApi } from '../../api/inventario';
 import BannerErrorMutacion from '../../componentes/BannerErrorMutacion';
 import { formatearErrorApi } from '../../api/client';
+import { etiquetasModulos } from '../../lib/modulosPlataforma';
 
 const ROL_CLASE = {
   Consultor: 't-BAJO',
@@ -67,7 +68,11 @@ export default function UsuariosPlataforma() {
   async function alternarActivo(u) {
     setErrorMutacion(null);
     try {
-      await inventarioApi.editarUsuarioPlataforma(u.id, { is_active: !u.is_active, rol: u.rol });
+      await inventarioApi.editarUsuarioPlataforma(u.id, {
+        is_active: !u.is_active,
+        rol: u.rol,
+        modulos_acceso: u.modulos_acceso,
+      });
       recargar();
     } catch (e) {
       setErrorMutacion(formatearErrorApi(e));
@@ -141,6 +146,7 @@ export default function UsuariosPlataforma() {
               <th>Nombre</th>
               <th>Área</th>
               <th>Rol SGSI</th>
+              <th>Proyectos</th>
               <th>Correo</th>
               <th>Estado</th>
               <th></th>
@@ -164,6 +170,9 @@ export default function UsuariosPlataforma() {
                 <td>
                   <span className={`tag ${ROL_CLASE[u.rol] || ''}`}>{u.rol || 'Sin rol'}</span>
                 </td>
+                <td style={{ fontSize: 12, maxWidth: 220 }}>
+                  {etiquetasModulos(u.modulos_acceso).join(' · ')}
+                </td>
                 <td>{u.email || '—'}</td>
                 <td>{u.is_active ? 'Activo' : 'Inactivo'}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
@@ -185,7 +194,7 @@ export default function UsuariosPlataforma() {
             ))}
             {!lista.length && (
               <tr>
-                <td colSpan={7} className="sub">
+                <td colSpan={8} className="sub">
                   No hay cuentas que coincidan con el filtro.
                 </td>
               </tr>

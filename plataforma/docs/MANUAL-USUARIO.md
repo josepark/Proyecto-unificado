@@ -244,7 +244,7 @@ Catálogo de las tres clases principales (Infraestructura, Sistemas, Equipos) co
 
 Solo visible para rol **Administrador**. Permite:
 
-- Crear cuentas con usuario, contraseña, nombre, correo, **área organizacional** y rol SGSI (Consultor, Dinamizador o Administrador)
+- Crear cuentas con usuario, contraseña, nombre, correo, **área organizacional**, **proyectos permitidos** y rol SGSI (Consultor, Dinamizador o Administrador)
 - Editar datos, cambiar rol, restablecer contraseña o desactivar cuentas
 - Filtrar por área, rol o búsqueda de texto
 

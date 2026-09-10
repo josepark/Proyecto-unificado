@@ -518,6 +518,7 @@ class EventoHojaVidaSerializer(serializers.ModelSerializer):
 from django.contrib.auth.models import User
 from .models import PerfilPlataforma
 from .permisos import ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN, roles_de
+from .modulos_plataforma import MODULOS_PLATAFORMA, normalizar_modulos
 
 ROLES_PLATAFORMA = (ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN)
 
@@ -525,16 +526,21 @@ ROLES_PLATAFORMA = (ROL_CONSULTOR, ROL_DINAMIZADOR, ROL_ADMIN)
 class UsuarioPlataformaSerializer(serializers.ModelSerializer):
     rol = serializers.SerializerMethodField()
     area = serializers.SerializerMethodField()
+    modulos_acceso = serializers.SerializerMethodField()
     nombre_completo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = (
             "id", "username", "email", "first_name", "last_name",
-            "nombre_completo", "rol", "area", "is_active",
+            "nombre_completo", "rol", "area", "modulos_acceso", "is_active",
             "last_login", "date_joined", "is_superuser",
         )
         read_only_fields = fields
+
+    def get_modulos_acceso(self, obj):
+        from .modulos_plataforma import modulos_de
+        return modulos_de(obj)
 
     def get_rol(self, obj):
         rs = roles_de(obj) & set(ROLES_PLATAFORMA)
@@ -563,6 +569,11 @@ class UsuarioPlataformaWriteSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
     rol = serializers.ChoiceField(choices=ROLES_PLATAFORMA)
     area = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    modulos_acceso = serializers.ListField(
+        child=serializers.ChoiceField(choices=MODULOS_PLATAFORMA),
+        required=False,
+        allow_empty=True,
+    )
     is_active = serializers.BooleanField(default=True)
 
     def validate_username(self, value):
@@ -607,6 +618,17 @@ class UsuarioPlataformaWriteSerializer(serializers.Serializer):
                 {"is_active": "No puede desactivar al último Administrador."}
             )
 
+        modulos = attrs.get("modulos_acceso")
+        if modulos is not None:
+            attrs["modulos_acceso"] = normalizar_modulos(modulos)
+            rol_efectivo = attrs.get("rol") or (
+                UsuarioPlataformaSerializer().get_rol(instance) if instance else None
+            )
+            if rol_efectivo != ROL_ADMIN and not attrs["modulos_acceso"]:
+                raise serializers.ValidationError(
+                    {"modulos_acceso": "Seleccione al menos un proyecto."}
+                )
+
         return attrs
 
 
@@ -626,10 +648,17 @@ def _grupo_por_rol(rol):
     return Group.objects.get(name=rol)
 
 
-def _guardar_perfil(user, area):
+def _guardar_perfil(user, area=None, modulos_acceso=None):
     perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
-    perfil.area = area or ""
-    perfil.save(update_fields=["area"])
+    campos = []
+    if area is not None:
+        perfil.area = area or ""
+        campos.append("area")
+    if modulos_acceso is not None:
+        perfil.modulos_acceso = normalizar_modulos(modulos_acceso)
+        campos.append("modulos_acceso")
+    if campos:
+        perfil.save(update_fields=campos)
 
 
 def crear_usuario_plataforma(validated_data):
@@ -637,6 +666,7 @@ def crear_usuario_plataforma(validated_data):
     password = validated_data.pop("password")
     rol = validated_data.pop("rol")
     area = validated_data.pop("area", "")
+    modulos = validated_data.pop("modulos_acceso", None)
     is_active = validated_data.pop("is_active", True)
     username = validated_data.pop("username")
     user = User.objects.create_user(
@@ -648,7 +678,7 @@ def crear_usuario_plataforma(validated_data):
         is_active=is_active,
     )
     user.groups.set([_grupo_por_rol(rol)])
-    _guardar_perfil(user, area)
+    _guardar_perfil(user, area=area, modulos_acceso=modulos if modulos is not None else list(MODULOS_PLATAFORMA))
     return user
 
 
@@ -656,6 +686,7 @@ def actualizar_usuario_plataforma(instance, validated_data):
     password = validated_data.pop("password", None)
     rol = validated_data.pop("rol", None)
     area = validated_data.pop("area", None)
+    modulos = validated_data.pop("modulos_acceso", None)
     for campo in ("email", "first_name", "last_name", "is_active"):
         if campo in validated_data:
             setattr(instance, campo, validated_data[campo])
@@ -664,7 +695,7 @@ def actualizar_usuario_plataforma(instance, validated_data):
     instance.save()
     if rol is not None:
         instance.groups.set([_grupo_por_rol(rol)])
-    if area is not None:
-        _guardar_perfil(instance, area)
+    if area is not None or modulos is not None:
+        _guardar_perfil(instance, area=area, modulos_acceso=modulos)
     return instance
 

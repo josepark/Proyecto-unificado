@@ -709,6 +709,12 @@ class PerfilPlataforma(models.Model):
         blank=True,
         help_text="Dependencia o área del CRIC/SUIIN a la que pertenece el usuario.",
     )
+    modulos_acceso = models.JSONField(
+        "Módulos permitidos",
+        default=list,
+        blank=True,
+        help_text="Proyectos de la plataforma: inventario, rbac, riesgos. Vacío = todos.",
+    )
 
     class Meta:
         verbose_name = "Perfil de plataforma"

@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import PerfilPlataforma
+from .modulos_plataforma import MODULOS_PLATAFORMA
 from .permisos import SoloAdministrador
 from .serializers import (
     ROLES_PLATAFORMA,
@@ -73,7 +74,7 @@ class UsuarioPlataformaViewSet(viewsets.ModelViewSet):
             .distinct()
             .order_by("area")
         )
-        return Response({"roles": list(ROLES_PLATAFORMA), "areas": areas})
+        return Response({"roles": list(ROLES_PLATAFORMA), "areas": areas, "modulos": list(MODULOS_PLATAFORMA)})
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):

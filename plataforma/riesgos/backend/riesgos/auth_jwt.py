@@ -56,6 +56,11 @@ class JWTPlataformaAuthentication(BaseAuthentication):
             raise exceptions.AuthenticationFailed("Token de sesión sin usuario.")
 
         roles = payload.get("roles", [])
+        modulos = payload.get("modulos")
+        if modulos is not None and "riesgos" not in modulos:
+            raise exceptions.AuthenticationFailed(
+                "Su cuenta no tiene acceso al módulo de Gestión de Riesgos.")
+
         ver_token = payload.get("ver", 0)
         ver_actual = jwt_version_vigente(username)
         if ver_actual is not None and ver_token < ver_actual:

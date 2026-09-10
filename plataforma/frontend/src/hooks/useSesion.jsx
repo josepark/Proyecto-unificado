@@ -8,6 +8,7 @@ const VACIA = {
   roles: [],
   puedeEditar: false,
   puedeEliminar: false,
+  modulos: [],
 };
 
 const SesionContext = createContext(null);
@@ -19,6 +20,7 @@ function mapearSesion(s) {
     roles: s.roles || [],
     puedeEditar: s.puede_editar,
     puedeEliminar: s.puede_eliminar,
+    modulos: s.modulos || [],
   };
 }
 
