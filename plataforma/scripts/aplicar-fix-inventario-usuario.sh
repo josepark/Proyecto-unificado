@@ -3,14 +3,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo ">> Reconstruyendo inventario y nginx (backend + SPA)..."
-docker compose build inventario nginx
+echo ">> Reconstruyendo inventario, rbac y nginx (backend + SPA)..."
+docker compose build inventario rbac nginx
 
 echo ">> Levantando servicios..."
-docker compose up -d inventario nginx
+docker compose up -d inventario rbac nginx
 
 echo ">> Migraciones inventario (0017 repara espacios demo indebidos)..."
 docker compose exec inventario python manage.py migrate --noinput
+
+echo ">> Migración espacio RBAC (columnas + vistas — evita 500 en /rbac/api/resumen)..."
+docker compose exec rbac python3 migrar_espacio_datos.py
 
 echo ">> Listo. Cierre sesión en el navegador, Ctrl+Shift+R, vuelva a entrar."
 echo ">> Verifique GET /api/sesion/ → espacio_codigo debe ser usuario-<su_usuario>, no organizacion."

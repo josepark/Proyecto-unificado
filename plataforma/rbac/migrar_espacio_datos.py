@@ -13,6 +13,48 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(BASE, "rbac.db")
 ESPACIO_DEFAULT = "organizacion"
 
+_VISTAS_RBAC = (
+    "v_accesos_usuario",
+    "v_roles_criticos",
+    "v_alertas_mfa",
+)
+
+_RECREAR_VISTAS_SQL = """
+CREATE VIEW v_accesos_usuario AS
+SELECT u.id AS usuario_id, u.nombre AS usuario, u.estado,
+       r.abreviatura AS rol, r.denominacion,
+       s.nombre AS sistema, c.nombre AS categoria, s.clasificacion,
+       COALESCE(e.nivel_codigo, ma.nivel_codigo) AS nivel,
+       n.nombre AS nivel_nombre,
+       CASE WHEN e.usuario_id IS NOT NULL THEN 1 ELSE 0 END AS es_excepcion
+FROM usuario u
+JOIN rol r            ON r.id = u.rol_id
+JOIN matriz_acceso ma ON ma.rol_id = r.id
+JOIN sistema s        ON s.id = ma.sistema_id
+JOIN categoria_sistema c ON c.id = s.categoria_id
+LEFT JOIN acceso_excepcion e ON e.usuario_id = u.id AND e.sistema_id = s.id
+       AND (e.fecha_fin IS NULL OR date(e.fecha_fin) >= date('now'))
+JOIN nivel_acceso n   ON n.codigo = COALESCE(e.nivel_codigo, ma.nivel_codigo)
+WHERE COALESCE(e.nivel_codigo, ma.nivel_codigo) <> '—'
+  AND u.estado IN ('Activo','Temporal')
+  AND r.activo = 1 AND s.activo = 1;
+
+CREATE VIEW v_roles_criticos AS
+SELECT r.codigo, r.abreviatura, r.denominacion, s.nombre AS sistema, s.clasificacion
+FROM matriz_acceso ma
+JOIN rol r     ON r.id = ma.rol_id
+JOIN sistema s ON s.id = ma.sistema_id
+WHERE ma.nivel_codigo = 'A' AND r.activo = 1 AND s.activo = 1;
+
+CREATE VIEW v_alertas_mfa AS
+SELECT u.id, u.nombre, r.abreviatura AS rol, r.mfa_requerido, u.mfa_activo
+FROM usuario u JOIN rol r ON r.id = u.rol_id
+WHERE u.estado IN ('Activo','Temporal')
+  AND r.mfa_requerido LIKE 'Sí%'
+  AND u.mfa_activo NOT LIKE 'Sí%'
+  AND r.activo = 1;
+"""
+
 
 def _columnas(con, tabla):
     return [r[1] for r in con.execute(f"PRAGMA table_info({tabla})")]
@@ -29,23 +71,36 @@ def _agregar_columna_espacio(con, tabla):
     return True
 
 
+def _sistema_unicidad_por_espacio(con):
+    row = con.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='sistema'"
+    ).fetchone()
+    if not row or not row[0]:
+        return False
+    ddl = row[0].replace(" ", "")
+    return "UNIQUE(espacio_codigo,nombre)" in ddl
+
+
+def _migracion_completa(con):
+    for tabla in ("sistema", "usuario", "acceso_excepcion"):
+        if "espacio_codigo" not in _columnas(con, tabla):
+            return False
+    return _sistema_unicidad_por_espacio(con)
+
+
+def _eliminar_vistas(con):
+    for vista in _VISTAS_RBAC:
+        con.execute(f"DROP VIEW IF EXISTS {vista}")
+
+
 def _recrear_sistema_unicidad_espacio(con):
     """Nombre único por espacio, no globalmente."""
-    idx = con.execute(
-        "SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='sistema' "
-        "AND sql LIKE '%UNIQUE%' AND sql LIKE '%nombre%'"
-    ).fetchall()
-    if not idx and "espacio_codigo" in _columnas(con, "sistema"):
-        # Comprobar si ya hay índice compuesto
-        comp = con.execute(
-            "SELECT name FROM sqlite_master WHERE type='index' "
-            "AND name='idx_sistema_espacio_nombre'"
-        ).fetchone()
-        if comp:
-            return False
+    if _sistema_unicidad_por_espacio(con):
+        return False
 
+    _eliminar_vistas(con)
     con.executescript("""
-    CREATE TABLE IF NOT EXISTS sistema_new (
+    CREATE TABLE sistema_new (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre           TEXT NOT NULL,
         categoria_id     INTEGER NOT NULL REFERENCES categoria_sistema(id),
@@ -65,6 +120,7 @@ def _recrear_sistema_unicidad_espacio(con):
     ALTER TABLE sistema_new RENAME TO sistema;
     CREATE INDEX IF NOT EXISTS idx_sistema_espacio ON sistema(espacio_codigo);
     """)
+    con.executescript(_RECREAR_VISTAS_SQL)
     print("Tabla sistema: unicidad (espacio_codigo, nombre) aplicada.")
     return True
 
@@ -74,11 +130,15 @@ def migrar(db_path=DB):
         print(f"No existe {db_path} — omitiendo migración de espacio.")
         return
     con = sqlite3.connect(db_path)
-    con.execute("PRAGMA foreign_keys = ON")
+    con.execute("PRAGMA foreign_keys = OFF")
     try:
+        if _migracion_completa(con):
+            print("Migración de espacio de datos RBAC ya aplicada.")
+            return
         for tabla in ("sistema", "usuario", "acceso_excepcion"):
             _agregar_columna_espacio(con, tabla)
         _recrear_sistema_unicidad_espacio(con)
+        con.execute("CREATE INDEX IF NOT EXISTS idx_usuario_espacio ON usuario(espacio_codigo)")
         con.commit()
         print("Migración de espacio de datos RBAC completa.")
     finally:
