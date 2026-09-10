@@ -1234,7 +1234,7 @@ def api_login(request):
 
 def logout_view(request):
     _logout(request)
-    return redirect("/")
+    return redirect("/login")
 
 
 # ---------------------------------------------------------------------------

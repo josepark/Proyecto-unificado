@@ -8,6 +8,10 @@ export default function RutaInicio() {
   const { modulos, cargando, autenticado } = useSesion();
   if (cargando) return null;
 
+  if (!autenticado) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (autenticado && !modulos?.length) {
     return (
       <div className="card">

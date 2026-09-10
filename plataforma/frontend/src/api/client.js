@@ -96,6 +96,11 @@ async function peticion(url, opciones = {}) {
 
     if (respuesta.status === 401) {
       await notificar401(url);
+    } else if (respuesta.status === 403 && url.includes('/api/')) {
+      const sesion = await consultarSesionInventario();
+      if (!sesion.autenticado) {
+        await notificar401(url);
+      }
     }
     if (!respuesta.ok) {
       let cuerpo;

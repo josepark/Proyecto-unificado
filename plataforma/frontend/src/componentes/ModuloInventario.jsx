@@ -1,7 +1,15 @@
-import { NavLink, Outlet, useOutletContext, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useOutletContext, useLocation } from 'react-router-dom';
 
 import { pendientesSync } from '../lib/integracionUi';
 import { tieneModulo } from '../lib/modulosPlataforma';
+
+/** Rutas consultables sin sesión (API AllowAny). El resto exige login. */
+const RUTAS_PUBLICAS = new Set(['panel-ejecutivo']);
+
+function rutaInventarioPublica(pathname) {
+  const match = pathname.match(/\/inventario\/([^/]+)/);
+  return Boolean(match && RUTAS_PUBLICAS.has(match[1]));
+}
 
 const PESTANAS_BASE = [
   { to: 'dashboard', etiqueta: 'Dashboard' },
@@ -20,7 +28,23 @@ export default function ModuloInventario() {
   const ubicacion = useLocation();
   const pestanas = puedeEliminar ? [...PESTANAS_BASE, PESTANA_USUARIOS] : PESTANAS_BASE;
   const gestionUsuarios = ubicacion.pathname.includes('/inventario/usuarios');
+  const esPublica = rutaInventarioPublica(ubicacion.pathname);
   const sinInventario = autenticado && !tieneModulo(modulos, 'inventario', { autenticado });
+  const rutaTrasLogin = `${ubicacion.pathname}${ubicacion.search}`;
+
+  if (!autenticado && !esPublica) {
+    return (
+      <div className="modulo-restringido">
+        <p>
+          El <b>Inventario de activos</b> requiere iniciar sesión para consultar activos, alertas y catálogos.
+          El <Link to="/inventario/panel-ejecutivo">panel ejecutivo</Link> permanece disponible sin sesión.
+        </p>
+        <Link className="btn btn-primary" to={`/login?next=${encodeURIComponent(rutaTrasLogin)}`}>
+          Iniciar sesión
+        </Link>
+      </div>
+    );
+  }
 
   if (sinInventario && !gestionUsuarios) {
     return (

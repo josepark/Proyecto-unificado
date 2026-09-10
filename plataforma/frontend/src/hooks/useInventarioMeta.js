@@ -4,10 +4,10 @@ import { inventarioApi } from '../api/inventario';
 
 /** Metadatos del inventario (clases, colores, enums) — se recargan al cambiar de usuario. */
 export function useInventarioMeta() {
-  const { usuario } = useOutletContext() ?? {};
+  const { usuario, autenticado } = useOutletContext() ?? {};
   const { datos, cargando, error, recargar } = useApi(
-    () => inventarioApi.metaInventario(),
-    [usuario],
+    () => (autenticado ? inventarioApi.metaInventario() : Promise.resolve(null)),
+    [autenticado, usuario],
   );
   return {
     meta: datos,

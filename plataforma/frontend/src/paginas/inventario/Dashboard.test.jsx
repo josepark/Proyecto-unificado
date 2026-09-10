@@ -43,7 +43,7 @@ function ok(data) {
   return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => data };
 }
 
-function renderDashboard(contexto = { puedeEditar: true, usuario: 'test' }) {
+function renderDashboard(contexto = { puedeEditar: true, usuario: 'test', autenticado: true }) {
   return render(
     <MemoryRouter initialEntries={['/inventario/dashboard']}>
       <Routes>
@@ -71,7 +71,7 @@ describe('Dashboard — exportación y etiquetas', () => {
   });
 
   it('muestra columna Sync y filtro sin espejo', async () => {
-    renderDashboard({ puedeEditar: true, alertasUnificadas: { vinculacion: { disponible: true } } });
+    renderDashboard({ puedeEditar: true, autenticado: true, alertasUnificadas: { vinculacion: { disponible: true } } });
     await screen.findByText('SIS-001');
     expect(screen.getByRole('columnheader', { name: 'Sync ↗' })).toBeInTheDocument();
     expect(screen.getByTitle('Sin espejo en Gestión de Riesgos — abrir ficha')).toBeInTheDocument();

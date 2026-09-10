@@ -9,26 +9,28 @@ import { claseTagNivelInventario, pendientesSync } from '../../lib/integracionUi
 export default function Dashboard() {
   const navegar = useNavigate();
   const [searchParams] = useSearchParams();
-  const { puedeEditar, alertasUnificadas, usuario } = useOutletContext() ?? {};
+  const { puedeEditar, alertasUnificadas, usuario, autenticado } = useOutletContext() ?? {};
   const alertasRes = alertasUnificadas;
   const vinc = alertasRes?.vinculacion;
   const { coloresClase } = useInventarioMeta();
   const { datos: stats, cargando: cargandoStats, error: errorStats } = useApi(
-    () => inventarioApi.estadisticas(),
-    [usuario],
+    () => (autenticado ? inventarioApi.estadisticas() : Promise.resolve(null)),
+    [autenticado, usuario],
   );
   const [busqueda, setBusqueda] = useState('');
   const [filtroClase, setFiltroClase] = useState('');
   const [soloSinEspejo, setSoloSinEspejo] = useState(searchParams.get('solo_sin_espejo') === '1');
   const [seleccionados, setSeleccionados] = useState(() => new Set());
   const { datos: activos, cargando: cargandoLista, error: errorLista } = useApi(
-    () => inventarioApi.listarActivos({
-      search: busqueda,
-      page_size: 50,
-      ...(filtroClase ? { clase: filtroClase } : {}),
-      ...(soloSinEspejo ? { sin_espejo_riesgos: 'true' } : {}),
-    }),
-    [usuario, busqueda, filtroClase, soloSinEspejo],
+    () => (autenticado
+      ? inventarioApi.listarActivos({
+        search: busqueda,
+        page_size: 50,
+        ...(filtroClase ? { clase: filtroClase } : {}),
+        ...(soloSinEspejo ? { sin_espejo_riesgos: 'true' } : {}),
+      })
+      : Promise.resolve(null)),
+    [autenticado, usuario, busqueda, filtroClase, soloSinEspejo],
   );
 
   useEffect(() => {
