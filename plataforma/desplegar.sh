@@ -104,6 +104,14 @@ else
     exit 1
 fi
 
+paso "5b/10 · Migraciones de base de datos"
+docker compose exec -T inventario python manage.py migrate --noinput
+docker compose exec -T riesgos-backend python manage.py migrate --noinput
+echo "Inventario:"
+docker compose exec -T inventario python manage.py showmigrations inventario | tail -5
+echo "Riesgos:"
+docker compose exec -T riesgos-backend python manage.py showmigrations riesgos | tail -5
+
 importar_mitre_si_falta() {
     local count
     count=$(docker compose exec -T inventario python manage.py shell -c \
