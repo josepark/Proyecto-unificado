@@ -1,5 +1,7 @@
 .env
 .env.bak*
+nginx/tls/*.pem
+nginx/nginx-tls.active.conf
 __pycache__/
 *.pyc
 .venv/

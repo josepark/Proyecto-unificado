@@ -143,6 +143,12 @@ cd riesgos/backend && python3 manage.py test
 | `./sincronizar_catalogos_mitre.sh` | MITRE ATT&CK Inventario → RBAC |
 | `python3 respaldar_plataforma.py` | Respaldo unificado SQLite + media |
 | `python3 generar_secretos.py` | Genera secretos faltantes en `.env` |
+| `python3 validar_secretos.py` | Comprueba que no queden placeholders |
+| `python3 restaurar_plataforma.py --ultimo --confirmar` | Restaura el último respaldo unificado |
+| `./scripts/activar-tls.sh <dominio> <email>` | TLS Let's Encrypt + nginx 443 |
+| `sudo ./scripts/instalar-cron.sh` | Instala cron (respaldo, sync, alertas) |
+| `./scripts/verificar-prioridad-1.sh` | Checklist sesión y proyectos |
+| `./scripts/verificar-prioridad-2.sh` | Checklist secretos, respaldos y TLS |
 | `./diagnostico_login.sh` | Diagnóstico de bloqueos de login |
 
 ## Estructura del repositorio
@@ -156,8 +162,13 @@ plataforma/
 ├── nginx/              Gateway + build multi-etapa del frontend
 ├── docker-compose.yml
 ├── desplegar.sh
-├── README-DESPLIEGUE.md   Guía operativa y historial de integración
-└── cron/suiin-sgsi.cron.example
+├── respaldar_plataforma.py
+├── restaurar_plataforma.py
+├── validar_secretos.py
+├── docker-compose.tls.yml   Override opcional HTTPS
+├── scripts/                 activar-tls, cron, verificación P1/P2
+├── cron/suiin-sgsi.cron.example
+└── README-DESPLIEGUE.md   Guía operativa y historial de integración
 ```
 
 ## Documentación adicional

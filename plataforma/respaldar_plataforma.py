@@ -12,6 +12,7 @@ un único .tar.gz fechado.
 
 Uso manual:
     python3 respaldar_plataforma.py
+    python3 respaldar_plataforma.py --verificar   # solo comprueba el último respaldo
 
 Programado en cron (ejemplo, diario a las 02:00), corriendo directamente
 sobre los archivos del host — no hace falta que los contenedores estén
@@ -21,15 +22,22 @@ arriba, y si lo están, no hay que detenerlos:
 
 Conserva las últimas 30 copias (igual que ya hacía rbac/respaldar.py).
 """
+import argparse
 import os
 import shutil
 import sqlite3
+import sys
 import tarfile
 from datetime import datetime
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DIR_RESPALDOS = os.path.join(BASE, "respaldos")
 RETENCION = 30
+MIEMBROS_ESPERADOS = (
+    "inventario_db.sqlite3",
+    "rbac.db",
+    "riesgos_db.sqlite3",
+)
 
 
 def _copia_consistente_sqlite(origen_path, destino_path):
@@ -42,7 +50,19 @@ def _copia_consistente_sqlite(origen_path, destino_path):
     origen.close()
 
 
-def respaldar():
+def _verificar_archivo(destino: str) -> None:
+    if not os.path.isfile(destino):
+        raise RuntimeError(f"No se creó el respaldo: {destino}")
+    with tarfile.open(destino, "r:gz") as tar:
+        nombres = {m.split("/")[-1] for m in tar.getnames() if "/" in m}
+        faltantes = [m for m in MIEMBROS_ESPERADOS if m not in nombres]
+        if len(faltantes) == len(MIEMBROS_ESPERADOS):
+            raise RuntimeError(f"El tar no contiene bases reconocibles: {destino}")
+        if faltantes:
+            print(f"AVISO: faltan en el tar: {', '.join(faltantes)}")
+
+
+def respaldar() -> str:
     os.makedirs(DIR_RESPALDOS, exist_ok=True)
     marca = datetime.now().strftime("%Y%m%d_%H%M%S")
     tmp = os.path.join(DIR_RESPALDOS, f".tmp_{marca}")
@@ -81,6 +101,8 @@ def respaldar():
     shutil.rmtree(tmp)
     print(f"Respaldo creado: {destino}")
 
+    _verificar_archivo(destino)
+
     copias = sorted(
         f for f in os.listdir(DIR_RESPALDOS)
         if f.startswith("suiin_plataforma_") and f.endswith(".tar.gz"))
@@ -88,6 +110,35 @@ def respaldar():
         os.remove(os.path.join(DIR_RESPALDOS, viejo))
         print(f"Retención: eliminado {viejo}")
 
+    return destino
+
+
+def verificar_ultimo() -> int:
+    copias = sorted(
+        f for f in os.listdir(DIR_RESPALDOS)
+        if f.startswith("suiin_plataforma_") and f.endswith(".tar.gz")
+    ) if os.path.isdir(DIR_RESPALDOS) else []
+    if not copias:
+        print("ERROR: no hay respaldos en respaldos/", file=sys.stderr)
+        return 1
+    ultimo = os.path.join(DIR_RESPALDOS, copias[-1])
+    try:
+        _verificar_archivo(ultimo)
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    print(f"OK — último respaldo verificado: {copias[-1]}")
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verificar", action="store_true", help="Verificar el último .tar.gz sin crear uno nuevo")
+    args = parser.parse_args()
+    if args.verificar:
+        sys.exit(verificar_ultimo())
+    respaldar()
+
 
 if __name__ == "__main__":
-    respaldar()
+    main()

@@ -80,6 +80,7 @@ fi
 
 paso "3/10 · Generando secretos que falten"
 python3 generar_secretos.py
+python3 validar_secretos.py || exit 1
 cargar_env
 
 if $PURGAR; then
