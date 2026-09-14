@@ -1,0 +1,134 @@
+# Frontend — Soluciones SUIIN (React, interfaz principal)
+
+SPA de React que es la **interfaz principal** de la plataforma SUIIN-SGSI. Ver
+[README.md](../README.md) para visión general y [README-DESPLIEGUE.md](../README-DESPLIEGUE.md)
+para despliegue e integración histórica.
+
+**Estado actual:** migración React completa — interfaz en `/`, login en
+`/login` (API `POST /api/auth/login/`), logout en `/logout/`.
+
+## Desarrollo local
+
+Con el Inventario (`127.0.0.1:8000`) y RBAC (`127.0.0.1:5000`) corriendo
+por separado (fuera de Docker, como cualquier app Django/Flask normal):
+
+```bash
+npm install
+npm run dev
+```
+
+Abre `http://127.0.0.1:5173/` (login en `/login`). El proxy de desarrollo
+(`vite.config.js`) reenvía `/api` al Inventario y `/rbac` a RBAC, con el
+mismo recorte de prefijo que hace nginx en producción — así el mismo código
+funciona igual en desarrollo y en producción, sin ninguna URL hardcodeada
+por entorno.
+
+## Pruebas
+
+```bash
+npm test          # 57 pruebas — corre toda la suite una vez
+npm run test:watch  # modo interactivo, vuelve a correr al guardar
+```
+
+Vitest + Testing Library + jsdom (antes no había ninguna prueba de
+frontend — solo las del backend). Hay un archivo `*.test.jsx` junto a
+cada componente que lo cubre, con tres patrones de referencia para
+extender la suite:
+
+- **`Riesgos.test.jsx`** — página de solo lectura: simula `fetch()` según
+  la URL pedida y verifica que se muestren datos reales de la respuesta.
+- **`ActivoForm.test.jsx`** — formulario de escritura: valida que un envío
+  inválido muestre el error del backend sin navegar, y que uno válido
+  cree el recurso y navegue a su ficha.
+- **`Activo.test.jsx`** — guardas de rol: envuelve la ruta en un
+  `<Outlet context={...}>` propio para simular `puedeEditar`/
+  `puedeEliminar` sin montar todo `Shell.jsx`, y verifica qué botones
+  aparecen para cada rol.
+
+Mismo mecanismo en los tres casos: se simula `global.fetch` directamente
+(la misma función que ya usa `src/api/client.js`), no los módulos de la
+API — así la prueba también verifica que el cliente HTTP real arma bien
+la petición y procesa la respuesta.
+
+## Estructura
+
+```
+src/
+├── theme.css              Paleta e identidad visual (misma que el resto de la plataforma)
+├── App.jsx                Rutas de los dos módulos (anidadas, una sub-navegación por módulo)
+├── componentes/
+│   ├── Shell.jsx              Encabezado + pestañas de módulo + badges de alertas
+│   ├── ModuloInventario.jsx   Sub-navegación del Inventario (badges sync/alertas)
+│   ├── ModuloRBAC.jsx         Sub-navegación RBAC + badges por pestaña
+│   ├── PuertaRBAC.jsx         Guardia de rol antes de ModuloRBAC
+│   ├── PanelVinculacion.jsx   Sync Inventario ↔ Riesgos (Olas 5–8)
+│   ├── BannerErrorMutacion.jsx Errores inline (sustituye alert() en RBAC)
+│   ├── AvisoConsultaRbac.jsx  Modo solo lectura para Consultor
+│   └── ModuloRiesgosPTR.jsx     Módulo nativo SUIIN-SGSI-RIESGOS
+├── lib/
+│   └── integracionUi.js       Utilidades compartidas Inventario ↔ Riesgos
+├── api/
+│   ├── client.js           Fábrica de cliente HTTP con manejo de CSRF y evento de sesión vencida
+│   ├── inventario.js        Cliente del Inventario (Django DRF)
+│   └── rbac.js               Cliente de la Matriz RBAC (Flask, Fase 1 del README)
+├── hooks/
+│   ├── useSesion.js         Usuario/rol actual
+│   ├── useSesion.jsx         Usuario/rol actual + SesionProvider
+│   └── useApi.js             Carga de datos genérica (estados de carga/error)
+└── paginas/
+    ├── inventario/
+    │   ├── Dashboard.jsx        KPIs + tabla de activos
+    │   ├── PanelEjecutivo.jsx    Madurez del SGSI + KPIs de RBAC consolidados
+    │   ├── Alertas.jsx            Grupos de alertas por severidad
+    │   ├── Riesgos.jsx            Motor de riesgos del Inventario (no confundir con PTR)
+    │   ├── CentroDatos.jsx          Datacenters y diagramas
+    │   ├── Bitacora.jsx             Historial de cambios
+    │   ├── Activo.jsx / ActivoForm.jsx / ImportarActivos.jsx
+    │   └── DatacenterForm.jsx / DiagramaForm.jsx
+    └── rbac/
+        ├── Inicio.jsx             Tablero de control de acceso
+        ├── Roles.jsx / RolForm.jsx
+        ├── Usuarios.jsx / UsuarioForm.jsx
+        ├── Matriz.jsx / MatrizComparar.jsx
+        ├── Sistemas.jsx / SistemaForm.jsx
+        ├── Excepciones.jsx / ExcepcionMasiva.jsx
+        └── Auditoria.jsx
+
+**Tres módulos en la shell:** Inventario, Matriz RBAC (React nativo) y
+Gestión de Riesgos y PTR (React nativo bajo `/gestion-riesgos/`).
+
+## Despliegue en `/`
+
+nginx sirve este build en la raíz del dominio. Las rutas de backend
+(`/api/`, `/login/`, `/rbac/api/`, `/riesgos/api/`, …) las atiende nginx por
+separado antes de caer al `index.html` de React. Marcadores antiguos bajo
+`/app/…` redirigen con 301 a la misma ruta sin prefijo.
+
+## Cuidado al anidar rutas: el contexto no se propaga solo
+
+`ModuloInventario`/`ModuloRBAC` tienen su propio `<Outlet>` para las
+pantallas de su sub-navegación. El contexto que `Shell` le pasa a **su**
+`<Outlet>` (`{ autenticado, puedeEditar }`) **no** llega automáticamente a
+las rutas anidadas dentro de esos módulos — cada `<Outlet>` intermedio
+tiene que leerlo con `useOutletContext()` y reenviarlo explícitamente al
+suyo propio, o las páginas hijas verían `undefined`.
+
+## CSRF
+
+Los dos backends usan mecanismos distintos, y `api/client.js` reproduce
+los dos (no es un mecanismo nuevo, es la versión en React de lo que cada
+backend ya exigía):
+
+- **Inventario**: cookie `csrftoken` (Django), reenviada como encabezado
+  `X-CSRFToken`.
+- **RBAC**: token de sesión servido por `GET /rbac/api/csrf`, reenviado
+  como encabezado `X-CSRF-Token`.
+
+## react-router-dom
+
+Se usa **exclusivamente en modo declarativo** (`<BrowserRouter>`,
+`<Routes>`, `<Route>`) — nunca "Framework Mode" ni acciones de servidor.
+Esto importa porque la versión instalada (7.18.1, la más reciente
+disponible) tiene un aviso de seguridad conocido
+(GHSA-qwww-vcr4-c8h2, CSRF en "RSC Mode") que, según el propio aviso, **no
+afecta** al modo declarativo — ver `vite.config.js` para el detalle.

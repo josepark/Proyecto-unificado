@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Ingreso — Soluciones SUIIN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --base-950:#060a10;--base-900:#0b121c;--base-700:#22303f;--base-300:#8b9bad;--base-100:#dbe4ec;
+    --cric-green-600:#1d6b4a;--cric-green-500:#2b8a5f;--cric-green-400:#4bab7c;
+    --cric-gold-500:#c99a35;--cric-gold-400:#e0b559;
+    --borde:color-mix(in srgb,#22303f 60%,transparent);
+    --panel:#0b121c;
+    --risk-critico:#e0475a;
+    --font-display:"Space Grotesk","Inter",system-ui,sans-serif;
+    --font-body:"Inter",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--font-body);background:var(--base-950);color:var(--base-100);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background-image:
+      radial-gradient(ellipse 900px 500px at 12% -10%, rgba(43,138,95,.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(201,154,53,.10), transparent 55%);
+  }
+  .box{background:var(--panel);border:1px solid var(--borde);border-radius:16px;width:100%;max-width:390px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+  .head{color:var(--base-100);padding:26px 28px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;border-bottom:1px solid var(--borde)}
+  .head::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border:2px solid rgba(43,138,95,.25);border-radius:50%;box-shadow:0 0 0 16px rgba(43,138,95,.08)}
+  .ring{width:46px;height:46px;border:3px solid var(--cric-green-500);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ring span{font-family:var(--font-display);font-weight:700;color:var(--cric-gold-500);font-size:16px}
+  .head h1{font-family:var(--font-display);font-size:16px}
+  .head .s{font-size:11px;color:var(--base-300);margin-top:2px}
+  form{padding:26px 28px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--base-300);margin:12px 0 4px}
+  input{width:100%;padding:11px 12px;border:1px solid var(--borde);border-radius:8px;font-size:14px;background:color-mix(in srgb,var(--base-900) 80%,transparent);color:var(--base-100)}
+  input:focus{outline:none;border-color:var(--cric-green-500)}
+  button{width:100%;margin-top:20px;padding:12px;background:var(--cric-green-600);color:var(--base-100);border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+  button:hover{background:var(--cric-green-500)}
+  .err{background:color-mix(in srgb,var(--risk-critico) 12%,var(--base-900));color:var(--risk-critico);border:1px solid color-mix(in srgb,var(--risk-critico) 35%,transparent);border-radius:8px;padding:9px 12px;font-size:13px;margin-top:14px}
+  .foot{text-align:center;font-size:11px;color:var(--base-300);padding:0 28px 22px}
+  a{color:var(--cric-green-400);text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="head">
+      <div class="ring"><span>SU</span></div>
+      <div><h1>Soluciones SUIIN</h1><div class="s">Inventario de Activos SGSI · Matriz RBAC</div></div>
+    </div>
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      {% if form.errors %}<div class="err">Usuario o contraseña incorrectos.</div>{% endif %}
+      <label for="id_username">Usuario</label>
+      {{ form.username }}
+      <label for="id_password">Contraseña</label>
+      {{ form.password }}
+      <input type="hidden" name="next" value="/">
+      <button type="submit">Ingresar</button>
+    </form>
+    <div class="foot">Acceso restringido · Roles: Consultor · Dinamizador · Administrador<br>
+      <a href="/">← Volver al tablero (solo consulta)</a></div>
+  </div>
+</body>
+</html>

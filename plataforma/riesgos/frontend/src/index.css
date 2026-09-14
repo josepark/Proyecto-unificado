@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  /* Identidad institucional CRIC en clave "sala de operaciones de seguridad":
+     fondo casi-negro azulado, verde CRIC como acento primario, oro como acento
+     de énfasis/advertencia, y una escala semántica de riesgo independiente
+     (crítico/alto/medio/bajo) que nunca se confunde con el acento de marca. */
+  --color-base-950: #060a10;
+  --color-base-900: #0b121c;
+  --color-base-850: #101a27;
+  --color-base-800: #16212f;
+  --color-base-700: #22303f;
+  --color-base-600: #34445576;
+  --color-base-500: #4a5b6e;
+  --color-base-300: #8b9bad;
+  --color-base-100: #dbe4ec;
+
+  --color-cric-green-700: #16513a;
+  --color-cric-green-600: #1d6b4a;
+  --color-cric-green-500: #2b8a5f;
+  --color-cric-green-400: #4bab7c;
+
+  --color-cric-gold-600: #a97c1e;
+  --color-cric-gold-500: #c99a35;
+  --color-cric-gold-400: #e0b559;
+
+  --color-risk-critico: #e0475a;
+  --color-risk-alto: #e0812f;
+  --color-risk-medio: #e0b559;
+  --color-risk-bajo: #4bab7c;
+  --color-risk-sindato: #4a5b6e;
+
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-base-950);
+  color: var(--color-base-100);
+  font-family: var(--font-body);
+  background-image:
+    radial-gradient(ellipse 900px 500px at 12% -10%, rgba(43, 138, 95, 0.16), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(201, 154, 53, 0.10), transparent 55%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--color-cric-green-500);
+  color: var(--color-base-950);
+}
+
+/* Scrollbar discreta, coherente con el tono oscuro del panel */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-base-700); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-base-600); }
+
+.font-mono-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
