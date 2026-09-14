@@ -213,11 +213,20 @@ export default function UsuarioPlataformaForm() {
               value={form.rol}
               onChange={(e) => {
                 const rol = e.target.value;
-                setForm((f) => ({
-                  ...f,
-                  rol,
-                  ...(!editando && rol === 'Administrador' ? { modulos_acceso: [] } : {}),
-                }));
+                setForm((f) => {
+                  const next = { ...f, rol };
+                  if (!editando && rol === 'Administrador') {
+                    next.modulos_acceso = [];
+                  } else if (
+                    !editando
+                    && (rol === 'Consultor' || rol === 'Dinamizador')
+                    && !(f.modulos_acceso || []).length
+                  ) {
+                    // Evita cuentas nuevas sin proyectos (403 en Inventario/RBAC).
+                    next.modulos_acceso = ['inventario', 'rbac'];
+                  }
+                  return next;
+                });
               }}
               disabled={editando && existente?.is_superuser}
             />
@@ -246,7 +255,7 @@ export default function UsuarioPlataformaForm() {
                   ? 'Los Administradores tienen acceso a todos los proyectos de la plataforma.'
                   : editando
                     ? 'Marque los proyectos que podrá ver y gestionar. Debe haber al menos uno.'
-                    : 'Seleccione los proyectos a los que tendrá acceso. Ninguno viene marcado por defecto.'}
+                    : 'Al elegir Consultor o Dinamizador se marcan Inventario y Matriz RBAC por defecto; ajuste según necesite.'}
               </p>
               {(form.modulos_acceso || []).length === 0 && !esAdmin ? (
                 <p className="sub" style={{ margin: '0 0 10px', color: 'var(--alto)' }}>

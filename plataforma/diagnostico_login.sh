@@ -13,11 +13,11 @@ if [ ! -f docker-compose.yml ]; then
     exit 1
 fi
 
-echo "=== 1/6 · Contenedores ==="
+echo "=== 1/7 · Contenedores ==="
 docker compose ps -a || { rojo "docker compose no disponible"; exit 1; }
 
 echo ""
-echo "=== 2/6 · Secretos en .env (placeholders impiden arrancar con DEBUG=False) ==="
+echo "=== 2/7 · Secretos en .env (placeholders impiden arrancar con DEBUG=False) ==="
 if [ -f .env ]; then
     problemas=0
     for var in DJANGO_SECRET_KEY JWT_SHARED_SECRET RIESGOS_SECRET_KEY SUIIN_RBAC_SECRET; do
@@ -41,7 +41,7 @@ else
 fi
 
 echo ""
-echo "=== 3/6 · Gateway nginx (localhost) ==="
+echo "=== 3/7 · Gateway nginx (localhost) ==="
 if codigo=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1/healthz 2>/dev/null); then
     if [ "$codigo" = "200" ]; then
         verde "GET /healthz → $codigo"
@@ -64,7 +64,7 @@ else
 fi
 
 echo ""
-echo "=== 3b/6 · Sesión anónima (proyectos / SPA) ==="
+echo "=== 3b/7 · Sesión anónima (proyectos / SPA) ==="
 if cuerpo=$(curl -s --connect-timeout 3 http://127.0.0.1/api/sesion/ 2>/dev/null); then
     if echo "$cuerpo" | grep -qE '"autenticado"[[:space:]]*:[[:space:]]*false'; then
         verde "GET /api/sesion/ → autenticado: false (OK para logout / login)"
@@ -76,7 +76,7 @@ else
 fi
 
 echo ""
-echo "=== 4/6 · Inventario directo (red docker, sin pasar por el navegador) ==="
+echo "=== 4/7 · Inventario directo (red docker, sin pasar por el navegador) ==="
 if docker compose ps inventario 2>/dev/null | grep -qE 'Up|running'; then
     if docker compose exec -T nginx curl -sf --connect-timeout 5 http://inventario:8000/api/sesion/ >/dev/null 2>&1; then
         verde "inventario:8000/api/sesion/ responde OK"
@@ -98,7 +98,35 @@ else
 fi
 
 echo ""
-echo "=== 5/6 · Acciones recomendadas ==="
+echo "=== 5/7 · RBAC (integridad /api/resumen) ==="
+if docker compose ps rbac 2>/dev/null | grep -qE 'Up|running'; then
+    if docker compose exec -T rbac python3 -c "from recuperar_rbac_db import integridad_ok; import sys; sys.exit(0 if integridad_ok('rbac.db') else 2)" 2>/dev/null; then
+        verde "rbac.db: tablas, espacio_codigo y vistas OK"
+    else
+        rojo "rbac.db incompleta — /rbac/api/resumen puede devolver 500"
+        amarillo "  docker compose exec rbac python3 recuperar_rbac_db.py"
+        amarillo "  docker compose exec rbac python3 migrar_espacio_datos.py"
+    fi
+else
+    amarillo "Contenedor rbac no está en ejecución — omitiendo chequeo de integridad"
+fi
+
+echo ""
+echo "=== 6/7 · Migraciones modulos_acceso (Inventario) ==="
+if docker compose ps inventario 2>/dev/null | grep -qE 'Up|running'; then
+    if docker compose exec -T inventario python manage.py showmigrations inventario 2>/dev/null \
+        | grep -E '0014_backfill|0015_alter' | grep -q '\[X\]'; then
+        verde "Migraciones 0014/0015 aplicadas (proyectos por usuario)"
+    else
+        rojo "Faltan migraciones 0014/0015 — modulos_acceso puede estar mal"
+        amarillo "  docker compose exec inventario python manage.py migrate inventario"
+    fi
+else
+    amarillo "Inventario no está Up — omitiendo chequeo de migraciones"
+fi
+
+echo ""
+echo "=== 7/7 · Acciones recomendadas ==="
 cat <<'EOF'
 Si inventario está caído o el paso 3 devolvió 502:
 
@@ -109,7 +137,11 @@ Si inventario está caído o el paso 3 devolvió 502:
 
 Recuperación completa (recomendada tras actualizar código):
 
-  ./desplegar.sh --desbloquear admin
+  ./desplegar.sh --purgar --desbloquear admin
+
+Verificación prioridad 1 (sesión + proyectos + RBAC):
+
+  ./scripts/verificar-prioridad-1.sh
 
 Si el backend responde 401 (no 502) pero no acepta la clave:
 

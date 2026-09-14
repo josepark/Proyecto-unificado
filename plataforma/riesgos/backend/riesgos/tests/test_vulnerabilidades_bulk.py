@@ -19,10 +19,11 @@ def jwt_habilitado(settings):
     settings.JWT_ISSUER = "suiin-inventario"
 
 
-def _token(username="analista_plataforma", roles=("Dinamizador",)):
+def _token(username="analista_plataforma", roles=("Dinamizador",), modulos=("riesgos",)):
     ahora = dt.datetime.now(dt.timezone.utc)
     payload = {
         "iss": "suiin-inventario", "sub": "7", "username": username, "roles": list(roles),
+        "modulos": list(modulos),
         "iat": ahora, "exp": ahora + dt.timedelta(minutes=30),
     }
     return jwt.encode(payload, SECRETO, algorithm="HS256")

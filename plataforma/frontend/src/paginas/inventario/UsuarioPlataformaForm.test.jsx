@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import UsuarioPlataformaForm from './UsuarioPlataformaForm';
@@ -54,5 +54,14 @@ describe('UsuarioPlataformaForm — alta', () => {
     expect(checks.length).toBe(3);
     checks.forEach((c) => expect(c).not.toBeChecked());
     expect(screen.getByText(/ningún proyecto seleccionado/i)).toBeInTheDocument();
+  });
+
+  it('al elegir Consultor marca Inventario y RBAC por defecto', () => {
+    renderNuevo();
+    fireEvent.change(screen.getByLabelText(/Rol en la plataforma/i), { target: { value: 'Consultor' } });
+    expect(screen.getByLabelText(/Inventario de activos/i)).toBeChecked();
+    expect(screen.getByLabelText(/Matriz RBAC/i)).toBeChecked();
+    expect(screen.getByLabelText(/Gestión de Riesgos/i)).not.toBeChecked();
+    expect(screen.queryByText(/ningún proyecto seleccionado/i)).not.toBeInTheDocument();
   });
 });
