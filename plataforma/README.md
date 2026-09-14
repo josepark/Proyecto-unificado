@@ -149,6 +149,9 @@ cd riesgos/backend && python3 manage.py test
 | `sudo ./scripts/instalar-cron.sh` | Instala cron (respaldo, sync, alertas) |
 | `./scripts/verificar-prioridad-1.sh` | Checklist sesión y proyectos |
 | `./scripts/verificar-prioridad-2.sh` | Checklist secretos, respaldos y TLS |
+| `./scripts/verificar-prioridad-3.sh` | Checklist PostgreSQL, MFA y refresh JWT |
+| `./scripts/activar-postgresql.sh` | Habilita PostgreSQL en `.env` + compose override |
+| `/seguridad-mfa` | Configurar autenticación TOTP (login en dos pasos) |
 | `./diagnostico_login.sh` | Diagnóstico de bloqueos de login |
 
 ## Estructura del repositorio

@@ -1622,6 +1622,84 @@ class TokenJWTTest(TestCase):
         self.assertEqual(r_final.status_code, 200)
 
 
+class TokenJWTRefreshTest(TestCase):
+    URL = "/api/token-jwt/"
+    REFRESH_URL = "/api/token-jwt/refresh/"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.usuario = User.objects.create_user(
+            "refresh_test", password="clave-de-prueba-123")
+        cls.usuario.groups.add(cls.grupo_dinamizador)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-de-prueba-jwt", JWT_REFRESH_EXPIRACION_DIAS=7)
+    def test_emite_refresh_token_en_login(self):
+        self.client.force_login(self.usuario)
+        r = self.client.get(self.URL)
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("refresh_token", data)
+        self.assertIn("refresh_expira", data)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-de-prueba-jwt", JWT_REFRESH_EXPIRACION_DIAS=7)
+    def test_refresh_renovado(self):
+        self.client.force_login(self.usuario)
+        r = self.client.get(self.URL)
+        refresh = r.json()["refresh_token"]
+        r2 = self.client.post(self.REFRESH_URL, {"refresh_token": refresh}, content_type="application/json")
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn("token", r2.json())
+        self.assertIn("refresh_token", r2.json())
+
+    @override_settings(JWT_SHARED_SECRET="secreto-de-prueba-jwt")
+    def test_refresh_invalido_401(self):
+        r = self.client.post(self.REFRESH_URL, {"refresh_token": "invalido"}, content_type="application/json")
+        self.assertEqual(r.status_code, 401)
+
+
+class MFALoginTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_dinamizador, _ = Group.objects.get_or_create(name="Dinamizador")
+        cls.usuario = User.objects.create_user(
+            "mfa_test", password="clave-de-prueba-123")
+        cls.usuario.groups.add(cls.grupo_dinamizador)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-de-prueba-jwt")
+    def test_login_sin_mfa_normal(self):
+        r = self.client.post(
+            "/api/auth/login/",
+            {"username": "mfa_test", "password": "clave-de-prueba-123"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200)
+
+    @override_settings(JWT_SHARED_SECRET="secreto-de-prueba-jwt")
+    def test_login_con_mfa_pide_codigo(self):
+        import pyotp
+        from inventario.models import PerfilPlataforma
+        secreto = pyotp.random_base32()
+        perfil, _ = PerfilPlataforma.objects.get_or_create(user=self.usuario)
+        perfil.mfa_totp_secreto = secreto
+        perfil.mfa_habilitado = True
+        perfil.save()
+        r = self.client.post(
+            "/api/auth/login/",
+            {"username": "mfa_test", "password": "clave-de-prueba-123"},
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 401)
+        self.assertTrue(r.json().get("requiere_mfa"))
+        codigo = pyotp.TOTP(secreto).now()
+        r2 = self.client.post(
+            "/api/auth/login/",
+            {"username": "mfa_test", "password": "clave-de-prueba-123", "codigo_mfa": codigo},
+            content_type="application/json",
+        )
+        self.assertEqual(r2.status_code, 200)
+
+
 class ServicioInternoCatalogoTest(TestCase):
     """Sync Riesgos/RBAC usa X-Plataforma-Secret (= JWT_SHARED_SECRET)."""
 

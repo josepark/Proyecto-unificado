@@ -31,6 +31,7 @@ import ClasesActivos from './paginas/inventario/ClasesActivos';
 import UsuariosPlataforma from './paginas/inventario/UsuariosPlataforma';
 import UsuarioPlataformaForm from './paginas/inventario/UsuarioPlataformaForm';
 import Login from './paginas/Login';
+import SeguridadMfa from './paginas/SeguridadMfa';
 import RutaInicio from './componentes/RutaInicio';
 
 // Fase 4 completa: React es la interfaz principal en "/". Login propio en
@@ -43,6 +44,7 @@ export default function App() {
 
         <Route path="/" element={<Shell />}>
           <Route index element={<RutaInicio />} />
+          <Route path="seguridad-mfa" element={<SeguridadMfa />} />
 
           <Route path="inventario" element={<ModuloInventario />}>
             <Route index element={<Navigate to="dashboard" replace />} />

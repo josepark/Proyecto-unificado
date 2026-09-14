@@ -12,11 +12,17 @@ export const endpoints = {
   // Sesión única: fetch + same-origin (mismo mecanismo que GET /api/sesion/ del shell).
   ssoJWT: () => peticionInventario("/token-jwt/"),
 
-  ssoJWTLogin: async (username, password) => {
+  ssoJWTRefresh: (refreshToken) =>
+    peticionInventario("/token-jwt/refresh/", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    }),
+
+  ssoJWTLogin: async (username, password, codigoMfa = "") => {
     await peticionInventario("/sesion/");
     return peticionInventario("/token-jwt/", {
       method: "POST",
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, codigo_mfa: codigoMfa || undefined }),
       headers: { "X-CSRFToken": leerCookie("csrftoken") || "" },
     });
   },

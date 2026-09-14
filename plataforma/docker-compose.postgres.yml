@@ -1,0 +1,38 @@
+# PostgreSQL opcional — use junto con docker-compose.yml tras ./scripts/activar-postgresql.sh
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: suiin-postgres
+    environment:
+      POSTGRES_DB: ${DJANGO_DB_NAME:-suiin_inventario}
+      POSTGRES_USER: ${DJANGO_DB_USER:-suiin}
+      POSTGRES_PASSWORD: ${DJANGO_DB_PASSWORD:?Defina DJANGO_DB_PASSWORD en .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DJANGO_DB_USER:-suiin} -d ${DJANGO_DB_NAME:-suiin_inventario}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  inventario:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./inventario/db.sqlite3:/app/db.sqlite3
+      - ./inventario/media:/app/media
+      - ./inventario/data:/app/data:ro
+      - static_data:/app/staticfiles
+
+  riesgos-backend:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventario:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

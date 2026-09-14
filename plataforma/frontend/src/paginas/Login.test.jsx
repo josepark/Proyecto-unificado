@@ -71,7 +71,7 @@ describe('Login', () => {
     fireEvent.change(screen.getByLabelText(/Usuario/i), { target: { value: 'admin' } });
     fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: 'ok' } });
     fireEvent.click(screen.getByRole('button', { name: /Ingresar/i }));
-    await waitFor(() => expect(inventarioApi.login).toHaveBeenCalledWith('admin', 'ok'));
+    await waitFor(() => expect(inventarioApi.login).toHaveBeenCalledWith('admin', 'ok', undefined));
     expect(recargar).toHaveBeenCalled();
     expect(await screen.findByText('Tablero RBAC')).toBeInTheDocument();
   });

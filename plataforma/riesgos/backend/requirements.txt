@@ -11,6 +11,7 @@ requests==2.32.3
 PyJWT==2.10.1
 reportlab==4.4.10
 django-axes==8.3.1
+psycopg2-binary==2.9.10
 
 # Pruebas (opcional en producción, solo para desarrollo)
 pytest==9.1.1

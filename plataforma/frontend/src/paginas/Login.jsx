@@ -20,6 +20,8 @@ export default function Login() {
 
   const [usuario, setUsuario] = useState('');
   const [clave, setClave] = useState('');
+  const [codigoMfa, setCodigoMfa] = useState('');
+  const [pasoMfa, setPasoMfa] = useState(false);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -36,12 +38,19 @@ export default function Login() {
     setError('');
     setEnviando(true);
     try {
-      const sesionLogin = await inventarioApi.login(usuario, clave);
+      const sesionLogin = await inventarioApi.login(
+        usuario,
+        clave,
+        pasoMfa ? codigoMfa : undefined,
+      );
       sincronizarUsuarioActivo(sesionLogin.usuario || usuario.trim());
       await recargar();
       navigate(rutaSegura(params.get('next'), sesionLogin.modulos), { replace: true });
     } catch (err) {
-      if (err.status === 429) {
+      if (err.data?.requiere_mfa) {
+        setPasoMfa(true);
+        setError('Introduzca el código de su autenticador.');
+      } else if (err.status === 429) {
         setError('Acceso bloqueado temporalmente por demasiados intentos fallidos.');
       } else if (err.status >= 500 || !err.status) {
         setError(
@@ -80,27 +89,52 @@ export default function Login() {
 
         <form className="login-formulario" onSubmit={enviar}>
           {error ? <div className="login-error">{error}</div> : null}
-          <label htmlFor="login-usuario">Usuario</label>
-          <input
-            id="login-usuario"
-            name="username"
-            autoComplete="username"
-            value={usuario}
-            onChange={(e) => setUsuario(e.target.value)}
-            required
-          />
-          <label htmlFor="login-clave">Contraseña</label>
-          <input
-            id="login-clave"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={clave}
-            onChange={(e) => setClave(e.target.value)}
-            required
-          />
+          {!pasoMfa ? (
+            <>
+              <label htmlFor="login-usuario">Usuario</label>
+              <input
+                id="login-usuario"
+                name="username"
+                autoComplete="username"
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                required
+              />
+              <label htmlFor="login-clave">Contraseña</label>
+              <input
+                id="login-clave"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={clave}
+                onChange={(e) => setClave(e.target.value)}
+                required
+              />
+            </>
+          ) : (
+            <>
+              <p className="login-mfa-aviso">Verificación en dos pasos para <b>{usuario}</b></p>
+              <label htmlFor="login-mfa">Código del autenticador</label>
+              <input
+                id="login-mfa"
+                name="codigo_mfa"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={codigoMfa}
+                onChange={(e) => setCodigoMfa(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="btn btn-link login-volver"
+                onClick={() => { setPasoMfa(false); setCodigoMfa(''); setError(''); }}
+              >
+                ← Volver a usuario y contraseña
+              </button>
+            </>
+          )}
           <button type="submit" className="btn btn-primary login-enviar" disabled={enviando}>
-            {enviando ? 'Ingresando…' : 'Ingresar'}
+            {enviando ? 'Ingresando…' : pasoMfa ? 'Verificar código' : 'Ingresar'}
           </button>
         </form>
 
