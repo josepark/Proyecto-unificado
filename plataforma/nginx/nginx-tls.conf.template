@@ -1,0 +1,27 @@
+# HTTPS — generado por scripts/activar-tls.sh (no editar a mano)
+# Dominio: __SUIIN_TLS_DOMAIN__
+
+include /etc/nginx/includes/suiin-common.conf;
+
+server {
+    listen 443 ssl http2;
+    server_name __SUIIN_TLS_DOMAIN__;
+    client_max_body_size 30M;
+
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    include /etc/nginx/includes/suiin-locations.conf;
+}
+
+server {
+    listen 80;
+    server_name __SUIIN_TLS_DOMAIN__;
+    return 301 https://$host$request_uri;
+}

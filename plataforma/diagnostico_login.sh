@@ -143,6 +143,11 @@ Verificación prioridad 1 (sesión + proyectos + RBAC):
 
   ./scripts/verificar-prioridad-1.sh
 
+Verificación prioridad 2 (secretos, respaldos, cron, TLS):
+
+  ./scripts/verificar-prioridad-2.sh
+  sudo ./scripts/instalar-cron.sh
+
 Si el backend responde 401 (no 502) pero no acepta la clave:
 
   docker compose exec inventario python manage.py changepassword admin

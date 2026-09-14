@@ -1,0 +1,10 @@
+# TLS opcional — use junto con docker-compose.yml tras ./scripts/activar-tls.sh
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build nginx
+services:
+  nginx:
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/nginx-tls.active.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/includes:/etc/nginx/includes:ro
+      - ./nginx/tls:/etc/nginx/ssl:ro
