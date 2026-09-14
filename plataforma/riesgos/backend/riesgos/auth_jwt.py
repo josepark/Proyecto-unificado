@@ -51,6 +51,9 @@ class JWTPlataformaAuthentication(BaseAuthentication):
         except jwt.InvalidTokenError:
             raise exceptions.AuthenticationFailed("Token de sesión inválido.")
 
+        if payload.get("typ") == "refresh":
+            raise exceptions.AuthenticationFailed("Token de refresh no válido como acceso.")
+
         username = payload.get("username")
         if not username:
             raise exceptions.AuthenticationFailed("Token de sesión sin usuario.")

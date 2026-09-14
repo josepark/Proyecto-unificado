@@ -7,17 +7,20 @@ const INTERVALO_REVALIDACION_MS = 3 * 60 * 1000;
 const EVENTO_SESION_PLATAFORMA = "suiin-sesion-plataforma";
 const ROLES_ESCRITURA = new Set(["Dinamizador", "Administrador"]);
 
-function guardarCredenciales(token, esquema, origen = null) {
+function guardarCredenciales(token, esquema, origen = null, refreshToken = null) {
   localStorage.setItem("suiin_token", token);
   localStorage.setItem("suiin_auth_scheme", esquema);
   if (origen) localStorage.setItem("suiin_auth_origen", origen);
   else localStorage.removeItem("suiin_auth_origen");
+  if (refreshToken) localStorage.setItem("suiin_refresh_token", refreshToken);
+  else localStorage.removeItem("suiin_refresh_token");
 }
 
 function borrarCredenciales() {
   localStorage.removeItem("suiin_token");
   localStorage.removeItem("suiin_auth_scheme");
   localStorage.removeItem("suiin_auth_origen");
+  localStorage.removeItem("suiin_refresh_token");
 }
 
 function limpiarSiEraSSO() {
@@ -68,9 +71,21 @@ export function AuthProvider({
           }
         }
 
+        const refresh = localStorage.getItem("suiin_refresh_token");
+        if (refresh) {
+          try {
+            const data = await endpoints.ssoJWTRefresh(refresh);
+            guardarCredenciales(data.token, "Bearer", "sso", data.refresh_token);
+            aplicarPerfil(data, setUser, setRoles, setPuedeEditar);
+            return true;
+          } catch {
+            localStorage.removeItem("suiin_refresh_token");
+          }
+        }
+
         try {
           const data = await endpoints.ssoJWT();
-          guardarCredenciales(data.token, "Bearer", "sso");
+          guardarCredenciales(data.token, "Bearer", "sso", data.refresh_token);
           aplicarPerfil(data, setUser, setRoles, setPuedeEditar);
           return true;
         } catch {
@@ -190,7 +205,7 @@ export function AuthProvider({
   const login = useCallback(async (username, password) => {
     try {
       const data = await endpoints.ssoJWTLogin(username, password);
-      guardarCredenciales(data.token, "Bearer");
+      guardarCredenciales(data.token, "Bearer", undefined, data.refresh_token);
       aplicarPerfil(data, setUser, setRoles, setPuedeEditar);
       return;
     } catch {

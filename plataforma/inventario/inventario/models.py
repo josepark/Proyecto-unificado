@@ -752,6 +752,11 @@ class PerfilPlataforma(models.Model):
     user = models.OneToOneField(
         "auth.User", on_delete=models.CASCADE, related_name="perfil_plataforma")
     jwt_version = models.PositiveIntegerField(default=1)
+    mfa_habilitado = models.BooleanField("MFA TOTP activo", default=False)
+    mfa_totp_secreto = models.CharField(
+        "Secreto TOTP (interno)", max_length=64, blank=True,
+        help_text="Secreto base32 para autenticador TOTP; no exponer al usuario.",
+    )
     area = models.CharField(
         "Área organizacional",
         max_length=120,

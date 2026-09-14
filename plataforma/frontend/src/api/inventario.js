@@ -87,15 +87,17 @@ export const inventarioApi = {
   editarUsuarioPlataforma: (id, datos) => api.patch(`/usuarios-plataforma/${id}/`, datos),
   eliminarUsuarioPlataforma: (id) => api.delete(`/usuarios-plataforma/${id}/`),
 
-  login: async (username, password) => {
+  login: async (username, password, codigoMfa) => {
     await fetch('/api/auth/login/', { credentials: 'same-origin' });
     const match = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/);
     const csrf = match ? decodeURIComponent(match[1]) : '';
+    const datosLogin = { username, password };
+    if (codigoMfa) datosLogin.codigo_mfa = codigoMfa;
     const respuesta = await fetch('/api/auth/login/', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify(datosLogin),
     });
     let cuerpo = null;
     try {
@@ -111,4 +113,9 @@ export const inventarioApi = {
     }
     return cuerpo;
   },
+
+  mfaEstado: () => api.get('/mfa/estado/'),
+  mfaConfigurar: () => api.post('/mfa/configurar/'),
+  mfaActivar: (codigo) => api.post('/mfa/activar/', { codigo }),
+  mfaDesactivar: (codigo) => api.post('/mfa/desactivar/', { codigo }),
 };

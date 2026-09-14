@@ -1228,6 +1228,21 @@ def api_login(request):
     if user is None:
         return Response({"detail": "Usuario o contraseña incorrectos."}, status=401)
 
+    from .mfa_plataforma import mfa_habilitado, verificar_mfa_login
+
+    if mfa_habilitado(user):
+        codigo_mfa = (request.data.get("codigo_mfa") or "").strip()
+        if not codigo_mfa:
+            return Response(
+                {
+                    "requiere_mfa": True,
+                    "detail": "Introduzca el código de su autenticador.",
+                },
+                status=401,
+            )
+        if not verificar_mfa_login(user, codigo_mfa):
+            return Response({"detail": "Código MFA incorrecto."}, status=401)
+
     _auth_login(request, user)
     return Response(_respuesta_sesion(user))
 
@@ -1356,7 +1371,12 @@ def catalogo_sistemas_rbac_view(request):
 # Sesión única con SUIIN-SGSI-RIESGOS — emisión de JWT
 # ---------------------------------------------------------------------------
 from django.contrib.auth import authenticate as _authenticate
-from .jwt_plataforma import emitir_jwt, JWTNoConfigurado
+from .jwt_plataforma import (
+    emitir_par_jwt,
+    renovar_desde_refresh,
+    JWTNoConfigurado,
+    RefreshTokenInvalido,
+)
 
 
 @api_view(["GET"])
@@ -1409,14 +1429,101 @@ def token_jwt(request):
     if user is None:
         return Response({"detail": "No hay sesión activa ni credenciales válidas."}, status=401)
 
+    from .mfa_plataforma import mfa_habilitado, verificar_mfa_login
+
+    if mfa_habilitado(user):
+        codigo_mfa = (request.data.get("codigo_mfa") or "").strip()
+        if not codigo_mfa:
+            return Response(
+                {
+                    "requiere_mfa": True,
+                    "detail": "Introduzca el código de su autenticador.",
+                },
+                status=401,
+            )
+        if not verificar_mfa_login(user, codigo_mfa):
+            return Response({"detail": "Código MFA incorrecto."}, status=401)
+
     try:
-        token, expira = emitir_jwt(user)
+        token, expira, refresh, refresh_expira = emitir_par_jwt(user)
     except JWTNoConfigurado as e:
         return Response({"detail": str(e)}, status=503)
 
     return Response({
         "token": token,
         "expira": expira.isoformat(),
+        "refresh_token": refresh,
+        "refresh_expira": refresh_expira.isoformat(),
         "username": user.get_username(),
         "roles": sorted(roles_de(user)),
     }, headers={"Cache-Control": "no-store"})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def token_jwt_refresh(request):
+    """Renueva access + refresh tokens sin volver a pedir contraseña."""
+    refresh = (request.data.get("refresh_token") or "").strip()
+    try:
+        token, expira, nuevo_refresh, refresh_expira = renovar_desde_refresh(refresh)
+    except RefreshTokenInvalido as exc:
+        return Response({"detail": str(exc)}, status=401)
+    except JWTNoConfigurado as exc:
+        return Response({"detail": str(exc)}, status=503)
+
+    import jwt as pyjwt
+    payload = pyjwt.decode(
+        token,
+        settings.JWT_SHARED_SECRET,
+        algorithms=[settings.JWT_ALGORITHM],
+        issuer=settings.JWT_ISSUER,
+    )
+    return Response({
+        "token": token,
+        "expira": expira.isoformat(),
+        "refresh_token": nuevo_refresh,
+        "refresh_expira": refresh_expira.isoformat(),
+        "username": payload.get("username"),
+        "roles": payload.get("roles", []),
+    }, headers={"Cache-Control": "no-store"})
+
+
+@api_view(["GET"])
+def mfa_estado(request):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+    from .mfa_plataforma import mfa_habilitado
+    return Response({"mfa_habilitado": mfa_habilitado(request.user)})
+
+
+@api_view(["POST"])
+def mfa_configurar(request):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+    from .mfa_plataforma import iniciar_configuracion_mfa, mfa_habilitado
+    if mfa_habilitado(request.user):
+        return Response({"detail": "MFA ya está activo. Desactívelo antes de reconfigurar."}, status=400)
+    datos = iniciar_configuracion_mfa(request.user)
+    return Response(datos)
+
+
+@api_view(["POST"])
+def mfa_activar(request):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+    from .mfa_plataforma import confirmar_configuracion_mfa
+    ok, mensaje = confirmar_configuracion_mfa(request.user, request.data.get("codigo"))
+    if not ok:
+        return Response({"detail": mensaje}, status=400)
+    return Response({"detail": mensaje, "mfa_habilitado": True})
+
+
+@api_view(["POST"])
+def mfa_desactivar(request):
+    if not request.user.is_authenticated:
+        return Response(status=401)
+    from .mfa_plataforma import desactivar_mfa
+    ok, mensaje = desactivar_mfa(request.user, request.data.get("codigo"))
+    if not ok:
+        return Response({"detail": mensaje}, status=400)
+    return Response({"detail": mensaje, "mfa_habilitado": False})

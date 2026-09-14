@@ -96,6 +96,7 @@ AXES_FAILURE_LIMIT = 5
 JWT_SHARED_SECRET = os.environ.get('JWT_SHARED_SECRET', '')
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRACION_MINUTOS = int(os.environ.get('JWT_EXPIRACION_MINUTOS', '30'))
+JWT_REFRESH_EXPIRACION_DIAS = int(os.environ.get('JWT_REFRESH_EXPIRACION_DIAS', '7'))
 JWT_ISSUER = 'suiin-inventario'
 # Lista ANIDADA (una sola lista adentro) — significa "bloquear por la
 # COMBINACIÓN usuario+IP juntos". La forma plana ['username', 'ip_address']

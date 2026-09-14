@@ -148,6 +148,10 @@ Verificación prioridad 2 (secretos, respaldos, cron, TLS):
   ./scripts/verificar-prioridad-2.sh
   sudo ./scripts/instalar-cron.sh
 
+Verificación prioridad 3 (PostgreSQL, MFA TOTP, refresh JWT):
+
+  ./scripts/verificar-prioridad-3.sh
+
 Si el backend responde 401 (no 502) pero no acepta la clave:
 
   docker compose exec inventario python manage.py changepassword admin

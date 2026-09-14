@@ -148,6 +148,8 @@ export default function Shell() {
                 </Link>
               ) : null}
               Sesión: <b>{usuario}</b>
+              {' · '}
+              <Link to="/seguridad-mfa" style={{ fontSize: 12 }}>MFA</Link>
               {soloLecturaRbac ? ' · consulta RBAC' : null}
               {cargando ? ' · …' : null}
               {' · '}

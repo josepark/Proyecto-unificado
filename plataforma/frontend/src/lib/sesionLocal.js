@@ -11,6 +11,7 @@ export function limpiarCredencialesLocales() {
   localStorage.removeItem('suiin_token');
   localStorage.removeItem('suiin_auth_scheme');
   localStorage.removeItem('suiin_auth_origen');
+  localStorage.removeItem('suiin_refresh_token');
   sessionStorage.removeItem(CLAVE_USUARIO);
 }
 
@@ -26,6 +27,7 @@ export function sincronizarUsuarioActivo(username) {
     localStorage.removeItem('suiin_token');
     localStorage.removeItem('suiin_auth_scheme');
     localStorage.removeItem('suiin_auth_origen');
+    localStorage.removeItem('suiin_refresh_token');
     window.dispatchEvent(new CustomEvent('suiin-sesion-plataforma'));
   }
   sessionStorage.setItem(CLAVE_USUARIO, username);
