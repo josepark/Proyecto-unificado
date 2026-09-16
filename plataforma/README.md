@@ -150,7 +150,10 @@ cd riesgos/backend && python3 manage.py test
 | `./scripts/verificar-prioridad-1.sh` | Checklist sesión y proyectos |
 | `./scripts/verificar-prioridad-2.sh` | Checklist secretos, respaldos y TLS |
 | `./scripts/verificar-prioridad-3.sh` | Checklist PostgreSQL, MFA y refresh JWT |
-| `./scripts/activar-postgresql.sh` | Habilita PostgreSQL en `.env` + compose override |
+| `./scripts/activar-postgresql.sh` | Habilita PostgreSQL en `.env` |
+| `./scripts/migrar-sqlite-a-postgresql.sh` | Migra SQLite → PostgreSQL (pgloader) |
+| `./scripts/verificar-postgresql.sh` | Comprueba conexión PostgreSQL |
+| `./desplegar.sh --postgres` | Despliegue con docker-compose.postgres.yml |
 | `/seguridad-mfa` | Configurar autenticación TOTP (login en dos pasos) |
 | `./diagnostico_login.sh` | Diagnóstico de bloqueos de login |
 

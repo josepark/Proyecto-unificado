@@ -265,6 +265,7 @@ if os.environ.get('DJANGO_DB_ENGINE') == 'postgresql':
             'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', ''),
             'HOST': os.environ.get('DJANGO_DB_HOST', '127.0.0.1'),
             'PORT': os.environ.get('DJANGO_DB_PORT', '5432'),
+            'CONN_MAX_AGE': 60,
         }
     }
 

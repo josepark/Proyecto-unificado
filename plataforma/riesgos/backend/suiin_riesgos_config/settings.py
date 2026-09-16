@@ -185,11 +185,12 @@ if os.environ.get("DJANGO_DB_ENGINE") == "postgresql":
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get("DJANGO_DB_NAME", "suiin_riesgos"),
+            'NAME': os.environ.get("RIESGOS_DB_NAME", os.environ.get("DJANGO_DB_NAME", "suiin_riesgos")),
             'USER': os.environ.get("DJANGO_DB_USER", "suiin"),
             'PASSWORD': os.environ.get("DJANGO_DB_PASSWORD", ""),
             'HOST': os.environ.get("DJANGO_DB_HOST", "localhost"),
             'PORT': os.environ.get("DJANGO_DB_PORT", "5432"),
+            'CONN_MAX_AGE': 60,
         }
     }
 else:

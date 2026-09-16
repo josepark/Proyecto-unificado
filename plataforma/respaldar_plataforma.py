@@ -26,6 +26,7 @@ import argparse
 import os
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tarfile
 from datetime import datetime
@@ -33,11 +34,50 @@ from datetime import datetime
 BASE = os.path.dirname(os.path.abspath(__file__))
 DIR_RESPALDOS = os.path.join(BASE, "respaldos")
 RETENCION = 30
-MIEMBROS_ESPERADOS = (
+MIEMBROS_SQLITE = (
     "inventario_db.sqlite3",
     "rbac.db",
     "riesgos_db.sqlite3",
 )
+MIEMBROS_POSTGRES = (
+    "inventario_pg.sql",
+    "riesgos_pg.sql",
+    "rbac.db",
+)
+
+
+def _leer_env():
+    valores = {}
+    ruta = os.path.join(BASE, ".env")
+    if not os.path.isfile(ruta):
+        return valores
+    for linea in open(ruta, encoding="utf-8"):
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+        clave, valor = linea.split("=", 1)
+        valores[clave.strip()] = valor.strip()
+    return valores
+
+
+def _usa_postgresql(env):
+    return env.get("DJANGO_DB_ENGINE") == "postgresql"
+
+
+def _pg_dump(env, database, destino_path):
+    usuario = env.get("DJANGO_DB_USER", "suiin")
+    password = env.get("DJANGO_DB_PASSWORD", "")
+    cmd = [
+        "docker", "compose",
+        "-f", os.path.join(BASE, "docker-compose.yml"),
+        "-f", os.path.join(BASE, "docker-compose.postgres.yml"),
+        "exec", "-T", "postgres",
+        "pg_dump", "-U", usuario, "--no-owner", "--no-acl", database,
+    ]
+    entorno = os.environ.copy()
+    entorno["PGPASSWORD"] = password
+    with open(destino_path, "w", encoding="utf-8") as salida:
+        subprocess.run(cmd, check=True, stdout=salida, env=entorno)
 
 
 def _copia_consistente_sqlite(origen_path, destino_path):
@@ -50,13 +90,13 @@ def _copia_consistente_sqlite(origen_path, destino_path):
     origen.close()
 
 
-def _verificar_archivo(destino: str) -> None:
+def _verificar_archivo(destino: str, miembros_esperados) -> None:
     if not os.path.isfile(destino):
         raise RuntimeError(f"No se creó el respaldo: {destino}")
     with tarfile.open(destino, "r:gz") as tar:
         nombres = {m.split("/")[-1] for m in tar.getnames() if "/" in m}
-        faltantes = [m for m in MIEMBROS_ESPERADOS if m not in nombres]
-        if len(faltantes) == len(MIEMBROS_ESPERADOS):
+        faltantes = [m for m in miembros_esperados if m not in nombres]
+        if len(faltantes) == len(miembros_esperados):
             raise RuntimeError(f"El tar no contiene bases reconocibles: {destino}")
         if faltantes:
             print(f"AVISO: faltan en el tar: {', '.join(faltantes)}")
@@ -68,26 +108,38 @@ def respaldar() -> str:
     tmp = os.path.join(DIR_RESPALDOS, f".tmp_{marca}")
     os.makedirs(tmp, exist_ok=True)
 
+    env = _leer_env()
+    postgres = _usa_postgresql(env)
+
     db_inventario = os.path.join(BASE, "inventario", "db.sqlite3")
     db_rbac = os.path.join(BASE, "rbac", "rbac.db")
     db_riesgos = os.path.join(BASE, "riesgos", "backend", "db.sqlite3")
     media_inventario = os.path.join(BASE, "inventario", "media")
     media_riesgos = os.path.join(BASE, "riesgos", "backend", "media")
 
-    if os.path.exists(db_inventario):
-        _copia_consistente_sqlite(db_inventario, os.path.join(tmp, "inventario_db.sqlite3"))
+    if postgres:
+        try:
+            _pg_dump(env, env.get("DJANGO_DB_NAME", "suiin_inventario"),
+                     os.path.join(tmp, "inventario_pg.sql"))
+            _pg_dump(env, env.get("RIESGOS_DB_NAME", "suiin_riesgos"),
+                     os.path.join(tmp, "riesgos_pg.sql"))
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            print(f"AVISO: pg_dump falló ({exc}) — ¿postgres arriba?")
     else:
-        print(f"AVISO: no se encontró {db_inventario}, se omite.")
+        if os.path.exists(db_inventario):
+            _copia_consistente_sqlite(db_inventario, os.path.join(tmp, "inventario_db.sqlite3"))
+        else:
+            print(f"AVISO: no se encontró {db_inventario}, se omite.")
+
+        if os.path.exists(db_riesgos):
+            _copia_consistente_sqlite(db_riesgos, os.path.join(tmp, "riesgos_db.sqlite3"))
+        else:
+            print(f"AVISO: no se encontró {db_riesgos}, se omite.")
 
     if os.path.exists(db_rbac):
         _copia_consistente_sqlite(db_rbac, os.path.join(tmp, "rbac.db"))
     else:
         print(f"AVISO: no se encontró {db_rbac}, se omite.")
-
-    if os.path.exists(db_riesgos):
-        _copia_consistente_sqlite(db_riesgos, os.path.join(tmp, "riesgos_db.sqlite3"))
-    else:
-        print(f"AVISO: no se encontró {db_riesgos}, se omite.")
 
     if os.path.isdir(media_inventario):
         shutil.copytree(media_inventario, os.path.join(tmp, "media_inventario"))
@@ -96,12 +148,13 @@ def respaldar() -> str:
         shutil.copytree(media_riesgos, os.path.join(tmp, "media_riesgos"))
 
     destino = os.path.join(DIR_RESPALDOS, f"suiin_plataforma_{marca}.tar.gz")
+    miembros = MIEMBROS_POSTGRES if postgres else MIEMBROS_SQLITE
     with tarfile.open(destino, "w:gz") as tar:
         tar.add(tmp, arcname=marca)
     shutil.rmtree(tmp)
     print(f"Respaldo creado: {destino}")
 
-    _verificar_archivo(destino)
+    _verificar_archivo(destino, miembros)
 
     copias = sorted(
         f for f in os.listdir(DIR_RESPALDOS)
@@ -122,8 +175,10 @@ def verificar_ultimo() -> int:
         print("ERROR: no hay respaldos en respaldos/", file=sys.stderr)
         return 1
     ultimo = os.path.join(DIR_RESPALDOS, copias[-1])
+    env = _leer_env()
+    miembros = MIEMBROS_POSTGRES if _usa_postgresql(env) else MIEMBROS_SQLITE
     try:
-        _verificar_archivo(ultimo)
+        _verificar_archivo(ultimo, miembros)
     except RuntimeError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

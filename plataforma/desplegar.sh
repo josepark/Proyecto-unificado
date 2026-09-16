@@ -10,12 +10,12 @@
 #   ./desplegar.sh --purgar               # rebuild limpio (recomendado tras git pull)
 #   ./desplegar.sh --desbloquear admin    # además desbloquea cuenta tras axes
 #   ./desplegar.sh --no-sincronizar       # omite sync de activos
-#   ./desplegar.sh --no-sincronizar-mitre # omite import/sync MITRE
+#   ./desplegar.sh --postgres              # usa docker-compose.postgres.yml
 #
 # Catálogo MITRE: coloque enterprise-attack-v19_1.xlsx en inventario/data/
 # (ver inventario/data/README.md). Si falta y el catálogo está vacío, avisa al final.
 #
-# Requiere: docker compose v2.17+ (--wait) desde la raíz de plataforma/.
+# Requiere: compose v2.17+ (--wait) desde la raíz de plataforma/.
 
 set -euo pipefail
 
@@ -23,6 +23,7 @@ PURGAR=false
 DESBLOQUEAR_USUARIO=""
 SINCRONIZAR=true
 SINCRONIZAR_MITRE=true
+USAR_POSTGRES=false
 
 mostrar_ayuda() {
     sed -n '2,18p' "$0" | sed 's/^# \?//'
@@ -37,6 +38,7 @@ while [[ $# -gt 0 ]]; do
         --sincronizar) SINCRONIZAR=true; shift ;;
         --no-sincronizar) SINCRONIZAR=false; shift ;;
         --no-sincronizar-mitre) SINCRONIZAR_MITRE=false; shift ;;
+        --postgres) USAR_POSTGRES=true; shift ;;
         -h|--help) mostrar_ayuda; exit 0 ;;
         *) echo "Argumento desconocido: $1 (use --help)" >&2; exit 1 ;;
     esac
@@ -53,12 +55,20 @@ cargar_env() {
     fi
 }
 
+compose() {
+    if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
+        docker compose -f docker-compose.yml -f docker-compose.postgres.yml "$@"
+    else
+        docker compose "$@"
+    fi
+}
+
 paso "1/10 · Verificando requisitos"
 if ! command -v docker >/dev/null 2>&1; then
     echo "docker no está instalado o no está en el PATH." >&2
     exit 1
 fi
-if ! docker compose version >/dev/null 2>&1; then
+if ! compose version >/dev/null 2>&1; then
     echo "El plugin 'docker compose' (v2) no está disponible." >&2
     exit 1
 fi
@@ -83,43 +93,49 @@ python3 generar_secretos.py
 python3 validar_secretos.py || exit 1
 cargar_env
 
+if $USAR_POSTGRES && [ "${DJANGO_DB_ENGINE:-}" != "postgresql" ]; then
+    echo "Activando PostgreSQL en .env (--postgres)..."
+    ./scripts/activar-postgresql.sh
+    cargar_env
+fi
+
 if $PURGAR; then
     paso "4/10 · Deteniendo y purgando contenedores + imágenes"
-    docker compose down --rmi all
+    compose down --rmi all
 else
     paso "4/10 · Deteniendo contenedores (use --purgar tras actualizar código)"
-    docker compose down
+    compose down
 fi
 
 paso "5/10 · Reconstruyendo y esperando servicios sanos"
-if docker compose up -d --build --wait --wait-timeout 180; then
+if compose up -d --build --wait --wait-timeout 180; then
     echo "Todos los servicios con healthcheck quedaron 'healthy'."
 else
     echo "⚠ Algún servicio no quedó sano." >&2
-    docker compose ps >&2 || true
-    for servicio in $(docker compose ps --format '{{.Service}}' --filter "health=unhealthy" 2>/dev/null || true); do
+    compose ps >&2 || true
+    for servicio in $(compose ps --format '{{.Service}}' --filter "health=unhealthy" 2>/dev/null || true); do
         echo "" >&2
         echo ">> $servicio:" >&2
-        docker compose logs --tail=40 "$servicio" >&2 || true
+        compose logs --tail=40 "$servicio" >&2 || true
     done
     exit 1
 fi
 
 paso "5b/10 · Migraciones de base de datos"
-docker compose exec -T inventario python manage.py migrate --noinput
-docker compose exec -T riesgos-backend python manage.py migrate --noinput
+compose exec -T inventario python manage.py migrate --noinput
+compose exec -T riesgos-backend python manage.py migrate --noinput
 echo "Inventario:"
-docker compose exec -T inventario python manage.py showmigrations inventario | tail -8
-if ! docker compose exec -T inventario python manage.py showmigrations inventario 2>/dev/null | grep -E '0014_backfill|0015_alter' | grep -q '\[X\]'; then
+compose exec -T inventario python manage.py showmigrations inventario | tail -8
+if ! compose exec -T inventario python manage.py showmigrations inventario 2>/dev/null | grep -E '0014_backfill|0015_alter' | grep -q '\[X\]'; then
     echo "ERROR: faltan migraciones 0014/0015 (modulos_acceso por proyecto)." >&2
     exit 1
 fi
 echo "Riesgos:"
-docker compose exec -T riesgos-backend python manage.py showmigrations riesgos | tail -5
+compose exec -T riesgos-backend python manage.py showmigrations riesgos | tail -5
 
 importar_mitre_si_falta() {
     local count
-    count=$(docker compose exec -T inventario python manage.py shell -c \
+    count=$(compose exec -T inventario python manage.py shell -c \
         "from inventario.models import AmenazaMITRE; print(AmenazaMITRE.objects.count())" \
         2>/dev/null | grep -Eo '[0-9]+$' | tail -1 || true)
     count=${count:-0}
@@ -145,7 +161,7 @@ importar_mitre_si_falta() {
     local base
     base=$(basename "$xlsx")
     echo "Importando MITRE desde inventario/data/${base}..."
-    docker compose exec -T inventario python manage.py importar_mitre --file "/app/data/${base}"
+    compose exec -T inventario python manage.py importar_mitre --file "/app/data/${base}"
 }
 
 sync_mitre_plataforma() {
@@ -159,7 +175,7 @@ sync_mitre_plataforma() {
     fi
 
     echo "→ Verificando endpoint interno MITRE..."
-    docker compose exec -T \
+    compose exec -T \
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
         riesgos-backend python3 -c "
 import os, urllib.request
@@ -172,20 +188,20 @@ with urllib.request.urlopen(req, timeout=15) as r:
 "
 
     echo "→ Riesgos: espejo TecnicaMitre"
-    docker compose exec -T \
+    compose exec -T \
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
         riesgos-backend python manage.py sincronizar_tecnicas_mitre
 
     echo "→ RBAC: attack_tecnicas.json"
-    docker compose exec -T \
+    compose exec -T \
         -e INVENTARIO_URL="${INVENTARIO_URL:-http://inventario:8000}" \
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
         rbac python3 catalogo_attack_desde_inventario.py
 
     echo "→ RBAC: recuperar + migrar espacio + v2.1"
-    docker compose exec -T rbac python3 recuperar_rbac_db.py
-    docker compose exec -T rbac python3 migrar_espacio_datos.py
-    docker compose exec -T rbac python3 migrar_v2_1.py
+    compose exec -T rbac python3 recuperar_rbac_db.py
+    compose exec -T rbac python3 migrar_espacio_datos.py
+    compose exec -T rbac python3 migrar_v2_1.py
 }
 
 verificar_login() {
@@ -195,7 +211,7 @@ verificar_login() {
         200) echo "Login API responde OK (GET /api/auth/login/ → 200)." ;;
         502|503|504)
             echo "ERROR: login devuelve $codigo — inventario no alcanzable desde nginx." >&2
-            echo "       Revise: docker compose logs inventario --tail 30" >&2
+            echo "       Revise: compose logs inventario --tail 30" >&2
             return 1
             ;;
         *) echo "GET /api/auth/login/ → $codigo (revise nginx/inventario si no puede entrar)." ;;
@@ -215,7 +231,7 @@ verificar_sesion_anonima() {
 }
 
 verificar_rbac_resumen() {
-    if docker compose exec -T rbac python3 -c "
+    if compose exec -T rbac python3 -c "
 from recuperar_rbac_db import integridad_ok
 import sqlite3, sys
 if not integridad_ok('rbac.db'):
@@ -229,9 +245,9 @@ c.execute('SELECT COUNT(*) FROM acceso_excepcion WHERE espacio_codigo=?', (esp,)
     else
         echo "ERROR: rbac.db incompleta (tabla sistema, espacio_codigo o vistas)." >&2
         echo "       Ejecute:" >&2
-        echo "         docker compose exec rbac python3 migrar_espacio_datos.py" >&2
-        echo "         docker compose exec rbac python3 migrar_v2_1.py" >&2
-        echo "       Si persiste: docker compose exec rbac python3 recuperar_rbac_db.py" >&2
+        echo "         compose exec rbac python3 migrar_espacio_datos.py" >&2
+        echo "         compose exec rbac python3 migrar_v2_1.py" >&2
+        echo "       Si persiste: compose exec rbac python3 recuperar_rbac_db.py" >&2
         return 1
     fi
 }
@@ -249,15 +265,15 @@ fi
 
 if [ -n "$DESBLOQUEAR_USUARIO" ]; then
     paso "8/10 · Desbloqueando cuenta '$DESBLOQUEAR_USUARIO'"
-    docker compose exec -T inventario python manage.py desbloquear_login "$DESBLOQUEAR_USUARIO" || true
-    docker compose exec -T riesgos-backend python manage.py desbloquear_login "$DESBLOQUEAR_USUARIO" || true
+    compose exec -T inventario python manage.py desbloquear_login "$DESBLOQUEAR_USUARIO" || true
+    compose exec -T riesgos-backend python manage.py desbloquear_login "$DESBLOQUEAR_USUARIO" || true
 else
     paso "8/10 · (sin --desbloquear — omita si axes bloqueó su usuario)"
 fi
 
 if $SINCRONIZAR; then
     paso "9/10 · Sincronizando activos Inventario → Riesgos (todos los espacios)"
-    docker compose exec -T \
+    compose exec -T \
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET:-}" \
         riesgos-backend python manage.py sincronizar_activos_inventario --todos-espacios
 else
@@ -279,6 +295,9 @@ Plataforma desplegada. Acceda en el host de DJANGO_ALLOWED_HOSTS:
 
 Un solo comando para todo (recomendado tras actualizar código):
   ./desplegar.sh --purgar --desbloquear admin
+
+Con PostgreSQL (tras ./scripts/migrar-sqlite-a-postgresql.sh):
+  ./desplegar.sh --postgres --purgar --desbloquear admin
 
 Si algo falla: ./diagnostico_login.sh
 EOF

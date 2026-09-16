@@ -17,4 +17,4 @@ EXPOSE 8000
 # base de datos ya poblada que trae el proyecto) y luego levanta gunicorn.
 # SQLite no admite escrituras concurrentes desde varios workers de
 # gunicorn; mantener --workers 1 hasta migrar a PostgreSQL.
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --access-logfile - --error-logfile -"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-1} --access-logfile - --error-logfile -"]

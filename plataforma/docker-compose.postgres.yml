@@ -1,4 +1,7 @@
-# PostgreSQL opcional — use junto con docker-compose.yml tras ./scripts/activar-postgresql.sh
+# PostgreSQL opcional — use junto con docker-compose.yml
+#   ./scripts/activar-postgresql.sh
+#   ./scripts/migrar-sqlite-a-postgresql.sh   (primera vez, con datos SQLite)
+#   ./desplegar.sh --postgres --purgar
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,20 +12,22 @@ services:
       POSTGRES_PASSWORD: ${DJANGO_DB_PASSWORD:?Defina DJANGO_DB_PASSWORD en .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DJANGO_DB_USER:-suiin} -d ${DJANGO_DB_NAME:-suiin_inventario}"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
     restart: unless-stopped
 
   inventario:
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
     volumes:
-      - ./inventario/db.sqlite3:/app/db.sqlite3
       - ./inventario/media:/app/media
       - ./inventario/data:/app/data:ro
       - static_data:/app/staticfiles
@@ -33,6 +38,22 @@ services:
         condition: service_healthy
       inventario:
         condition: service_healthy
+    environment:
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      RIESGOS_DB_NAME: ${RIESGOS_DB_NAME:-suiin_riesgos}
+    volumes:
+      - ./riesgos/backend/media:/app/media
+
+  pgloader:
+    image: ghcr.io/dimitri/pgloader:v3.6.9
+    profiles: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./inventario/db.sqlite3:/sqlite/inventario.db:ro
+      - ./riesgos/backend/db.sqlite3:/sqlite/riesgos.db:ro
+    entrypoint: ["pgloader"]
 
 volumes:
   postgres_data:

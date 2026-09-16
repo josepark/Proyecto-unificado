@@ -1,12 +1,12 @@
 #!/bin/bash
-# Activa PostgreSQL para Inventario y Riesgos (opcional — producción concurrente).
+# Activa PostgreSQL para Inventario y Riesgos (producción concurrente).
 #
 # Uso (desde plataforma/):
 #   ./scripts/activar-postgresql.sh
-#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
-#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml exec inventario python manage.py migrate
+#   ./scripts/migrar-sqlite-a-postgresql.sh          # primera vez con datos SQLite
+#   ./desplegar.sh --postgres --purgar --desbloquear admin
 #
-# Requiere contraseña en .env: DJANGO_DB_PASSWORD
+# Inventario → suiin_inventario | Riesgos → suiin_riesgos | RBAC → SQLite (rbac.db)
 
 set -euo pipefail
 
@@ -25,15 +25,18 @@ fi
 
 python3 - <<'PY'
 import re
+import secrets
 from pathlib import Path
 ruta = Path(".env")
 lineas = ruta.read_text(encoding="utf-8").splitlines()
 cambios = {
     "DJANGO_DB_ENGINE": "postgresql",
     "DJANGO_DB_NAME": "suiin_inventario",
+    "RIESGOS_DB_NAME": "suiin_riesgos",
     "DJANGO_DB_USER": "suiin",
     "DJANGO_DB_HOST": "postgres",
     "DJANGO_DB_PORT": "5432",
+    "GUNICORN_WORKERS": "3",
 }
 for clave, valor in cambios.items():
     patron = re.compile(rf"^{re.escape(clave)}=.*$")
@@ -46,17 +49,22 @@ for clave, valor in cambios.items():
     if not encontrada:
         lineas.append(f"{clave}={valor}")
     print(f"  .env → {clave}={valor}")
-if not any(l.startswith("DJANGO_DB_PASSWORD=") and not l.endswith("=") for l in lineas):
-    import secrets
+if not any(l.startswith("DJANGO_DB_PASSWORD=") and len(l.split("=", 1)[1].strip()) > 0 for l in lineas):
     pwd = secrets.token_urlsafe(24)
     lineas.append(f"DJANGO_DB_PASSWORD={pwd}")
-    print(f"  .env → DJANGO_DB_PASSWORD=<generada>")
+    print("  .env → DJANGO_DB_PASSWORD=<generada>")
 ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
 PY
 
+chmod +x postgres/init/01-create-riesgos-db.sh 2>/dev/null || true
+
 verde "PostgreSQL configurado en .env."
 echo ""
-echo "Arranque con override:"
-echo "  docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build"
+echo "Siguiente paso (con datos SQLite existentes):"
+echo "  ./scripts/migrar-sqlite-a-postgresql.sh"
 echo ""
-echo "Migración inicial (SQLite → PostgreSQL requiere pgloader o dump manual — ver README-DESPLIEGUE.md)."
+echo "O base nueva sin migrar datos:"
+echo "  ./scripts/migrar-sqlite-a-postgresql.sh --solo-vacio"
+echo ""
+echo "Despliegue habitual:"
+echo "  ./desplegar.sh --postgres --purgar --desbloquear admin"
