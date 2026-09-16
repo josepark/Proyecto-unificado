@@ -48,6 +48,24 @@ class MigracionError(Exception):
     pass
 
 
+def _conectar_origen_sqlite(origen: Path) -> sqlite3.Connection:
+    """Abre rbac.db origen en solo lectura (volúmenes Docker montados :ro)."""
+    ruta = origen.resolve().as_posix()
+    return sqlite3.connect(f'file:{ruta}?mode=ro', uri=True)
+
+
+def origen_sqlite_usable(origen: Path | None = None) -> bool:
+    """True si rbac.db existe y SQLite puede leerlo (p. ej. montaje :ro)."""
+    path = Path(origen or RBAC_DB_FLASK)
+    if not path.is_file():
+        return False
+    try:
+        verificar_origen(path)
+        return True
+    except (MigracionError, sqlite3.OperationalError, OSError):
+        return False
+
+
 def _parse_datetime(val):
     if val is None or val == '':
         return timezone.now()
@@ -78,7 +96,7 @@ def _transform_row(tabla, row_dict):
 def verificar_origen(origen: Path) -> None:
     if not origen.is_file():
         raise MigracionError(f'No se encontró {origen}')
-    con = sqlite3.connect(origen)
+    con = _conectar_origen_sqlite(origen)
     con.row_factory = sqlite3.Row
     try:
         for tabla in ('sistema', 'rol', 'usuario', 'matriz_acceso'):
@@ -156,7 +174,7 @@ def _ajustar_secuencias(using='rbac'):
 def contar_tablas(origen: Path | None = None, using='rbac', origen_sqlite=False):
     counts = {}
     if origen_sqlite and origen:
-        con = sqlite3.connect(origen)
+        con = _conectar_origen_sqlite(Path(origen))
         try:
             for tabla in TABLAS_ORDEN:
                 try:
@@ -190,7 +208,7 @@ def migrar(origen: Path | None = None, using='rbac', forzar=False, dry_run=False
         )
 
     stats = {}
-    src = sqlite3.connect(origen)
+    src = _conectar_origen_sqlite(origen)
     try:
         with transaction.atomic(using=using):
             if forzar or any(destino_counts.values()):

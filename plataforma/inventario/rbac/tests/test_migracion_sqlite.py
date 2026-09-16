@@ -1,11 +1,13 @@
+import os
 import sqlite3
+import stat
 import tempfile
 from pathlib import Path
 
 from django.test import TestCase
 
 from rbac.management.commands.sembrar_rbac import Command as SembrarRbac
-from rbac.migracion_sqlite import MigracionError, migrar, verificar_origen
+from rbac.migracion_sqlite import MigracionError, migrar, origen_sqlite_usable, verificar_origen
 
 
 class MigrarRbacSqliteTest(TestCase):
@@ -74,3 +76,12 @@ class MigrarRbacSqliteTest(TestCase):
     def test_origen_inexistente(self):
         with self.assertRaises(MigracionError):
             verificar_origen(Path('/tmp/no-existe-rbac.db'))
+
+    def test_origen_solo_lectura_como_volumen_docker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            origen = Path(tmp) / 'rbac.db'
+            self._crear_sqlite_minimo(origen)
+            os.chmod(origen, stat.S_IRUSR)
+            self.assertTrue(origen_sqlite_usable(origen))
+            resultado = migrar(origen=origen, forzar=True)
+            self.assertEqual(resultado['destino']['rol'], 1)

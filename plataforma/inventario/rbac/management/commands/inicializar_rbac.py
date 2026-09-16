@@ -2,6 +2,7 @@
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
+from rbac.migracion_sqlite import MigracionError, origen_sqlite_usable
 from rbac.models import Rol
 from rbac.paths import RBAC_DATA_JSON, RBAC_DB_FLASK
 
@@ -26,17 +27,22 @@ class Command(BaseCommand):
             self.stdout.write(f'RBAC ya tiene {roles} roles — omitiendo inicialización.')
             return
 
-        if RBAC_DB_FLASK.is_file():
+        if origen_sqlite_usable(RBAC_DB_FLASK):
             self.stdout.write(f'Migrando RBAC desde {RBAC_DB_FLASK}…')
             migrar_args = []
             if options['forzar_migracion']:
                 migrar_args.append('--forzar')
-            call_command('migrar_rbac_sqlite', *migrar_args)
-            roles = Rol.objects.using(using).count()
-            if roles > 0:
-                self.stdout.write(self.style.SUCCESS(f'RBAC inicializado: {roles} roles.'))
-                return
-            raise CommandError('migrar_rbac_sqlite terminó sin datos en la base destino.')
+            try:
+                call_command('migrar_rbac_sqlite', *migrar_args)
+            except CommandError as exc:
+                self.stdout.write(self.style.WARNING(
+                    f'migrar_rbac_sqlite falló ({exc}) — intentando sembrar_rbac…'
+                ))
+            else:
+                roles = Rol.objects.using(using).count()
+                if roles > 0:
+                    self.stdout.write(self.style.SUCCESS(f'RBAC inicializado: {roles} roles.'))
+                    return
 
         if RBAC_DATA_JSON.is_file():
             self.stdout.write(f'Sembrando RBAC desde {RBAC_DATA_JSON}…')
@@ -44,7 +50,7 @@ class Command(BaseCommand):
             return
 
         raise CommandError(
-            'La base RBAC está vacía y no hay rbac.db ni rbac_data.json accesibles. '
+            'La base RBAC está vacía y no hay rbac.db legible ni rbac_data.json. '
             'Monte ./rbac en el contenedor (RBAC_ORIGEN_DIR=/app/rbac_origen) o ejecute '
             './scripts/migrar-rbac-postgresql.sh --forzar'
         )
