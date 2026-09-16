@@ -1,5 +1,12 @@
 """Catálogos estáticos del esquema RBAC (SUIIN-SGSI-MCA-001)."""
 
+ESTADOS_USUARIO = ('Activo', 'Temporal', 'Suspendido', 'Revocado')
+RIESGOS_ATTACK = ('Alto', 'Medio', 'Bajo')
+CLASIFICACIONES = (
+    'Altamente Confidencial', 'Confidencial', 'Interna', 'Pública',
+)
+DIAS_ALERTA_VENCIMIENTO = 7
+
 GRUPOS = [
     ('GOB', 'Gobierno'), ('ASE', 'Asesoría'), ('LID', 'Liderazgo'),
     ('PRO', 'Profesional'), ('CON', 'Conocimiento'), ('TEC', 'Tecnología'),
