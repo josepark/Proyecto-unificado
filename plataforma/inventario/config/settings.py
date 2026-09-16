@@ -34,7 +34,7 @@ ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').sp
 # contenedor, sin pasar por nginx (que sí reescribe el Host al del dominio
 # público) — con Host: inventario:8000, Django lo rechazaba con 400 Bad
 # Request ("Invalid HTTP_HOST header") al no estar en la lista.
-for _host_interno in ('inventario', 'localhost', '127.0.0.1'):
+for _host_interno in ('inventario', 'localhost', '127.0.0.1', 'testserver'):
     if _host_interno not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_host_interno)
 

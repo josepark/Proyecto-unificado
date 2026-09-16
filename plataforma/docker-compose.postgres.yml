@@ -46,7 +46,7 @@ services:
       - ./riesgos/backend/media:/app/media
 
   pgloader:
-    image: ghcr.io/dimitri/pgloader:v3.6.9
+    image: ${PGLOADER_IMAGE:-ghcr.io/dimitri/pgloader:latest}
     profiles: ["migrate"]
     depends_on:
       postgres:

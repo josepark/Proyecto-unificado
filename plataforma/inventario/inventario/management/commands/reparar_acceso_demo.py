@@ -96,18 +96,35 @@ class Command(BaseCommand):
         return engine
 
     def _probar_http(self):
+        import os
+
+        from django.conf import settings
         from django.test import Client
 
-        client = Client()
+        host = "localhost"
+        for candidato in settings.ALLOWED_HOSTS:
+            h = candidato.strip()
+            if h and h not in ("*", ".localhost"):
+                host = h
+                break
+
+        client = Client(HTTP_HOST=host)
         client.get("/api/auth/login/")
         resp = client.post(
             "/api/auth/login/",
             {"username": "admin", "password": "SUIIN2026#"},
             content_type="application/json",
+            HTTP_HOST=host,
         )
         if resp.status_code != 200:
-            self.stdout.write(self.style.ERROR(
-                f"POST /api/auth/login/ → {resp.status_code}: {resp.content.decode()[:200]}"
+            self.stdout.write(self.style.WARNING(
+                f"POST /api/auth/login/ (Client, Host={host}) → {resp.status_code} — "
+                "use ./reparar-login.sh para probar vía nginx."
             ))
-            raise SystemExit(1)
-        self.stdout.write(self.style.SUCCESS("POST /api/auth/login/ → 200 (como la SPA)"))
+            if os.environ.get("SUIIN_PROBAR_HTTP_ESTRICTO") == "1":
+                self.stdout.write(self.style.ERROR(resp.content.decode()[:300]))
+                raise SystemExit(1)
+            return
+        self.stdout.write(self.style.SUCCESS(
+            f"POST /api/auth/login/ → 200 (Host={host})"
+        ))

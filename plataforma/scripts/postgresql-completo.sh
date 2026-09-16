@@ -107,6 +107,32 @@ uri_pg() {
     printf 'postgresql://%s:%s@%s:5432/%s' "$DB_USER" "$DJANGO_DB_PASSWORD" "$DB_HOST" "$db"
 }
 
+resolver_imagen_pgloader() {
+    local img
+    for img in \
+        ghcr.io/dimitri/pgloader:latest \
+        ghcr.io/dimitri/pgloader:3.6.8 \
+        dimitri/pgloader:latest; do
+        amarillo "Probando imagen pgloader: ${img}…"
+        if docker pull "$img" >/dev/null 2>&1; then
+            export PGLOADER_IMAGE="$img"
+            verde "pgloader: ${img}"
+            return 0
+        fi
+    done
+    rojo "No se pudo descargar ninguna imagen pgloader."
+    echo "  - Con datos SQLite: resuelva acceso a ghcr.io o docker.io y reintente."
+    echo "  - Sin datos que migrar: ./postgresql.sh --solo-vacio"
+    exit 1
+}
+
+ejecutar_pgloader() {
+    local sqlite_path=$1
+    local db_name=$2
+    "${COMPOSE[@]}" --profile migrate run --rm pgloader \
+        pgloader "$sqlite_path" "$(uri_pg "$db_name")"
+}
+
 MIGRO_INVENTARIO=false
 MIGRO_RIESGOS=false
 if ! $SOLO_VACIO; then
@@ -121,17 +147,16 @@ paso "5/8 · Levantar PostgreSQL y pgloader"
 if $SOLO_VACIO; then
     amarillo "Modo --solo-vacio: se omitirá pgloader."
 elif $MIGRO_INVENTARIO || $MIGRO_RIESGOS; then
+    resolver_imagen_pgloader
     if $MIGRO_INVENTARIO; then
         amarillo "Migrando Inventario (SQLite → PostgreSQL)…"
-        "${COMPOSE[@]}" --profile migrate run --rm pgloader \
-            pgloader /sqlite/inventario.db "$(uri_pg "$DB_INV")"
+        ejecutar_pgloader /sqlite/inventario.db "$DB_INV"
     else
         amarillo "inventario/db.sqlite3 vacío — esquema se creará con migrate."
     fi
     if $MIGRO_RIESGOS; then
         amarillo "Migrando Riesgos (SQLite → PostgreSQL)…"
-        "${COMPOSE[@]}" --profile migrate run --rm pgloader \
-            pgloader /sqlite/riesgos.db "$(uri_pg "$DB_RIES")"
+        ejecutar_pgloader /sqlite/riesgos.db "$DB_RIES"
     else
         amarillo "riesgos/backend/db.sqlite3 vacío — esquema se creará con migrate."
     fi
@@ -147,7 +172,13 @@ fi
 ./desplegar.sh "${DESPLEGAR_ARGS[@]}"
 
 paso "7/8 · Reparar login demo (contraseña + MFA + axes)"
-"${COMPOSE[@]}" exec -T inventario python manage.py reparar_acceso_demo --probar-http
+# shellcheck disable=SC1091
+source scripts/lib/probar-login-nginx.sh
+"${COMPOSE[@]}" exec -T inventario python manage.py reparar_acceso_demo
+if ! probar_login_nginx admin 'SUIIN2026#'; then
+    rojo "Login vía nginx falló tras reparar — ejecute ./diagnostico_login.sh"
+    exit 1
+fi
 
 paso "8/8 · Verificación PostgreSQL"
 ./scripts/verificar-postgresql.sh
