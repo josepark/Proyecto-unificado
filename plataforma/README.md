@@ -140,6 +140,7 @@ cd riesgos/backend && python3 manage.py test
 |--------|-----------|
 | `./desplegar.sh` | Despliegue completo con healthchecks |
 | `./postgresql.sh` | **PostgreSQL: migración + despliegue en un solo comando** |
+| `./reparar-login.sh` | **Arregla login 401** (admin / SUIIN2026#) sin re-migrar |
 | `./desplegar.sh --purgar --sincronizar` | Rebuild limpio + sync activos |
 | `./sincronizar_catalogos_mitre.sh` | MITRE ATT&CK Inventario → RBAC |
 | `python3 respaldar_plataforma.py` | Respaldo unificado SQLite + media |

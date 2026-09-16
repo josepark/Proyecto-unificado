@@ -140,28 +140,17 @@ else
 fi
 
 paso "6/8 · Despliegue completo (stack + MITRE + sync + login)"
-DESPLEGAR_ARGS=(--postgres --purgar --desbloquear admin)
+DESPLEGAR_ARGS=(--postgres --purgar --desbloquear admin --reset-passwords)
 if $MIGRO_INVENTARIO || $MIGRO_RIESGOS; then
     DESPLEGAR_ARGS+=(--migrate-fake-initial)
 fi
-if $RESET_PASSWORDS; then
-    DESPLEGAR_ARGS+=(--reset-passwords)
-fi
 ./desplegar.sh "${DESPLEGAR_ARGS[@]}"
 
-paso "7/8 · Verificación PostgreSQL"
-./scripts/verificar-postgresql.sh
+paso "7/8 · Reparar login demo (contraseña + MFA + axes)"
+"${COMPOSE[@]}" exec -T inventario python manage.py reparar_acceso_demo --probar-http
 
-paso "8/8 · Verificación login admin"
-"${COMPOSE[@]}" exec -T inventario python manage.py shell -c "
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
-u = User.objects.filter(username='admin').first()
-print('admin existe:', bool(u))
-if u:
-    ok = authenticate(username='admin', password='SUIIN2026#') is not None
-    print('admin + SUIIN2026# autentica:', ok)
-"
+paso "8/8 · Verificación PostgreSQL"
+./scripts/verificar-postgresql.sh
 
 verde "PostgreSQL listo — plataforma desplegada."
 echo ""

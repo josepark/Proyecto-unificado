@@ -27,14 +27,26 @@ class Command(BaseCommand):
         )
         if admin_creado or reset:
             admin.set_password("SUIIN2026#")
+        elif not admin.check_password("SUIIN2026#"):
+            admin.set_password("SUIIN2026#")
+            self.stdout.write(self.style.WARNING(
+                "  admin existía con otra contraseña — restablecida a SUIIN2026#"
+            ))
         admin.is_superuser = True
         admin.is_staff = True
         admin.is_active = True
         admin.save()
         admin.groups.add(grupos["Administrador"])
         from inventario.espacio_datos import espacio_datos_de
+        from inventario.models import PerfilPlataforma
 
         espacio_datos_de(admin)
+        perfil, _ = PerfilPlataforma.objects.get_or_create(user=admin)
+        if perfil.mfa_habilitado or perfil.mfa_totp_secreto:
+            perfil.mfa_habilitado = False
+            perfil.mfa_totp_secreto = ""
+            perfil.save(update_fields=["mfa_habilitado", "mfa_totp_secreto"])
+            self.stdout.write("  MFA desactivado en admin (heredado de SQLite)")
         estado_admin = "creado" if admin_creado else ("contraseña restablecida" if reset else "verificado")
         self.stdout.write(
             f"  Usuario 'admin' (Administrador) {estado_admin}"
