@@ -32,6 +32,7 @@ services:
       - ./inventario/media:/app/media
       - ./inventario/data:/app/data:ro
       - static_data:/app/staticfiles
+      - ./rbac/rbac.db:/app/rbac_origen/rbac.db:ro
 
   riesgos-backend:
     depends_on:

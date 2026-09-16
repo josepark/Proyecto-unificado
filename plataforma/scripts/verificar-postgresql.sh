@@ -30,6 +30,7 @@ echo "=== PostgreSQL · Configuración .env ==="
 verde "DJANGO_DB_ENGINE=postgresql"
 verde "Inventario → ${DJANGO_DB_NAME:-suiin_inventario} @ ${DJANGO_DB_HOST:-postgres}"
 verde "Riesgos   → ${RIESGOS_DB_NAME:-suiin_riesgos} @ ${DJANGO_DB_HOST:-postgres}"
+verde "RBAC      → ${RBAC_DB_NAME:-suiin_rbac} @ ${DJANGO_DB_HOST:-postgres} (Django; Flask aún en rbac.db)"
 
 echo ""
 echo "=== PostgreSQL · Contenedor ==="
@@ -55,6 +56,21 @@ if "${COMPOSE[@]}" exec -T riesgos-backend python manage.py shell -c \
     verde "Riesgos conectado a PostgreSQL"
 else
     rojo "Riesgos no conecta a PostgreSQL"
+    FALLOS=$((FALLOS + 1))
+fi
+
+if "${COMPOSE[@]}" exec -T inventario python manage.py shell -c \
+    "from django.db import connections; c=connections['rbac']; c.ensure_connection(); print('rbac OK')" 2>/dev/null | grep -q rbac; then
+    verde "RBAC Django conectado a PostgreSQL (alias rbac)"
+    ROLES=$("${COMPOSE[@]}" exec -T inventario python manage.py shell -c \
+        "from django.db import connections; cur=connections['rbac'].cursor(); cur.execute('SELECT COUNT(*) FROM rol'); print(cur.fetchone()[0])" 2>/dev/null | tail -1 || echo 0)
+    if [ "${ROLES:-0}" -gt 0 ] 2>/dev/null; then
+        verde "RBAC suiin_rbac: ${ROLES} roles"
+    else
+        amarillo "RBAC suiin_rbac vacío — ejecute ./scripts/migrar-rbac-postgresql.sh"
+    fi
+else
+    rojo "Inventario no conecta al alias rbac en PostgreSQL"
     FALLOS=$((FALLOS + 1))
 fi
 

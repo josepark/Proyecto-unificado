@@ -136,6 +136,7 @@ if $MIGRATE_FAKE_INITIAL; then
     MIGRATE_FLAGS=(--fake-initial --noinput)
 fi
 compose exec -T inventario python manage.py migrate "${MIGRATE_FLAGS[@]}"
+compose exec -T inventario python manage.py migrate rbac --database=rbac "${MIGRATE_FLAGS[@]}"
 compose exec -T riesgos-backend python manage.py migrate "${MIGRATE_FLAGS[@]}"
 if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
     echo "PostgreSQL: verificando usuarios demo (admin/consultor/dinamizador)…"

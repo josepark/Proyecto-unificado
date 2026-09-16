@@ -135,9 +135,11 @@ ejecutar_pgloader() {
 
 MIGRO_INVENTARIO=false
 MIGRO_RIESGOS=false
+MIGRO_RBAC=false
 if ! $SOLO_VACIO; then
     sqlite_tiene_datos inventario/db.sqlite3 && MIGRO_INVENTARIO=true
     sqlite_tiene_datos riesgos/backend/db.sqlite3 && MIGRO_RIESGOS=true
+    sqlite_tiene_datos rbac/rbac.db && MIGRO_RBAC=true
 fi
 
 paso "5/8 · Levantar PostgreSQL y pgloader"
@@ -171,6 +173,17 @@ if $MIGRO_INVENTARIO || $MIGRO_RIESGOS; then
 fi
 ./desplegar.sh "${DESPLEGAR_ARGS[@]}"
 
+paso "6b/8 · Migrar RBAC SQLite → suiin_rbac (Django)"
+if $SOLO_VACIO; then
+    amarillo "Modo --solo-vacio: RBAC Django se sembrará o migrará manualmente."
+elif $MIGRO_RBAC; then
+    chmod +x scripts/migrar-rbac-postgresql.sh 2>/dev/null || true
+    ./scripts/migrar-rbac-postgresql.sh --forzar
+else
+    amarillo "rbac/rbac.db vacío — omitiendo migración RBAC."
+    "${COMPOSE[@]}" exec -T inventario python manage.py migrate rbac --database=rbac --noinput 2>/dev/null || true
+fi
+
 paso "7/8 · Reparar login demo (contraseña + MFA + axes)"
 # shellcheck disable=SC1091
 source scripts/lib/probar-login-nginx.sh
@@ -193,4 +206,5 @@ echo ""
 echo "Despliegues futuros:"
 echo "  ./desplegar.sh --postgres --purgar --desbloquear admin"
 echo ""
-echo "RBAC permanece en rbac/rbac.db (SQLite)."
+echo "RBAC: datos copiados a suiin_rbac (Django). Flask sigue en rbac/rbac.db hasta Fase 1.5."
+echo "  Re-migrar manualmente: ./scripts/migrar-rbac-postgresql.sh --forzar"
