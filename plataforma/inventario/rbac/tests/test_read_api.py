@@ -21,6 +21,14 @@ class RbacReadApiTest(TestCase):
         self.assertEqual(data['sistemas_total'], 29)
         self.assertIn('mfa_pct', data)
 
+    def test_inicio_devuelve_tablero(self):
+        r = self.client.get('/rbac/api/inicio')
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data['stats']['roles'], 25)
+        self.assertIn('proximos_vencimientos', data)
+        self.assertIn('log', data)
+
     def test_catalogos_incluye_niveles(self):
         r = self.client.get('/rbac/api/catalogos')
         self.assertEqual(r.status_code, 200)

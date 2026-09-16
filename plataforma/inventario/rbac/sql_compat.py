@@ -16,13 +16,13 @@ def hoy_sql(using='rbac'):
 
 def date_col(column, using='rbac'):
     if vendor(using) == 'postgresql':
-        return f'{column}::date'
+        return f"NULLIF(TRIM({column}), '')::date"
     return f'date({column})'
 
 
 def hoy_mas_dias(dias, using='rbac'):
     if vendor(using) == 'postgresql':
-        return f"CURRENT_DATE + INTERVAL '{int(dias)} days'"
+        return f'(CURRENT_DATE + {int(dias)})'
     return f"date('now','localtime','+{int(dias)} days')"
 
 

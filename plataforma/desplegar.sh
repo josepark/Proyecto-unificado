@@ -141,6 +141,7 @@ if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
 fi
 compose exec -T inventario python manage.py migrate "${MIGRATE_FLAGS[@]}"
 compose exec -T inventario python manage.py migrate rbac --database=rbac "${MIGRATE_FLAGS[@]}"
+compose exec -T inventario python manage.py inicializar_rbac
 compose exec -T riesgos-backend python manage.py migrate "${MIGRATE_FLAGS[@]}"
 if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
     echo "PostgreSQL: verificando usuarios demo (admin/consultor/dinamizador)…"
@@ -267,6 +268,15 @@ print(f'RBAC Django: {roles} roles, {sistemas} sistemas')
     else
         echo "ERROR: base RBAC Django inaccesible (alias rbac)." >&2
         echo "       Ejecute: compose exec inventario python manage.py migrate rbac --database=rbac" >&2
+        return 1
+    fi
+    local roles
+    roles=$(compose exec -T inventario python manage.py shell -c \
+        "from rbac.models import Rol; print(Rol.objects.using('rbac').count())" 2>/dev/null | tail -1 || echo 0)
+    if [ "${roles:-0}" -eq 0 ] 2>/dev/null; then
+        echo "ERROR: base RBAC vacía (0 roles)." >&2
+        echo "       Ejecute: compose exec inventario python manage.py inicializar_rbac" >&2
+        echo "       o: ./scripts/migrar-rbac-postgresql.sh --forzar" >&2
         return 1
     fi
     local codigo

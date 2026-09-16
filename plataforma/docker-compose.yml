@@ -7,10 +7,13 @@ services:
       JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:?Defina JWT_SHARED_SECRET en .env}
       RIESGOS_INTERNAL_URL: ${RIESGOS_INTERNAL_URL:-http://riesgos-backend:8000}
       RBAC_INTERNAL_URL: ${RBAC_INTERNAL_URL:-http://inventario:8000/rbac/api}
+      RBAC_ORIGEN_DIR: /app/rbac_origen
+      RBAC_SQLITE_ORIGEN: /app/rbac_origen/rbac.db
     volumes:
       - ./inventario/db.sqlite3:/app/db.sqlite3
       - ./inventario/media:/app/media
       - ./inventario/data:/app/data:ro
+      - ./rbac:/app/rbac_origen:ro
       - static_data:/app/staticfiles
     expose:
       - "8000"
