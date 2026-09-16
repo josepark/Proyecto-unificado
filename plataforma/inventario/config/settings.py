@@ -256,9 +256,9 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'SAMEORIGIN'
     CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get('DJANGO_CSRF_TRUSTED', '').split(',') if o]
 
-# --- RBAC Django (Fase 1.1): base dedicada; Flask sigue activo por defecto ---
-# RBAC_BACKEND=flask|django — en 1.1 solo prepara modelos/sembrado; el corte nginx es 1.5.
-RBAC_BACKEND = os.environ.get('RBAC_BACKEND', 'flask').lower()
+# --- RBAC Django (Fase 1.5): API bajo /rbac/api/ en Inventario ---
+# RBAC_BACKEND=flask solo para rollback temporal; producción usa django.
+RBAC_BACKEND = os.environ.get('RBAC_BACKEND', 'django').lower()
 
 # --- Base de datos: PostgreSQL si se define DATABASE_URL, si no SQLite ---
 if os.environ.get('DJANGO_DB_ENGINE') == 'postgresql':

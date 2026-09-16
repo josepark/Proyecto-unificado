@@ -1,4 +1,4 @@
-"""Rutas a datos compartidos con el servicio Flask RBAC (Fase 1.x)."""
+"""Rutas a datos compartidos con el árbol legacy Flask (migración / sembrado)."""
 import os
 from pathlib import Path
 

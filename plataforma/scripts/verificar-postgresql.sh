@@ -30,7 +30,7 @@ echo "=== PostgreSQL · Configuración .env ==="
 verde "DJANGO_DB_ENGINE=postgresql"
 verde "Inventario → ${DJANGO_DB_NAME:-suiin_inventario} @ ${DJANGO_DB_HOST:-postgres}"
 verde "Riesgos   → ${RIESGOS_DB_NAME:-suiin_riesgos} @ ${DJANGO_DB_HOST:-postgres}"
-verde "RBAC      → ${RBAC_DB_NAME:-suiin_rbac} @ ${DJANGO_DB_HOST:-postgres} (Django; Flask aún en rbac.db)"
+verde "RBAC      → ${RBAC_DB_NAME:-suiin_rbac} @ ${DJANGO_DB_HOST:-postgres} (Django en Inventario)"
 
 echo ""
 echo "=== PostgreSQL · Contenedor ==="

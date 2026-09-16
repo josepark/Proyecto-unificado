@@ -122,7 +122,7 @@ actualizar_env
 
 echo ""
 verde "TLS configurado. Reinicie nginx con el override TLS:"
-echo "  docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build nginx inventario riesgos-backend rbac"
+echo "  docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d --build nginx inventario riesgos-backend"
 echo ""
 echo "Renovación Let's Encrypt (cron del host, ejemplo mensual):"
 echo "  0 4 1 * * certbot renew --quiet && cp /etc/letsencrypt/live/${DOMINIO}/fullchain.pem $(pwd)/${TLS_DIR}/fullchain.pem && cp /etc/letsencrypt/live/${DOMINIO}/privkey.pem $(pwd)/${TLS_DIR}/privkey.pem && docker compose -f docker-compose.yml -f docker-compose.tls.yml exec nginx nginx -s reload"

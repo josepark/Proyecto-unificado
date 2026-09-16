@@ -31,9 +31,8 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:8000', changeOrigin: true },
       '/rbac': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/rbac/, ''),
       },
       '/riesgos/api': { target: 'http://localhost:8001', changeOrigin: true, rewrite: (p) => p.replace(/^\/riesgos/, '') },
       '/riesgos/media': { target: 'http://localhost:8001', changeOrigin: true, rewrite: (p) => p.replace(/^\/riesgos/, '') },

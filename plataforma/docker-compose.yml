@@ -6,7 +6,7 @@ services:
     environment:
       JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:?Defina JWT_SHARED_SECRET en .env}
       RIESGOS_INTERNAL_URL: ${RIESGOS_INTERNAL_URL:-http://riesgos-backend:8000}
-      RBAC_INTERNAL_URL: ${RBAC_INTERNAL_URL:-http://rbac:5000}
+      RBAC_INTERNAL_URL: ${RBAC_INTERNAL_URL:-http://inventario:8000/rbac/api}
     volumes:
       - ./inventario/db.sqlite3:/app/db.sqlite3
       - ./inventario/media:/app/media
@@ -62,28 +62,6 @@ services:
       retries: 3
       start_period: 15s
 
-  rbac:
-    build: ./rbac
-    container_name: suiin-rbac
-    env_file: .env
-    environment:
-      # Obligatorio en .env — sin default débil en producción (Ola 1).
-      SUIIN_RBAC_SECRET: ${SUIIN_RBAC_SECRET:?Defina SUIIN_RBAC_SECRET en .env}
-      INVENTARIO_URL: ${INVENTARIO_URL:-http://inventario:8000}
-      JWT_SHARED_SECRET: ${JWT_SHARED_SECRET:?Defina JWT_SHARED_SECRET en .env}
-    volumes:
-      - ./rbac/rbac.db:/app/rbac.db
-    expose:
-      - "5000"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python3", "-c",
-             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/csrf', timeout=3)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
   nginx:
     build:
       context: .
@@ -99,8 +77,6 @@ services:
       - static_data:/static:ro
     depends_on:
       inventario:
-        condition: service_healthy
-      rbac:
         condition: service_healthy
       riesgos-backend:
         condition: service_healthy

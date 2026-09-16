@@ -36,4 +36,4 @@ else
 fi
 
 "${COMPOSE[@]}" exec -T inventario python manage.py migrar_rbac_sqlite "${ARGS[@]}"
-verde "RBAC migrado a suiin_rbac (alias rbac). Flask sigue usando rbac.db hasta Fase 1.5."
+verde "RBAC migrado a suiin_rbac (alias rbac). API en /rbac/api/ vía Inventario."

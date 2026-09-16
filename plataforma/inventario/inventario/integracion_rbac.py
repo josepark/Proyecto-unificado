@@ -1,7 +1,7 @@
 """Despliegue integrado — llamadas servidor-a-servidor a SUIIN-RBAC.
 
 Estas llamadas van directo a la red interna de docker-compose
-(http://rbac:5000), NO a través de nginx: la puerta de autorización de
+(http://inventario:8000/rbac/api), NO a través de nginx: la puerta de autorización de
 nginx (auth_request) protege el acceso desde el navegador, no las llamadas
 de un backend que ya corre dentro de la misma red de confianza.
 
@@ -12,7 +12,9 @@ import os
 
 import requests
 
-RBAC_INTERNAL_URL = os.environ.get("RBAC_INTERNAL_URL", "http://rbac:5000")
+RBAC_INTERNAL_URL = os.environ.get(
+    "RBAC_INTERNAL_URL", "http://inventario:8000/rbac/api"
+).rstrip("/")
 
 _TIMEOUT = 2  # segundos — corto a propósito: esto no debe demorar una petición del navegador
 
@@ -30,7 +32,7 @@ def resumen_rbac(espacio_codigo="organizacion"):
     y por el Panel ejecutivo."""
     try:
         r = requests.get(
-            f"{RBAC_INTERNAL_URL}/api/resumen",
+            f"{RBAC_INTERNAL_URL}/resumen",
             headers=_headers_espacio(espacio_codigo),
             timeout=_TIMEOUT,
         )
@@ -49,7 +51,7 @@ def inicio_rbac(espacio_codigo="organizacion"):
     con nombres sí."""
     try:
         r = requests.get(
-            f"{RBAC_INTERNAL_URL}/api/inicio",
+            f"{RBAC_INTERNAL_URL}/inicio",
             headers=_headers_espacio(espacio_codigo),
             timeout=_TIMEOUT,
         )
@@ -64,7 +66,7 @@ def catalogo_sistemas_rbac(espacio_codigo="organizacion"):
     rol. None si RBAC no responde."""
     try:
         r = requests.get(
-            f"{RBAC_INTERNAL_URL}/api/sistemas",
+            f"{RBAC_INTERNAL_URL}/sistemas",
             headers=_headers_espacio(espacio_codigo),
             timeout=_TIMEOUT,
         )
@@ -78,7 +80,7 @@ def auditoria_rbac(limite=80, espacio_codigo="organizacion"):
     """Últimas filas de log_auditoria de RBAC — para el panel unificado."""
     try:
         r = requests.get(
-            f"{RBAC_INTERNAL_URL}/api/auditoria",
+            f"{RBAC_INTERNAL_URL}/auditoria",
             params={"limite": limite},
             headers=_headers_espacio(espacio_codigo),
             timeout=_TIMEOUT,

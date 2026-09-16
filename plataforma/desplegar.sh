@@ -214,16 +214,11 @@ with urllib.request.urlopen(req, timeout=15) as r:
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
         riesgos-backend python manage.py sincronizar_tecnicas_mitre
 
-    echo "→ RBAC: attack_tecnicas.json"
+    echo "→ RBAC Django: attack_tecnica desde Inventario"
     compose exec -T \
         -e INVENTARIO_URL="${INVENTARIO_URL:-http://inventario:8000}" \
         -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
-        rbac python3 catalogo_attack_desde_inventario.py
-
-    echo "→ RBAC: recuperar + migrar espacio + v2.1"
-    compose exec -T rbac python3 recuperar_rbac_db.py
-    compose exec -T rbac python3 migrar_espacio_datos.py
-    compose exec -T rbac python3 migrar_v2_1.py
+        inventario python manage.py sincronizar_catalogo_attack
 }
 
 verificar_login() {
@@ -253,25 +248,37 @@ verificar_sesion_anonima() {
 }
 
 verificar_rbac_resumen() {
-    if compose exec -T rbac python3 -c "
-from recuperar_rbac_db import integridad_ok
-import sqlite3, sys
-if not integridad_ok('rbac.db'):
-    sys.exit(2)
-c = sqlite3.connect('rbac.db')
-esp = 'organizacion'
-c.execute('SELECT COUNT(*) FROM v_alertas_mfa v JOIN usuario u ON u.id=v.id WHERE u.espacio_codigo=?', (esp,))
-c.execute('SELECT COUNT(*) FROM acceso_excepcion WHERE espacio_codigo=?', (esp,))
+    if compose exec -T inventario python manage.py shell -c "
+from django.db import connections
+c = connections['rbac']
+c.ensure_connection()
+cur = c.cursor()
+cur.execute('SELECT COUNT(*) FROM rol')
+roles = cur.fetchone()[0]
+cur.execute('SELECT COUNT(*) FROM sistema')
+sistemas = cur.fetchone()[0]
+print(f'RBAC Django: {roles} roles, {sistemas} sistemas')
 " 2>/dev/null; then
-        echo "RBAC: esquema y vistas OK (/api/resumen operativo)."
+        :
     else
-        echo "ERROR: rbac.db incompleta (tabla sistema, espacio_codigo o vistas)." >&2
-        echo "       Ejecute:" >&2
-        echo "         compose exec rbac python3 migrar_espacio_datos.py" >&2
-        echo "         compose exec rbac python3 migrar_v2_1.py" >&2
-        echo "       Si persiste: compose exec rbac python3 recuperar_rbac_db.py" >&2
+        echo "ERROR: base RBAC Django inaccesible (alias rbac)." >&2
+        echo "       Ejecute: compose exec inventario python manage.py migrate rbac --database=rbac" >&2
         return 1
     fi
+    local codigo
+    codigo=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1/rbac/api/resumen 2>/dev/null || echo "000")
+    case "$codigo" in
+        200|401) echo "GET /rbac/api/resumen → $codigo (401 sin sesión es esperado)." ;;
+        500)
+            echo "ERROR: GET /rbac/api/resumen → 500 (revise logs de inventario)." >&2
+            return 1
+            ;;
+        502|503|504)
+            echo "ERROR: GET /rbac/api/resumen → $codigo (nginx/inventario caído)." >&2
+            return 1
+            ;;
+        *) echo "GET /rbac/api/resumen → $codigo (revise si no puede usar RBAC)." ;;
+    esac
 }
 
 if $SINCRONIZAR_MITRE; then

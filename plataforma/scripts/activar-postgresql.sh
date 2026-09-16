@@ -7,7 +7,6 @@
 #   ./desplegar.sh --postgres --purgar --desbloquear admin
 #
 # Inventario → suiin_inventario | Riesgos → suiin_riesgos | RBAC Django → suiin_rbac
-# (Flask rbac.db sigue activo hasta Fase 1.5; RBAC_BACKEND=flask por defecto)
 
 set -euo pipefail
 

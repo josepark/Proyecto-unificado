@@ -132,7 +132,7 @@ cd riesgos/backend && python3 manage.py test
 | `SUIIN_RBAC_SECRET` | Sesión Flask RBAC |
 | `JWT_SHARED_SECRET` | JWT plataforma + endpoints internos |
 | `DJANGO_ALLOWED_HOSTS` | Hosts públicos permitidos |
-| `RBAC_INTERNAL_URL` | Llamadas Inventario → RBAC (default `http://rbac:5000`) |
+| `RBAC_INTERNAL_URL` | Llamadas Inventario → RBAC Django (default `http://inventario:8000/rbac/api`) |
 
 ## Scripts útiles
 

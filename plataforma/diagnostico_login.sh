@@ -111,17 +111,24 @@ else
 fi
 
 echo ""
-echo "=== 5/7 · RBAC (integridad /api/resumen) ==="
-if compose_cmd ps rbac 2>/dev/null | grep -qE 'Up|running'; then
-    if compose_cmd exec -T rbac python3 -c "from recuperar_rbac_db import integridad_ok; import sys; sys.exit(0 if integridad_ok('rbac.db') else 2)" 2>/dev/null; then
-        verde "rbac.db: tablas, espacio_codigo y vistas OK"
+echo "=== 5/7 · RBAC Django (/rbac/api/resumen vía nginx) ==="
+if compose_cmd ps inventario 2>/dev/null | grep -qE 'Up|running'; then
+    if compose_cmd exec -T inventario python manage.py shell -c \
+        "from django.db import connections; connections['rbac'].ensure_connection(); print('ok')" 2>/dev/null | grep -q ok; then
+        verde "Base RBAC Django (alias rbac) accesible"
     else
-        rojo "rbac.db incompleta — /rbac/api/resumen puede devolver 500"
-        amarillo "  docker compose exec rbac python3 recuperar_rbac_db.py"
-        amarillo "  docker compose exec rbac python3 migrar_espacio_datos.py"
+        rojo "Base RBAC Django inaccesible — /rbac/api/resumen puede fallar"
+        amarillo "  compose exec inventario python manage.py migrate rbac --database=rbac"
     fi
+    codigo=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1/rbac/api/resumen 2>/dev/null || echo "000")
+    case "$codigo" in
+        200|401) verde "GET /rbac/api/resumen → $codigo" ;;
+        500) rojo "GET /rbac/api/resumen → 500 (revise logs inventario)" ;;
+        502|000) rojo "GET /rbac/api/resumen → $codigo (nginx/inventario caído)" ;;
+        *) amarillo "GET /rbac/api/resumen → $codigo" ;;
+    esac
 else
-    amarillo "Contenedor rbac no está en ejecución — omitiendo chequeo de integridad"
+    amarillo "Contenedor inventario no está en ejecución — omitiendo chequeo RBAC"
 fi
 
 echo ""

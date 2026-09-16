@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sincroniza el catálogo MITRE ATT&CK desde el Inventario hacia Riesgos y RBAC.
+# Sincroniza el catálogo MITRE ATT&CK desde el Inventario hacia Riesgos y RBAC Django.
 #
 # NOTA: preferible usar ./desplegar.sh (incluye import MITRE + sync + verificación).
 # Este script queda para re-sync puntual sin reconstruir toda la plataforma.
@@ -9,7 +9,7 @@
 #   ./sincronizar_catalogos_mitre.sh --reconstruir   # rebuild imágenes antes de sync
 #
 # Requisitos:
-#   - JWT_SHARED_SECRET definido en .env (mismo valor en los tres servicios)
+#   - JWT_SHARED_SECRET definido en .env (mismo valor en inventario y riesgos)
 #   - Endpoint interno /api/interno/catalogo-mitre/ (auth X-Plataforma-Secret)
 #   - Catálogo ya importado: docker compose exec inventario python manage.py importar_mitre ...
 
@@ -55,8 +55,8 @@ fi
 paso() { echo ""; echo "=== $1 ==="; }
 
 if $RECONSTRUIR; then
-    paso "0/3 · Reconstruyendo inventario, riesgos-backend y rbac"
-    docker compose build inventario riesgos-backend rbac
+    paso "0/3 · Reconstruyendo inventario y riesgos-backend"
+    docker compose build inventario riesgos-backend
     docker compose up -d
 fi
 
@@ -88,16 +88,11 @@ docker compose exec -T \
     -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
     riesgos-backend python manage.py sincronizar_tecnicas_mitre
 
-paso "2/3 · RBAC — regenerar static/attack_tecnicas.json desde Inventario"
+paso "2/3 · RBAC Django — attack_tecnica desde Inventario"
 docker compose exec -T \
     -e INVENTARIO_URL="${INVENTARIO_URL:-http://inventario:8000}" \
     -e JWT_SHARED_SECRET="${JWT_SHARED_SECRET}" \
-    rbac python3 catalogo_attack_desde_inventario.py
-
-paso "3/3 · RBAC — recargar catálogo en rbac.db"
-docker compose exec -T rbac python3 recuperar_rbac_db.py
-docker compose exec -T rbac python3 migrar_espacio_datos.py
-docker compose exec -T rbac python3 migrar_v2_1.py
+    inventario python manage.py sincronizar_catalogo_attack
 
 paso "Listo"
-echo "Catálogo MITRE propagado: Inventario → Riesgos + RBAC."
+echo "Catálogo MITRE propagado: Inventario → Riesgos + RBAC Django."

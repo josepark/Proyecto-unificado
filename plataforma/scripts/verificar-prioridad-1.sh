@@ -34,8 +34,8 @@ echo "=== Prioridad 1 · RBAC /api/resumen (vía nginx) ==="
 if codigo=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1/rbac/api/resumen 2>/dev/null); then
     case "$codigo" in
         200|401) verde "GET /rbac/api/resumen → $codigo (401 sin sesión es esperado)" ;;
-        500) rojo "GET /rbac/api/resumen → 500 (rbac.db corrupta o vistas faltantes)"; FALLOS=$((FALLOS + 1)) ;;
-        502|503|504) rojo "GET /rbac/api/resumen → $codigo (nginx/rbac caído)"; FALLOS=$((FALLOS + 1)) ;;
+        500) rojo "GET /rbac/api/resumen → 500 (revise logs inventario o migrate rbac)"; FALLOS=$((FALLOS + 1)) ;;
+        502|503|504) rojo "GET /rbac/api/resumen → $codigo (nginx/inventario caído)"; FALLOS=$((FALLOS + 1)) ;;
         *) amarillo "GET /rbac/api/resumen → $codigo" ;;
     esac
 else

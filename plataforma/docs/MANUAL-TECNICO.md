@@ -43,7 +43,7 @@ La plataforma unifica tres aplicaciones independientes bajo un **gateway nginx**
 │  ├── /, /inventario/*, /rbac/*, /gestion-riesgos/* → SPA│
 │  ├── /api/*              → inventario:8000                │
 │  ├── /admin/, /login/    → inventario:8000              │
-│  ├── /rbac/api/*         → rbac:5000 (+ auth_request)     │
+│  ├── /rbac/api/*         → inventario:8000/rbac/api (+ auth_request) │
 │  ├── /riesgos/api/*      → riesgos-backend:8000         │
 │  └── /static/, /media/   → archivos estáticos           │
 └──────────────────────────────────────────────────────────┘
@@ -172,7 +172,7 @@ Documentación ampliada: [README-DESPLIEGUE.md](../README-DESPLIEGUE.md).
 | `DJANGO_ALLOWED_HOSTS` | Inventario | Hosts permitidos (coma-separados) |
 | `DJANGO_CSRF_TRUSTED` | Inventario | Orígenes CSRF para HTTPS |
 | `DJANGO_SSL_REDIRECT` | Inventario | Redirección SSL Django |
-| `RBAC_INTERNAL_URL` | Inventario | URL interna RBAC (default `http://rbac:5000`) |
+| `RBAC_INTERNAL_URL` | Inventario | URL interna RBAC Django (default `http://inventario:8000/rbac/api`) |
 | `RIESGOS_INTERNAL_URL` | Inventario | URL interna Riesgos |
 | `INVENTARIO_API_URL` | Riesgos | URL catálogo activos (default `http://inventario:8000/api`) |
 | `PLATAFORMA_ACTIVOS_SOLO_INVENTARIO` | Riesgos | Solo activos sincronizados (default `true`) |
