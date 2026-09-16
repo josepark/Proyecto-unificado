@@ -27,7 +27,8 @@ services:
         condition: service_healthy
     environment:
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
-    volumes:
+    # Sin mount de db.sqlite3 — Inventario usa PostgreSQL (Compose concatena listas).
+    volumes: !override
       - ./inventario/media:/app/media
       - ./inventario/data:/app/data:ro
       - static_data:/app/staticfiles
@@ -41,7 +42,7 @@ services:
     environment:
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
       RIESGOS_DB_NAME: ${RIESGOS_DB_NAME:-suiin_riesgos}
-    volumes:
+    volumes: !override
       - ./riesgos/backend/media:/app/media
 
   pgloader:

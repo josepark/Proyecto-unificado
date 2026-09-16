@@ -396,20 +396,51 @@ como próximo paso en la sección 10, con `django-otp` como opción evaluada.
 Ver también la plantilla completa con alertas y sincronizaciones en
 `cron/suiin-sgsi.cron.example` (Ola 4).
 
-### 8.10bis Escalado: PostgreSQL y media en object storage (referencia)
+### 8.10bis PostgreSQL (Inventario + Riesgos)
 
-Hoy los tres módulos usan SQLite en el host (`inventario/db.sqlite3`,
-`rbac/rbac.db`, `riesgos/backend/db.sqlite3`). Es adecuado para un
-despliegue unificado con pocos editores concurrentes. Si crece la carga:
+Por defecto Inventario y Riesgos usan SQLite en el host. Para producción
+con varios analistas concurrentes, migre a PostgreSQL con los scripts del
+repo. **RBAC permanece en SQLite** (`rbac/rbac.db`).
 
-| Componente | Cuándo migrar | Notas |
-|------------|---------------|-------|
-| Inventario / Riesgos | Varios analistas editando a la vez | `DATABASE_URL` PostgreSQL en settings; ejecutar migraciones Django |
-| RBAC | Alta concurrencia en excepciones | Mismo patrón; hoy SQLite basta para la matriz |
-| Media (`inventario/media`, diagramas) | Disco del host limitado | S3/MinIO con `django-storages`; nginx puede servir `/media/` vía proxy o URL firmada |
+| Base | PostgreSQL | SQLite (sin migrar) |
+|------|------------|---------------------|
+| Inventario | `suiin_inventario` | `inventario/db.sqlite3` |
+| Riesgos | `suiin_riesgos` | `riesgos/backend/db.sqlite3` |
+| RBAC | `rbac/rbac.db` | `rbac/rbac.db` |
 
-No hay automatización en este repo todavía — planifique ventana de
-mantenimiento, respaldo con `respaldar_plataforma.py` y prueba en staging.
+**Primera migración** (desde `plataforma/`):
+
+```bash
+./scripts/activar-postgresql.sh
+./scripts/migrar-sqlite-a-postgresql.sh          # con datos SQLite (pgloader)
+# o, base vacía sin pgloader:
+./scripts/migrar-sqlite-a-postgresql.sh --solo-vacio
+./scripts/verificar-postgresql.sh
+./desplegar.sh --postgres --purgar --desbloquear admin
+```
+
+El script de migración: respaldo automático → levanta `postgres:16` →
+pgloader (si hay datos) → `migrate --fake-initial` → verificación.
+
+**Despliegues posteriores** con PostgreSQL ya activo en `.env`:
+
+```bash
+./desplegar.sh --postgres --purgar
+```
+
+**Respaldos:** con `DJANGO_DB_ENGINE=postgresql`, `respaldar_plataforma.py`
+genera `inventario_pg.sql` y `riesgos_pg.sql` (pg_dump) más RBAC/media.
+Restaurar:
+
+```bash
+python3 restaurar_plataforma.py --ultimo --confirmar   # requiere postgres Up
+```
+
+**Revertir a SQLite:** cambie `DJANGO_DB_ENGINE=sqlite` en `.env` (o
+elimine la variable), restaure los `.sqlite3` del respaldo previo a la
+migración y despliegue sin `--postgres`.
+
+Ver también `docker-compose.postgres.yml` y `./scripts/verificar-prioridad-3.sh`.
 
 ### 8.11 Detección automática de activos al subir un diagrama
 

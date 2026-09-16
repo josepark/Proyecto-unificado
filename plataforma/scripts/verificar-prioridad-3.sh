@@ -59,6 +59,17 @@ if [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
         rojo "Falta docker-compose.postgres.yml"
         FALLOS=$((FALLOS + 1))
     fi
+    if command -v docker >/dev/null 2>&1; then
+        if ./scripts/verificar-postgresql.sh 2>/dev/null; then
+            : # verificar-postgresql ya imprime OK
+        else
+            amarillo "PostgreSQL configurado pero verificación falló — ¿stack arriba? ./desplegar.sh --postgres"
+            avisos=$((avisos + 1))
+        fi
+    else
+        amarillo "Docker no disponible — omitiendo verificación de conexión PostgreSQL"
+        avisos=$((avisos + 1))
+    fi
 else
     amarillo "SQLite activo (OK en desarrollo) — use ./scripts/activar-postgresql.sh en producción concurrente"
     avisos=$((avisos + 1))
