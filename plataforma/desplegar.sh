@@ -117,6 +117,12 @@ else
 fi
 
 paso "5/10 · Reconstruyendo y esperando servicios sanos"
+if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
+    echo "PostgreSQL: levantando postgres y verificando suiin_riesgos / suiin_rbac…"
+    compose up -d postgres --wait --wait-timeout 120
+    chmod +x scripts/asegurar-bases-postgresql.sh 2>/dev/null || true
+    ./scripts/asegurar-bases-postgresql.sh
+fi
 if compose up -d --build --wait --wait-timeout 180; then
     echo "Todos los servicios con healthcheck quedaron 'healthy'."
 else
@@ -136,8 +142,7 @@ if $MIGRATE_FAKE_INITIAL; then
     MIGRATE_FLAGS=(--fake-initial --noinput)
 fi
 if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
-    chmod +x scripts/asegurar-bases-postgresql.sh 2>/dev/null || true
-    ./scripts/asegurar-bases-postgresql.sh
+    compose exec -T inventario python manage.py asegurar_bases_postgresql 2>/dev/null || true
 fi
 compose exec -T inventario python manage.py migrate "${MIGRATE_FLAGS[@]}"
 compose exec -T inventario python manage.py migrate rbac --database=rbac "${MIGRATE_FLAGS[@]}"

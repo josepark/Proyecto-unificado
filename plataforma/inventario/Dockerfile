@@ -7,14 +7,12 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 COPY . .
 
+RUN chmod +x docker-entrypoint.sh
+
 # Genera los estáticos dentro de la imagen; en el contenedor, docker-compose
 # monta un volumen sobre STATIC_ROOT que nginx lee directamente.
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-# Aplica migraciones pendientes en cada arranque (idempotente: no afecta la
-# base de datos ya poblada que trae el proyecto) y luego levanta gunicorn.
-# SQLite no admite escrituras concurrentes desde varios workers de
-# gunicorn; mantener --workers 1 hasta migrar a PostgreSQL.
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py migrate rbac --database=rbac --noinput && python manage.py inicializar_rbac && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-1} --access-logfile - --error-logfile -"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
