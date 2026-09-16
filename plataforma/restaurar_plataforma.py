@@ -37,6 +37,7 @@ DESTINOS_SQLITE = {
 DESTINOS_POSTGRES = {
     "inventario_pg.sql": ("inventario", "DJANGO_DB_NAME", "suiin_inventario"),
     "riesgos_pg.sql": ("riesgos", "RIESGOS_DB_NAME", "suiin_riesgos"),
+    "rbac_pg.sql": ("rbac", "RBAC_DB_NAME", "suiin_rbac"),
     "rbac.db": BASE / "rbac" / "rbac.db",
     "media_inventario": BASE / "inventario" / "media",
     "media_riesgos": BASE / "riesgos" / "backend" / "media",

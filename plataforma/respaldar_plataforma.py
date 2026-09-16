@@ -42,6 +42,7 @@ MIEMBROS_SQLITE = (
 MIEMBROS_POSTGRES = (
     "inventario_pg.sql",
     "riesgos_pg.sql",
+    "rbac_pg.sql",
     "rbac.db",
 )
 
@@ -123,6 +124,8 @@ def respaldar() -> str:
                      os.path.join(tmp, "inventario_pg.sql"))
             _pg_dump(env, env.get("RIESGOS_DB_NAME", "suiin_riesgos"),
                      os.path.join(tmp, "riesgos_pg.sql"))
+            _pg_dump(env, env.get("RBAC_DB_NAME", "suiin_rbac"),
+                     os.path.join(tmp, "rbac_pg.sql"))
         except (subprocess.CalledProcessError, FileNotFoundError) as exc:
             print(f"AVISO: pg_dump falló ({exc}) — ¿postgres arriba?")
     else:

@@ -6,7 +6,8 @@
 #   ./scripts/migrar-sqlite-a-postgresql.sh          # primera vez con datos SQLite
 #   ./desplegar.sh --postgres --purgar --desbloquear admin
 #
-# Inventario → suiin_inventario | Riesgos → suiin_riesgos | RBAC → SQLite (rbac.db)
+# Inventario → suiin_inventario | Riesgos → suiin_riesgos | RBAC Django → suiin_rbac
+# (Flask rbac.db sigue activo hasta Fase 1.5; RBAC_BACKEND=flask por defecto)
 
 set -euo pipefail
 
@@ -33,6 +34,7 @@ cambios = {
     "DJANGO_DB_ENGINE": "postgresql",
     "DJANGO_DB_NAME": "suiin_inventario",
     "RIESGOS_DB_NAME": "suiin_riesgos",
+    "RBAC_DB_NAME": "suiin_rbac",
     "DJANGO_DB_USER": "suiin",
     "DJANGO_DB_HOST": "postgres",
     "DJANGO_DB_PORT": "5432",
@@ -57,6 +59,7 @@ ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
 PY
 
 chmod +x postgres/init/01-create-riesgos-db.sh 2>/dev/null || true
+chmod +x postgres/init/02-create-rbac-db.sh 2>/dev/null || true
 
 verde "PostgreSQL configurado en .env."
 echo ""

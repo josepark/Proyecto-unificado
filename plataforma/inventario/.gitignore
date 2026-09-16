@@ -1,4 +1,5 @@
 __pycache__/
 *.pyc
 db.sqlite3
+rbac_django.sqlite3
 .venv/

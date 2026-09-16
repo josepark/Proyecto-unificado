@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'simple_history',
     'axes',
     'inventario',
+    'rbac',
 ]
 
 MIDDLEWARE = [
@@ -255,19 +256,41 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'SAMEORIGIN'
     CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get('DJANGO_CSRF_TRUSTED', '').split(',') if o]
 
+# --- RBAC Django (Fase 1.1): base dedicada; Flask sigue activo por defecto ---
+# RBAC_BACKEND=flask|django — en 1.1 solo prepara modelos/sembrado; el corte nginx es 1.5.
+RBAC_BACKEND = os.environ.get('RBAC_BACKEND', 'flask').lower()
+
 # --- Base de datos: PostgreSQL si se define DATABASE_URL, si no SQLite ---
 if os.environ.get('DJANGO_DB_ENGINE') == 'postgresql':
+    _pg_common = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'USER': os.environ.get('DJANGO_DB_USER', 'suiin'),
+        'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', ''),
+        'HOST': os.environ.get('DJANGO_DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DJANGO_DB_PORT', '5432'),
+        'CONN_MAX_AGE': 60,
+    }
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
+            **_pg_common,
             'NAME': os.environ.get('DJANGO_DB_NAME', 'suiin_inventario'),
-            'USER': os.environ.get('DJANGO_DB_USER', 'suiin'),
-            'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', ''),
-            'HOST': os.environ.get('DJANGO_DB_HOST', '127.0.0.1'),
-            'PORT': os.environ.get('DJANGO_DB_PORT', '5432'),
-            'CONN_MAX_AGE': 60,
-        }
+        },
+        'rbac': {
+            **_pg_common,
+            'NAME': os.environ.get('RBAC_DB_NAME', 'suiin_rbac'),
+        },
     }
+else:
+    DATABASES['rbac'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'rbac_django.sqlite3',
+        'OPTIONS': {
+            'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;',
+            'timeout': 20,
+        },
+    }
+
+DATABASE_ROUTERS = ['rbac.db_router.RbacRouter']
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
