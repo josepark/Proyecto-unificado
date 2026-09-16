@@ -59,6 +59,7 @@ PY
 
 chmod +x postgres/init/01-create-riesgos-db.sh 2>/dev/null || true
 chmod +x postgres/init/02-create-rbac-db.sh 2>/dev/null || true
+chmod +x scripts/asegurar-bases-postgresql.sh 2>/dev/null || true
 
 verde "PostgreSQL configurado en .env."
 echo ""

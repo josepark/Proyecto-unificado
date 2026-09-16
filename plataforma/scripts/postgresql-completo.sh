@@ -143,8 +143,10 @@ if ! $SOLO_VACIO; then
 fi
 
 paso "5/8 · Levantar PostgreSQL y pgloader"
-"${COMPOSE[@]}" down 2>/dev/null || true
+"${COMPOSE[@]}" down --remove-orphans 2>/dev/null || true
 "${COMPOSE[@]}" up -d postgres --wait
+chmod +x scripts/asegurar-bases-postgresql.sh 2>/dev/null || true
+./scripts/asegurar-bases-postgresql.sh
 
 if $SOLO_VACIO; then
     amarillo "Modo --solo-vacio: se omitirá pgloader."

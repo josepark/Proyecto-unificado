@@ -36,6 +36,8 @@ echo ""
 echo "=== PostgreSQL · Contenedor ==="
 if "${COMPOSE[@]}" ps postgres 2>/dev/null | grep -qE 'Up|running'; then
     verde "Servicio postgres en ejecución"
+    chmod +x scripts/asegurar-bases-postgresql.sh 2>/dev/null || true
+    ./scripts/asegurar-bases-postgresql.sh 2>/dev/null || true
 else
     rojo "postgres no está Up"
     FALLOS=$((FALLOS + 1))

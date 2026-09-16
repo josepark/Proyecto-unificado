@@ -110,10 +110,10 @@ fi
 
 if $PURGAR; then
     paso "4/10 · Deteniendo y purgando contenedores + imágenes"
-    compose down --rmi all
+    compose down --remove-orphans --rmi all
 else
     paso "4/10 · Deteniendo contenedores (use --purgar tras actualizar código)"
-    compose down
+    compose down --remove-orphans
 fi
 
 paso "5/10 · Reconstruyendo y esperando servicios sanos"
@@ -134,6 +134,10 @@ paso "5b/10 · Migraciones de base de datos"
 MIGRATE_FLAGS=(--noinput)
 if $MIGRATE_FAKE_INITIAL; then
     MIGRATE_FLAGS=(--fake-initial --noinput)
+fi
+if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
+    chmod +x scripts/asegurar-bases-postgresql.sh 2>/dev/null || true
+    ./scripts/asegurar-bases-postgresql.sh
 fi
 compose exec -T inventario python manage.py migrate "${MIGRATE_FLAGS[@]}"
 compose exec -T inventario python manage.py migrate rbac --database=rbac "${MIGRATE_FLAGS[@]}"
