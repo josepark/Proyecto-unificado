@@ -139,7 +139,7 @@ class Usuario(models.Model):
 
     nombre = models.CharField(max_length=200)
     rol = models.ForeignKey(Rol, on_delete=models.PROTECT, db_column='rol_id')
-    mfa_activo = models.CharField(max_length=20, default='No')
+    mfa_activo = models.CharField(max_length=50, default='No')
     nda = models.CharField(max_length=20, blank=True, null=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Activo')
     fecha_inicio = models.CharField(max_length=30, blank=True, null=True)
