@@ -15,6 +15,7 @@ from rbac.sql_compat import (
     dias_hasta,
     hoy_mas_dias,
     hoy_sql,
+    sql_activo,
     sql_revision_vencida,
 )
 
@@ -55,10 +56,10 @@ def catalogos(using='rbac'):
 def resumen(esp, using='rbac'):
     hoy = hoy_sql(using)
     roles_total = scalar(
-        'SELECT COUNT(*) n FROM rol WHERE activo=1', using=using,
+        f'SELECT COUNT(*) n FROM rol WHERE {sql_activo("activo", using)}', using=using,
     )
     sistemas_total = scalar(
-        'SELECT COUNT(*) n FROM sistema WHERE activo=1 AND espacio_codigo=%s',
+        f'SELECT COUNT(*) n FROM sistema WHERE {sql_activo("activo", using)} AND espacio_codigo=%s',
         [esp], using=using,
     )
     usuarios_activos = scalar(
@@ -67,12 +68,12 @@ def resumen(esp, using='rbac'):
         [esp], using=using,
     )
     alertas_mfa = scalar(
-        """SELECT COUNT(*) n FROM usuario u
+        f"""SELECT COUNT(*) n FROM usuario u
            JOIN rol r ON r.id = u.rol_id
            WHERE u.estado IN ('Activo','Temporal')
              AND r.mfa_requerido LIKE 'Sí%%'
              AND u.mfa_activo NOT LIKE 'Sí%%'
-             AND r.activo = 1
+             AND {sql_activo('r.activo', using)}
              AND u.espacio_codigo=%s""",
         [esp], using=using,
     )
@@ -114,7 +115,7 @@ def resumen(esp, using='rbac'):
     )
     rev_venc = sql_revision_vencida('r', using)
     roles_certificacion_vencida = scalar(
-        f'SELECT COUNT(*) n FROM rol r WHERE r.activo=1 AND {rev_venc} = 1',
+        f'SELECT COUNT(*) n FROM rol r WHERE {sql_activo("r.activo", using)} AND {rev_venc} = 1',
         using=using,
     )
     pendientes_total = (
@@ -164,13 +165,13 @@ def inicio(esp, using='rbac'):
         ),
     }
     alertas_mfa = fetchall(
-        """SELECT u.id, u.nombre, r.abreviatura AS rol, r.mfa_requerido, u.mfa_activo
+        f"""SELECT u.id, u.nombre, r.abreviatura AS rol, r.mfa_requerido, u.mfa_activo
            FROM usuario u
            JOIN rol r ON r.id = u.rol_id
            WHERE u.estado IN ('Activo','Temporal')
              AND r.mfa_requerido LIKE 'Sí%%'
              AND u.mfa_activo NOT LIKE 'Sí%%'
-             AND r.activo = 1
+             AND {sql_activo('r.activo', using)}
              AND u.espacio_codigo=%s""",
         [esp], using=using,
     )
@@ -200,7 +201,7 @@ def inicio(esp, using='rbac'):
     riesgo_roles = {
         r['riesgo_attack']: r['n']
         for r in fetchall(
-            'SELECT riesgo_attack, COUNT(*) n FROM rol WHERE activo=1 GROUP BY riesgo_attack',
+            f'SELECT riesgo_attack, COUNT(*) n FROM rol WHERE {sql_activo("activo", using)} GROUP BY riesgo_attack',
             using=using,
         )
     }
@@ -264,7 +265,7 @@ def listar_roles(q='', incluir_inactivos=False, using='rbac'):
     )
     params = []
     if not incluir_inactivos:
-        sql += ' AND r.activo = 1'
+        sql += f' AND {sql_activo("r.activo", using)}'
     if q:
         sql += ' AND (r.abreviatura LIKE %s OR r.denominacion LIKE %s OR r.codigo LIKE %s)'
         params += [f'%{q}%'] * 3
@@ -312,7 +313,7 @@ def listar_sistemas(esp, q='', categoria='', clasificacion='', incluir_inactivos
              WHERE s.espacio_codigo = %s"""
     params = [esp]
     if not incluir_inactivos:
-        sql += ' AND s.activo = 1'
+        sql += f' AND {sql_activo("s.activo", using)}'
     if q:
         sql += ' AND s.nombre LIKE %s'
         params.append(f'%{q}%')
@@ -326,12 +327,12 @@ def listar_sistemas(esp, q='', categoria='', clasificacion='', incluir_inactivos
     sistemas = fetchall(sql, params, using=using)
 
     accesos = fetchall(
-        """SELECT ma.sistema_id, r.abreviatura rol, r.denominacion,
+        f"""SELECT ma.sistema_id, r.abreviatura rol, r.denominacion,
                   ma.nivel_codigo nivel
            FROM matriz_acceso ma
            JOIN rol r ON r.id = ma.rol_id
            JOIN sistema s ON s.id = ma.sistema_id
-           WHERE ma.nivel_codigo <> '—' AND r.activo = 1 AND s.espacio_codigo = %s""",
+           WHERE ma.nivel_codigo <> '—' AND {sql_activo('r.activo', using)} AND s.espacio_codigo = %s""",
         [esp], using=using,
     )
     por_sistema = {}
@@ -379,12 +380,12 @@ def obtener_sistema(sid, esp, using='rbac'):
     if not sis:
         return None
     roles_acc = fetchall(
-        """SELECT r.id, r.abreviatura, r.denominacion, ma.nivel_codigo nivel,
+        f"""SELECT r.id, r.abreviatura, r.denominacion, ma.nivel_codigo nivel,
                   n.nombre nivel_nombre
            FROM matriz_acceso ma
            JOIN rol r ON r.id=ma.rol_id
            JOIN nivel_acceso n ON n.codigo=ma.nivel_codigo
-           WHERE ma.sistema_id=%s AND ma.nivel_codigo<>'—' AND r.activo=1
+           WHERE ma.sistema_id=%s AND ma.nivel_codigo<>'—' AND {sql_activo('r.activo', using)}
            ORDER BY n.orden, r.id""",
         [sid], using=using,
     )
@@ -399,7 +400,7 @@ def obtener_sistema(sid, esp, using='rbac'):
                  AND e.sistema_id=%s
                  AND (e.fecha_fin IS NULL OR {date_col('e.fecha_fin', using)} >= {hoy})
             WHERE COALESCE(e.nivel_codigo, ma.nivel_codigo) <> '—'
-              AND u.estado IN ('Activo','Temporal') AND r.activo=1
+              AND u.estado IN ('Activo','Temporal') AND {sql_activo('r.activo', using)}
               AND u.espacio_codigo=%s
             ORDER BY u.nombre""",
         [sid, sid, esp], using=using,
@@ -419,7 +420,7 @@ def listar_usuarios(esp, q='', estado='', rol='', using='rbac'):
                            AND (e.fecha_fin IS NULL OR {date_col('e.fecha_fin', using)} >= {hoy})
                       WHERE ma.rol_id = u.rol_id
                         AND COALESCE(e.nivel_codigo, ma.nivel_codigo) <> '—'
-                        AND s.activo = 1 AND s.espacio_codigo = u.espacio_codigo
+                        AND {sql_activo('s.activo', using)} AND s.espacio_codigo = u.espacio_codigo
                         AND u.estado IN ('Activo','Temporal')) n_sistemas,
                      (SELECT COUNT(*) FROM acceso_excepcion e
                       WHERE e.usuario_id = u.id) n_excepciones
@@ -452,7 +453,7 @@ def obtener_usuario(uid, esp, using='rbac'):
     if not u:
         return None
     accesos = fetchall(
-        """SELECT s.id sistema_id, s.nombre, cat.nombre categoria,
+        f"""SELECT s.id sistema_id, s.nombre, cat.nombre categoria,
                   s.clasificacion, ma.nivel_codigo nivel_rol,
                   e.nivel_codigo nivel_exc, e.motivo, e.fecha_fin exc_fin,
                   COALESCE(e.nivel_codigo, ma.nivel_codigo) nivel_efectivo
@@ -462,7 +463,7 @@ def obtener_usuario(uid, esp, using='rbac'):
                 AND ma.rol_id = (SELECT rol_id FROM usuario WHERE id=%s)
            LEFT JOIN acceso_excepcion e
                   ON e.usuario_id = %s AND e.sistema_id = s.id
-           WHERE s.activo = 1 AND s.espacio_codigo=%s
+           WHERE {sql_activo('s.activo', using)} AND s.espacio_codigo=%s
            ORDER BY cat.id, s.id""",
         [uid, uid, esp], using=using,
     )
@@ -473,7 +474,7 @@ def obtener_usuario(uid, esp, using='rbac'):
 def matriz(esp, grupo='', categoria='', using='rbac'):
     q_rol = (
         'SELECT r.*, g.nombre grupo, g.codigo gcod FROM rol r '
-        'JOIN grupo_rol g ON g.id=r.grupo_id WHERE r.activo=1'
+        f'JOIN grupo_rol g ON g.id=r.grupo_id WHERE {sql_activo("r.activo", using)}'
     )
     params = []
     if grupo:
@@ -484,7 +485,7 @@ def matriz(esp, grupo='', categoria='', using='rbac'):
     q_sis = (
         'SELECT s.*, c.nombre categoria FROM sistema s '
         'JOIN categoria_sistema c ON c.id=s.categoria_id '
-        'WHERE s.activo=1 AND s.espacio_codigo=%s'
+        f'WHERE {sql_activo("s.activo", using)} AND s.espacio_codigo=%s'
     )
     p2 = [esp]
     if categoria:
@@ -503,15 +504,15 @@ def matriz(esp, grupo='', categoria='', using='rbac'):
 
 def matriz_heatmap(esp, using='rbac'):
     return fetchall(
-        """SELECT cat.nombre categoria,
+        f"""SELECT cat.nombre categoria,
                   COUNT(DISTINCT s.id) sistemas,
                   SUM(CASE WHEN ma.nivel_codigo='A' THEN 1 ELSE 0 END) n_admin,
                   SUM(CASE WHEN ma.nivel_codigo NOT IN ('—','L') THEN 1 ELSE 0 END) n_elevados
            FROM sistema s
            JOIN categoria_sistema cat ON cat.id = s.categoria_id
            JOIN matriz_acceso ma ON ma.sistema_id = s.id
-           JOIN rol r ON r.id = ma.rol_id AND r.activo = 1
-           WHERE s.activo = 1 AND s.espacio_codigo=%s
+           JOIN rol r ON r.id = ma.rol_id AND {sql_activo('r.activo', using)}
+           WHERE {sql_activo('s.activo', using)} AND s.espacio_codigo=%s
            GROUP BY cat.id ORDER BY n_admin DESC, cat.nombre""",
         [esp], using=using,
     )
@@ -543,9 +544,9 @@ def matriz_comparar(esp, rol_a_id, rol_b_id, using='rbac'):
         )
     }
     sistemas = fetchall(
-        """SELECT s.id, s.nombre, cat.nombre categoria FROM sistema s
+        f"""SELECT s.id, s.nombre, cat.nombre categoria FROM sistema s
            JOIN categoria_sistema cat ON cat.id=s.categoria_id
-           WHERE s.activo=1 AND s.espacio_codigo=%s
+           WHERE {sql_activo('s.activo', using)} AND s.espacio_codigo=%s
            ORDER BY cat.nombre, s.nombre""",
         [esp], using=using,
     )
@@ -680,7 +681,7 @@ def export_accesos_csv(esp, using='rbac'):
             LEFT JOIN acceso_excepcion e ON e.usuario_id = u.id AND e.sistema_id = s.id
                  AND (e.fecha_fin IS NULL OR {date_col('e.fecha_fin', using)} >= {hoy})
             WHERE COALESCE(e.nivel_codigo, ma.nivel_codigo) <> '—'
-              AND u.estado IN ('Activo','Temporal') AND r.activo = 1 AND s.activo = 1
+              AND u.estado IN ('Activo','Temporal') AND {sql_activo('r.activo', using)} AND {sql_activo('s.activo', using)}
               AND u.espacio_codigo = %s AND s.espacio_codigo = %s
             ORDER BY u.nombre, s.nombre""",
         [esp, esp], using=using,

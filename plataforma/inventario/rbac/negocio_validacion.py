@@ -5,6 +5,7 @@ from datetime import datetime
 
 from rbac.constants import CLASIFICACIONES, ESTADOS_USUARIO, RIESGOS_ATTACK
 from rbac.db_util import fetchall, fetchone, rbac_cursor, scalar
+from rbac.sql_compat import sql_activo
 
 
 def fecha_valida(txt):
@@ -162,11 +163,15 @@ def analizar_importacion_matriz(texto, using='rbac'):
     encabezado, datos = filas_csv[0], filas_csv[1:]
     roles_por_abrev = {
         r['abreviatura']: r['id']
-        for r in fetchall('SELECT id, abreviatura FROM rol WHERE activo=1', using=using)
+        for r in fetchall(
+            f'SELECT id, abreviatura FROM rol WHERE {sql_activo("activo", using)}', using=using
+        )
     }
     sistemas_por_nombre = {
         s['nombre']: s['id']
-        for s in fetchall('SELECT id, nombre FROM sistema WHERE activo=1', using=using)
+        for s in fetchall(
+            f'SELECT id, nombre FROM sistema WHERE {sql_activo("activo", using)}', using=using
+        )
     }
     niveles_validos = {
         n['codigo'] for n in fetchall('SELECT codigo FROM nivel_acceso', using=using)
