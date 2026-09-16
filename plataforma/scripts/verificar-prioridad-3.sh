@@ -63,7 +63,7 @@ if [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
         if ./scripts/verificar-postgresql.sh 2>/dev/null; then
             : # verificar-postgresql ya imprime OK
         else
-            amarillo "PostgreSQL configurado pero verificación falló — ¿stack arriba? ./desplegar.sh --postgres"
+            amarillo "PostgreSQL configurado pero verificación falló — ¿stack arriba? ./postgresql.sh"
             avisos=$((avisos + 1))
         fi
     else
@@ -87,7 +87,7 @@ cat <<'EOF'
 1. Refresh JWT: tras login, comprobar localStorage suiin_refresh_token
 2. MFA: entrar → /seguridad-mfa → escanear QR → activar con código TOTP
 3. Login con MFA: cerrar sesión → login pide código de 6 dígitos
-4. PostgreSQL (staging): ./scripts/activar-postgresql.sh + compose override + migrate
+4. PostgreSQL: ./postgresql.sh   (migración + despliegue en un solo paso)
 EOF
 
 echo ""

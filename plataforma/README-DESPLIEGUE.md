@@ -399,8 +399,23 @@ Ver también la plantilla completa con alertas y sincronizaciones en
 ### 8.10bis PostgreSQL (Inventario + Riesgos)
 
 Por defecto Inventario y Riesgos usan SQLite en el host. Para producción
-con varios analistas concurrentes, migre a PostgreSQL con los scripts del
-repo. **RBAC permanece en SQLite** (`rbac/rbac.db`).
+con varios analistas concurrentes, migre a PostgreSQL con **un solo comando**:
+
+```bash
+cd plataforma
+./postgresql.sh
+```
+
+Eso ejecuta en secuencia: respaldo SQLite → activar `.env` → pgloader →
+despliegue completo (`desplegar.sh --postgres`) → usuarios demo → MITRE →
+sync activos → verificación. Login demo: **admin / SUIIN2026#**.
+
+Opciones:
+
+```bash
+./postgresql.sh --solo-vacio          # sin pgloader (bases vacías)
+./postgresql.sh --reset-passwords     # restablece contraseñas demo
+```
 
 | Base | PostgreSQL | SQLite (sin migrar) |
 |------|------------|---------------------|
@@ -408,45 +423,18 @@ repo. **RBAC permanece en SQLite** (`rbac/rbac.db`).
 | Riesgos | `suiin_riesgos` | `riesgos/backend/db.sqlite3` |
 | RBAC | `rbac/rbac.db` | `rbac/rbac.db` |
 
-**Primera migración** (desde `plataforma/`):
+**Despliegues posteriores** (PostgreSQL ya activo en `.env`):
 
 ```bash
-./scripts/activar-postgresql.sh
-./scripts/migrar-sqlite-a-postgresql.sh          # con datos SQLite (pgloader)
-# o, base vacía sin pgloader:
-./scripts/migrar-sqlite-a-postgresql.sh --solo-vacio
-./scripts/verificar-postgresql.sh
 ./desplegar.sh --postgres --purgar --desbloquear admin
 ```
 
-El script de migración: respaldo automático → levanta `postgres:16` →
-pgloader (si hay datos) → `migrate --fake-initial` → usuarios demo → verificación.
-
-**Login 401 tras migrar:** si `inventario/db.sqlite3` estaba vacío, el usuario
-`admin` no se migra. Ejecute:
-
-```bash
-./scripts/asegurar-usuarios-postgresql.sh
-# Credenciales demo: admin / SUIIN2026#
-```
-
-**Despliegues posteriores** con PostgreSQL ya activo en `.env`:
-
-```bash
-./desplegar.sh --postgres --purgar
-```
+**Login 401 tras migrar:** ejecute `./scripts/asegurar-usuarios-postgresql.sh`
+(o `./postgresql.sh --reset-passwords` si prefiere el flujo completo).
 
 **Respaldos:** con `DJANGO_DB_ENGINE=postgresql`, `respaldar_plataforma.py`
 genera `inventario_pg.sql` y `riesgos_pg.sql` (pg_dump) más RBAC/media.
-Restaurar:
-
-```bash
-python3 restaurar_plataforma.py --ultimo --confirmar   # requiere postgres Up
-```
-
-**Revertir a SQLite:** cambie `DJANGO_DB_ENGINE=sqlite` en `.env` (o
-elimine la variable), restaure los `.sqlite3` del respaldo previo a la
-migración y despliegue sin `--postgres`.
+Restaurar: `python3 restaurar_plataforma.py --ultimo --confirmar`
 
 Ver también `docker-compose.postgres.yml` y `./scripts/verificar-prioridad-3.sh`.
 

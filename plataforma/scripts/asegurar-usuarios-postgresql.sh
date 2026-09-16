@@ -1,10 +1,8 @@
 #!/bin/bash
-# Crea o verifica usuarios demo tras migrar a PostgreSQL (admin suele faltar
-# si inventario/db.sqlite3 estaba vacío). También desbloquea axes.
+# Recuperación rápida: usuarios demo y desbloqueo axes (sin re-migrar).
+# Para migración + despliegue completo use: ./postgresql.sh
 #
-# Uso (desde plataforma/):
-#   ./scripts/asegurar-usuarios-postgresql.sh
-#   ./scripts/asegurar-usuarios-postgresql.sh --reset-passwords
+# Uso: ./scripts/asegurar-usuarios-postgresql.sh [--reset-passwords]
 
 set -euo pipefail
 
@@ -22,7 +20,7 @@ set -a
 set +a
 
 if [ "${DJANGO_DB_ENGINE:-}" != "postgresql" ]; then
-    rojo "DJANGO_DB_ENGINE no es postgresql — omita este script o ejecute activar-postgresql.sh"
+    rojo "DJANGO_DB_ENGINE no es postgresql — use ./postgresql.sh para migrar."
     exit 1
 fi
 
@@ -36,7 +34,6 @@ echo "=== Usuarios demo en PostgreSQL ==="
 "${COMPOSE[@]}" exec -T inventario python manage.py crear_roles "${RESET[@]}"
 "${COMPOSE[@]}" exec -T inventario python manage.py desbloquear_login admin || true
 
-echo ""
 "${COMPOSE[@]}" exec -T inventario python manage.py shell -c "
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -48,4 +45,3 @@ if u:
 "
 
 verde "Listo. Pruebe login: admin / SUIIN2026#"
-echo "Cambie la contraseña en producción: docker compose exec inventario python manage.py changepassword admin"

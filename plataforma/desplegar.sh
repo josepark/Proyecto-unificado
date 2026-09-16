@@ -11,6 +11,11 @@
 #   ./desplegar.sh --desbloquear admin    # además desbloquea cuenta tras axes
 #   ./desplegar.sh --no-sincronizar       # omite sync de activos
 #   ./desplegar.sh --postgres              # usa docker-compose.postgres.yml
+#   ./desplegar.sh --migrate-fake-initial  # tras pgloader (lo usa postgresql.sh)
+#   ./desplegar.sh --reset-passwords       # restablece contraseñas demo
+#
+# Migración PostgreSQL completa (un solo comando):
+#   ./postgresql.sh
 #
 # Catálogo MITRE: coloque enterprise-attack-v19_1.xlsx en inventario/data/
 # (ver inventario/data/README.md). Si falta y el catálogo está vacío, avisa al final.
@@ -24,9 +29,11 @@ DESBLOQUEAR_USUARIO=""
 SINCRONIZAR=true
 SINCRONIZAR_MITRE=true
 USAR_POSTGRES=false
+MIGRATE_FAKE_INITIAL=false
+RESET_PASSWORDS=false
 
 mostrar_ayuda() {
-    sed -n '2,18p' "$0" | sed 's/^# \?//'
+    sed -n '2,20p' "$0" | sed 's/^# \?//'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -39,6 +46,8 @@ while [[ $# -gt 0 ]]; do
         --no-sincronizar) SINCRONIZAR=false; shift ;;
         --no-sincronizar-mitre) SINCRONIZAR_MITRE=false; shift ;;
         --postgres) USAR_POSTGRES=true; shift ;;
+        --migrate-fake-initial) MIGRATE_FAKE_INITIAL=true; shift ;;
+        --reset-passwords) RESET_PASSWORDS=true; shift ;;
         -h|--help) mostrar_ayuda; exit 0 ;;
         *) echo "Argumento desconocido: $1 (use --help)" >&2; exit 1 ;;
     esac
@@ -122,11 +131,19 @@ else
 fi
 
 paso "5b/10 · Migraciones de base de datos"
-compose exec -T inventario python manage.py migrate --noinput
-compose exec -T riesgos-backend python manage.py migrate --noinput
+MIGRATE_FLAGS=(--noinput)
+if $MIGRATE_FAKE_INITIAL; then
+    MIGRATE_FLAGS=(--fake-initial --noinput)
+fi
+compose exec -T inventario python manage.py migrate "${MIGRATE_FLAGS[@]}"
+compose exec -T riesgos-backend python manage.py migrate "${MIGRATE_FLAGS[@]}"
 if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
     echo "PostgreSQL: verificando usuarios demo (admin/consultor/dinamizador)…"
-    compose exec -T inventario python manage.py crear_roles
+    CREAR_ROLES_ARGS=()
+    if $RESET_PASSWORDS; then
+        CREAR_ROLES_ARGS=(--reset-passwords)
+    fi
+    compose exec -T inventario python manage.py crear_roles "${CREAR_ROLES_ARGS[@]}"
 fi
 echo "Inventario:"
 compose exec -T inventario python manage.py showmigrations inventario | tail -8
@@ -300,7 +317,10 @@ Plataforma desplegada. Acceda en el host de DJANGO_ALLOWED_HOSTS:
 Un solo comando para todo (recomendado tras actualizar código):
   ./desplegar.sh --purgar --desbloquear admin
 
-Con PostgreSQL (tras ./scripts/migrar-sqlite-a-postgresql.sh):
+PostgreSQL — migración + despliegue en un solo paso:
+  ./postgresql.sh
+
+Despliegues posteriores con PostgreSQL ya activo:
   ./desplegar.sh --postgres --purgar --desbloquear admin
 
 Si algo falla: ./diagnostico_login.sh

@@ -180,7 +180,8 @@ Verificación prioridad 3 (PostgreSQL, MFA TOTP, refresh JWT):
 
 Si el backend responde 401 (no 502) pero no acepta la clave:
 
-  ./scripts/asegurar-usuarios-postgresql.sh     # si migró a PostgreSQL
+  ./postgresql.sh                         # migración + despliegue completo
+  ./scripts/asegurar-usuarios-postgresql.sh     # solo login 401 (sin re-migrar)
   docker compose exec inventario python manage.py changepassword admin
   docker compose exec inventario python manage.py desbloquear_login admin
   # Credenciales demo por defecto: admin / SUIIN2026#

@@ -139,6 +139,7 @@ cd riesgos/backend && python3 manage.py test
 | Script | Propósito |
 |--------|-----------|
 | `./desplegar.sh` | Despliegue completo con healthchecks |
+| `./postgresql.sh` | **PostgreSQL: migración + despliegue en un solo comando** |
 | `./desplegar.sh --purgar --sincronizar` | Rebuild limpio + sync activos |
 | `./sincronizar_catalogos_mitre.sh` | MITRE ATT&CK Inventario → RBAC |
 | `python3 respaldar_plataforma.py` | Respaldo unificado SQLite + media |
@@ -150,9 +151,11 @@ cd riesgos/backend && python3 manage.py test
 | `./scripts/verificar-prioridad-1.sh` | Checklist sesión y proyectos |
 | `./scripts/verificar-prioridad-2.sh` | Checklist secretos, respaldos y TLS |
 | `./scripts/verificar-prioridad-3.sh` | Checklist PostgreSQL, MFA y refresh JWT |
-| `./scripts/activar-postgresql.sh` | Habilita PostgreSQL en `.env` |
-| `./scripts/migrar-sqlite-a-postgresql.sh` | Migra SQLite → PostgreSQL (pgloader) |
+| `./postgresql.sh` | Migración PostgreSQL + despliegue completo (un comando) |
+| `./scripts/activar-postgresql.sh` | Solo habilita PostgreSQL en `.env` (uso interno) |
+| `./scripts/migrar-sqlite-a-postgresql.sh` | Alias de `./postgresql.sh` |
 | `./scripts/verificar-postgresql.sh` | Comprueba conexión PostgreSQL |
+| `./scripts/asegurar-usuarios-postgresql.sh` | Solo usuarios demo (recuperación login 401) |
 | `./desplegar.sh --postgres` | Despliegue con docker-compose.postgres.yml |
 | `/seguridad-mfa` | Configurar autenticación TOTP (login en dos pasos) |
 | `./diagnostico_login.sh` | Diagnóstico de bloqueos de login |
