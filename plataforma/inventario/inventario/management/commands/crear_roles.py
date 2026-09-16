@@ -6,11 +6,40 @@ from django.core.management.base import BaseCommand
 class Command(BaseCommand):
     help = "Crea grupos Consultor/Dinamizador/Administrador y usuarios de ejemplo"
 
-    def handle(self, *args, **o):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reset-passwords",
+            action="store_true",
+            help="Restablece contraseñas demo aunque el usuario ya exista",
+        )
+
+    def handle(self, *args, **options):
+        reset = options["reset_passwords"]
         grupos = {}
         for g in ["Consultor", "Dinamizador", "Administrador"]:
             grupos[g], _ = Group.objects.get_or_create(name=g)
         self.stdout.write(self.style.SUCCESS("Grupos creados: Consultor, Dinamizador, Administrador"))
+
+        # Superusuario admin — necesario tras migrar a PostgreSQL con SQLite vacío
+        admin, admin_creado = User.objects.get_or_create(
+            username="admin",
+            defaults={"is_superuser": True, "is_staff": True, "is_active": True},
+        )
+        if admin_creado or reset:
+            admin.set_password("SUIIN2026#")
+        admin.is_superuser = True
+        admin.is_staff = True
+        admin.is_active = True
+        admin.save()
+        admin.groups.add(grupos["Administrador"])
+        from inventario.espacio_datos import espacio_datos_de
+
+        espacio_datos_de(admin)
+        estado_admin = "creado" if admin_creado else ("contraseña restablecida" if reset else "verificado")
+        self.stdout.write(
+            f"  Usuario 'admin' (Administrador) {estado_admin}"
+            + (" — pass: SUIIN2026#" if admin_creado or reset else "")
+        )
 
         # Usuarios de ejemplo (cambiar contrasenas en produccion)
         ejemplo = [
@@ -19,15 +48,20 @@ class Command(BaseCommand):
         ]
         for username, pwd, grupo, staff in ejemplo:
             u, creado = User.objects.get_or_create(username=username, defaults={"is_staff": staff})
-            u.set_password(pwd)
+            if creado or reset:
+                u.set_password(pwd)
             u.is_staff = staff
+            u.is_active = True
             u.save()
             u.groups.set([grupos[grupo]])
-            estado = "creado" if creado else "actualizado"
-            self.stdout.write(f"  Usuario '{username}' ({grupo}) {estado} - pass: {pwd}")
-
-        # El superusuario admin queda como Administrador
-        admin = User.objects.filter(is_superuser=True).first()
-        if admin:
-            admin.groups.add(grupos["Administrador"])
-            self.stdout.write(f"  Superusuario '{admin.username}' agregado a Administrador")
+            espacio_datos_de(u)
+            if creado:
+                estado = "creado"
+            elif reset:
+                estado = "contraseña restablecida"
+            else:
+                estado = "verificado"
+            self.stdout.write(
+                f"  Usuario '{username}' ({grupo}) {estado}"
+                + (f" — pass: {pwd}" if creado or reset else "")
+            )

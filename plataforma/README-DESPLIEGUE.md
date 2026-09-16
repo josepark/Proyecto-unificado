@@ -420,7 +420,15 @@ repo. **RBAC permanece en SQLite** (`rbac/rbac.db`).
 ```
 
 El script de migración: respaldo automático → levanta `postgres:16` →
-pgloader (si hay datos) → `migrate --fake-initial` → verificación.
+pgloader (si hay datos) → `migrate --fake-initial` → usuarios demo → verificación.
+
+**Login 401 tras migrar:** si `inventario/db.sqlite3` estaba vacío, el usuario
+`admin` no se migra. Ejecute:
+
+```bash
+./scripts/asegurar-usuarios-postgresql.sh
+# Credenciales demo: admin / SUIIN2026#
+```
 
 **Despliegues posteriores** con PostgreSQL ya activo en `.env`:
 

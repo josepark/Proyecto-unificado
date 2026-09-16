@@ -103,6 +103,10 @@ else
     "${COMPOSE[@]}" exec -T riesgos-backend python manage.py migrate --noinput
 fi
 
+paso "6b/7 · Usuarios demo (admin suele faltar si SQLite de Inventario estaba vacío)"
+"${COMPOSE[@]}" exec -T inventario python manage.py crear_roles
+"${COMPOSE[@]}" exec -T inventario python manage.py desbloquear_login admin || true
+
 paso "7/7 · Verificación"
 ./scripts/verificar-postgresql.sh
 

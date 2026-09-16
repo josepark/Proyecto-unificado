@@ -13,8 +13,21 @@ if [ ! -f docker-compose.yml ]; then
     exit 1
 fi
 
+if [ -f .env ]; then
+    # shellcheck disable=SC1091
+    source .env 2>/dev/null || true
+fi
+
+compose_cmd() {
+    if [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
+        docker compose -f docker-compose.yml -f docker-compose.postgres.yml "$@"
+    else
+        docker compose "$@"
+    fi
+}
+
 echo "=== 1/7 · Contenedores ==="
-docker compose ps -a || { rojo "docker compose no disponible"; exit 1; }
+compose_cmd ps -a || { rojo "docker compose no disponible"; exit 1; }
 
 echo ""
 echo "=== 2/7 · Secretos en .env (placeholders impiden arrancar con DEBUG=False) ==="
@@ -77,13 +90,13 @@ fi
 
 echo ""
 echo "=== 4/7 · Inventario directo (red docker, sin pasar por el navegador) ==="
-if docker compose ps inventario 2>/dev/null | grep -qE 'Up|running'; then
-    if docker compose exec -T nginx curl -sf --connect-timeout 5 http://inventario:8000/api/sesion/ >/dev/null 2>&1; then
+if compose_cmd ps inventario 2>/dev/null | grep -qE 'Up|running'; then
+    if compose_cmd exec -T nginx curl -sf --connect-timeout 5 http://inventario:8000/api/sesion/ >/dev/null 2>&1; then
         verde "inventario:8000/api/sesion/ responde OK"
     else
         rojo "inventario está 'Up' pero NO responde en :8000 — revise logs abajo"
     fi
-    codigo=$(docker compose exec -T nginx curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 \
+    codigo=$(compose_cmd exec -T nginx curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 \
         http://inventario:8000/api/auth/login/ 2>/dev/null || echo "000")
     case "$codigo" in
         200) verde "inventario:8000/api/auth/login/ → $codigo" ;;
@@ -94,13 +107,13 @@ else
     rojo "Contenedor inventario NO está en ejecución — causa típica del 502 en login"
     echo ""
     echo "Últimas líneas del log de inventario:"
-    docker compose logs inventario --tail 25 2>/dev/null || true
+    compose_cmd logs inventario --tail 25 2>/dev/null || true
 fi
 
 echo ""
 echo "=== 5/7 · RBAC (integridad /api/resumen) ==="
-if docker compose ps rbac 2>/dev/null | grep -qE 'Up|running'; then
-    if docker compose exec -T rbac python3 -c "from recuperar_rbac_db import integridad_ok; import sys; sys.exit(0 if integridad_ok('rbac.db') else 2)" 2>/dev/null; then
+if compose_cmd ps rbac 2>/dev/null | grep -qE 'Up|running'; then
+    if compose_cmd exec -T rbac python3 -c "from recuperar_rbac_db import integridad_ok; import sys; sys.exit(0 if integridad_ok('rbac.db') else 2)" 2>/dev/null; then
         verde "rbac.db: tablas, espacio_codigo y vistas OK"
     else
         rojo "rbac.db incompleta — /rbac/api/resumen puede devolver 500"
@@ -113,16 +126,29 @@ fi
 
 echo ""
 echo "=== 6/7 · Migraciones modulos_acceso (Inventario) ==="
-if docker compose ps inventario 2>/dev/null | grep -qE 'Up|running'; then
-    if docker compose exec -T inventario python manage.py showmigrations inventario 2>/dev/null \
+if compose_cmd ps inventario 2>/dev/null | grep -qE 'Up|running'; then
+    if compose_cmd exec -T inventario python manage.py showmigrations inventario 2>/dev/null \
         | grep -E '0014_backfill|0015_alter' | grep -q '\[X\]'; then
         verde "Migraciones 0014/0015 aplicadas (proyectos por usuario)"
     else
         rojo "Faltan migraciones 0014/0015 — modulos_acceso puede estar mal"
-        amarillo "  docker compose exec inventario python manage.py migrate inventario"
+        amarillo "  compose exec inventario python manage.py migrate inventario"
     fi
 else
     amarillo "Inventario no está Up — omitiendo chequeo de migraciones"
+fi
+
+if [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ] && compose_cmd ps inventario 2>/dev/null | grep -qE 'Up|running'; then
+    echo ""
+    echo "=== 6b/7 · Usuario admin en PostgreSQL ==="
+    if compose_cmd exec -T inventario python manage.py shell -c \
+        "from django.contrib.auth.models import User; print(User.objects.filter(username='admin').exists())" 2>/dev/null \
+        | grep -q True; then
+        verde "Usuario 'admin' existe en PostgreSQL"
+    else
+        rojo "Usuario 'admin' NO existe — causa típica del 401 tras migrar PostgreSQL"
+        amarillo "  ./scripts/asegurar-usuarios-postgresql.sh"
+    fi
 fi
 
 echo ""
@@ -154,6 +180,8 @@ Verificación prioridad 3 (PostgreSQL, MFA TOTP, refresh JWT):
 
 Si el backend responde 401 (no 502) pero no acepta la clave:
 
+  ./scripts/asegurar-usuarios-postgresql.sh     # si migró a PostgreSQL
   docker compose exec inventario python manage.py changepassword admin
   docker compose exec inventario python manage.py desbloquear_login admin
+  # Credenciales demo por defecto: admin / SUIIN2026#
 EOF

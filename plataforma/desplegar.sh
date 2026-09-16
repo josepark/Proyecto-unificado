@@ -124,6 +124,10 @@ fi
 paso "5b/10 · Migraciones de base de datos"
 compose exec -T inventario python manage.py migrate --noinput
 compose exec -T riesgos-backend python manage.py migrate --noinput
+if $USAR_POSTGRES || [ "${DJANGO_DB_ENGINE:-}" = "postgresql" ]; then
+    echo "PostgreSQL: verificando usuarios demo (admin/consultor/dinamizador)…"
+    compose exec -T inventario python manage.py crear_roles
+fi
 echo "Inventario:"
 compose exec -T inventario python manage.py showmigrations inventario | tail -8
 if ! compose exec -T inventario python manage.py showmigrations inventario 2>/dev/null | grep -E '0014_backfill|0015_alter' | grep -q '\[X\]'; then
