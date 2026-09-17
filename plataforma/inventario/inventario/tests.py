@@ -2269,6 +2269,17 @@ class CrearRolesDemoTest(TestCase):
             {"inventario", "rbac", "riesgos"},
         )
 
+    def test_crear_roles_repetido_no_invalida_jwt(self):
+        from django.core.management import call_command
+        from inventario.models import PerfilPlataforma
+        from inventario.signals import jwt_version_de
+
+        call_command("crear_roles")
+        ver1 = jwt_version_de(User.objects.get(username="admin"))
+        call_command("crear_roles")
+        ver2 = jwt_version_de(User.objects.get(username="admin"))
+        self.assertEqual(ver1, ver2)
+
 
 class UsuariosPlataformaAPITest(TestCase):
     """CRUD de cuentas de login — solo Administrador."""

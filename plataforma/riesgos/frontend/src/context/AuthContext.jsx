@@ -71,6 +71,18 @@ export function AuthProvider({
           }
         }
 
+        // Con sesión del shell activa, pedir JWT nuevo por cookie (versión vigente).
+        if (unificado && plataformaAutenticada) {
+          try {
+            const data = await endpoints.ssoJWT();
+            guardarCredenciales(data.token, "Bearer", "sso", data.refresh_token);
+            aplicarPerfil(data, setUser, setRoles, setPuedeEditar);
+            return true;
+          } catch {
+            borrarCredenciales();
+          }
+        }
+
         const refresh = localStorage.getItem("suiin_refresh_token");
         if (refresh) {
           try {
@@ -147,24 +159,6 @@ export function AuthProvider({
         }
         if (!cancelado) setChecking(false);
         return;
-      }
-
-      // Restaurar usuario desde JWT SSO guardado mientras se revalida — evita
-      // pantalla de "requiere sesión" al volver de RBAC/Inventario al módulo.
-      if (token && esquema === "Bearer" && origen === "sso" && unificado && plataformaAutenticada) {
-        try {
-          const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-          if (payload.username) {
-            aplicarPerfil(
-              { username: payload.username, roles: payload.roles || [], is_staff: payload.roles?.includes("Administrador") },
-              setUser,
-              setRoles,
-              setPuedeEditar,
-            );
-          }
-        } catch {
-          // sigue abajo con sincronizarSSO
-        }
       }
 
       const reintentos = unificado && plataformaAutenticada ? 2 : 1;

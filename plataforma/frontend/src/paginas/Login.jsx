@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { inventarioApi } from '../api/inventario';
 import { useSesion } from '../hooks/useSesion';
 import { rutaInicioModulos } from '../lib/modulosPlataforma';
-import { sincronizarUsuarioActivo } from '../lib/sesionLocal';
+import { sincronizarUsuarioActivo, renovarJwtPlataforma } from '../lib/sesionLocal';
 
 function rutaSegura(next, modulos) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
@@ -45,6 +45,7 @@ export default function Login() {
       );
       sincronizarUsuarioActivo(sesionLogin.usuario || usuario.trim());
       await recargar();
+      await renovarJwtPlataforma();
       navigate(rutaSegura(params.get('next'), sesionLogin.modulos), { replace: true });
     } catch (err) {
       if (err.data?.requiere_mfa) {

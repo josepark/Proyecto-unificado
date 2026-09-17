@@ -2,7 +2,7 @@ from itertools import chain
 
 from django.db.models import Count, Q
 from django.shortcuts import redirect
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -1459,6 +1459,7 @@ def token_jwt(request):
     }, headers={"Cache-Control": "no-store"})
 
 
+@csrf_exempt
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def token_jwt_refresh(request):

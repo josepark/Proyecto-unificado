@@ -36,7 +36,8 @@ class Command(BaseCommand):
         admin.is_staff = True
         admin.is_active = True
         admin.save()
-        admin.groups.add(grupos["Administrador"])
+        if not admin.groups.filter(pk=grupos["Administrador"].pk).exists():
+            admin.groups.add(grupos["Administrador"])
         from inventario.espacio_datos import espacio_datos_de
         from inventario.modulos_plataforma import modulos_demo_para
         from inventario.models import PerfilPlataforma
@@ -69,7 +70,9 @@ class Command(BaseCommand):
             u.is_staff = staff
             u.is_active = True
             u.save()
-            u.groups.set([grupos[grupo]])
+            grupo_obj = grupos[grupo]
+            if set(u.groups.values_list("pk", flat=True)) != {grupo_obj.pk}:
+                u.groups.set([grupo_obj])
             espacio_datos_de(u)
             perfil, _ = PerfilPlataforma.objects.get_or_create(user=u)
             perfil.modulos_acceso = modulos_demo_para(username, grupo)

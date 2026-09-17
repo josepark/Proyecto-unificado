@@ -54,7 +54,9 @@ class Command(BaseCommand):
             user.is_active = True
             user.set_password(password)
             user.save()
-            user.groups.set([grupos[grupo]])
+            grupo_obj = grupos[grupo]
+            if set(user.groups.values_list("pk", flat=True)) != {grupo_obj.pk}:
+                user.groups.set([grupo_obj])
             espacio_datos_de(user)
             perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
             perfil.modulos_acceso = modulos_demo_para(username, grupo)

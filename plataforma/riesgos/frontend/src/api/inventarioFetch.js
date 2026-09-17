@@ -11,6 +11,10 @@ export async function peticionInventario(ruta, opciones = {}) {
   if (opciones.body && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
+  const metodo = (opciones.method || "GET").toUpperCase();
+  if (metodo !== "GET" && metodo !== "HEAD" && !headers["X-CSRFToken"]) {
+    headers["X-CSRFToken"] = leerCookie("csrftoken") || "";
+  }
 
   const respuesta = await fetch(`${inventarioBaseURL}${ruta}`, {
     ...opciones,
