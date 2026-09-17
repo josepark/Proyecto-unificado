@@ -32,6 +32,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from inventario.espacio_datos import espacio_datos_de
+        from inventario.modulos_plataforma import modulos_demo_para
         from inventario.models import PerfilPlataforma
 
         grupos = {}
@@ -56,10 +57,13 @@ class Command(BaseCommand):
             user.groups.set([grupos[grupo]])
             espacio_datos_de(user)
             perfil, _ = PerfilPlataforma.objects.get_or_create(user=user)
+            perfil.modulos_acceso = modulos_demo_para(username, grupo)
+            campos_perfil = ["modulos_acceso"]
             if perfil.mfa_habilitado or perfil.mfa_totp_secreto:
                 perfil.mfa_habilitado = False
                 perfil.mfa_totp_secreto = ""
-                perfil.save(update_fields=["mfa_habilitado", "mfa_totp_secreto"])
+                campos_perfil.extend(["mfa_habilitado", "mfa_totp_secreto"])
+            perfil.save(update_fields=campos_perfil)
             accion = "creado" if creado else "restablecido"
             self.stdout.write(
                 self.style.SUCCESS(f"  {username} ({grupo}) {accion} — pass: {password}")

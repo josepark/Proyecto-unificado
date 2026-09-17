@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { eventosApi, consultarSesionInventario, leerSesionConfirmada } from '../api/client';
+import { eventosApi, obtenerSesionConfiable } from '../api/client';
 import { sincronizarUsuarioActivo } from '../lib/sesionLocal';
 
 const VACIA = {
@@ -32,7 +32,7 @@ export function SesionProvider({ children }) {
 
   const recargar = useCallback(({ silencioso = false } = {}) => {
     if (!silencioso) setCargando(true);
-    return leerSesionConfirmada()
+    return obtenerSesionConfiable()
       .then((s) => {
         if (s.autenticado) {
           sincronizarUsuarioActivo(s.usuario);
@@ -54,15 +54,9 @@ export function SesionProvider({ children }) {
       const s = evento.detail;
       if (!s || typeof s.autenticado !== 'boolean') return;
       if (!s.autenticado) {
-        const confirm = await consultarSesionInventario();
-        if (!confirm.autenticado) {
-          const reconfirm = await leerSesionConfirmada();
-          sincronizarUsuarioActivo(reconfirm.autenticado ? reconfirm.usuario : null);
-          setSesion(mapearSesion(reconfirm));
-        } else {
-          sincronizarUsuarioActivo(confirm.usuario);
-          setSesion(mapearSesion(confirm));
-        }
+        const confirmada = await obtenerSesionConfiable();
+        sincronizarUsuarioActivo(confirmada.autenticado ? confirmada.usuario : null);
+        setSesion(mapearSesion(confirmada));
       } else {
         sincronizarUsuarioActivo(s.usuario);
         setSesion(mapearSesion(s));

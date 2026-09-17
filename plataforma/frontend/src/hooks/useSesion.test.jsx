@@ -11,13 +11,12 @@ vi.mock('../api/client', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    consultarSesionInventario: vi.fn(),
-    leerSesionConfirmada: vi.fn(),
+    obtenerSesionConfiable: vi.fn(),
   };
 });
 
 import { inventarioApi } from '../api/inventario';
-import { consultarSesionInventario, leerSesionConfirmada } from '../api/client';
+import { obtenerSesionConfiable } from '../api/client';
 
 function Sonda() {
   const { autenticado, usuario, puedeEditar, cargando } = useSesion();
@@ -41,8 +40,7 @@ const SESION_ADMIN = {
 
 describe('SesionProvider', () => {
   beforeEach(() => {
-    vi.mocked(leerSesionConfirmada).mockResolvedValue(SESION_ADMIN);
-    vi.mocked(consultarSesionInventario).mockResolvedValue(SESION_ADMIN);
+    vi.mocked(obtenerSesionConfiable).mockResolvedValue(SESION_ADMIN);
   });
 
   afterEach(() => {
@@ -57,7 +55,7 @@ describe('SesionProvider', () => {
     );
     await waitFor(() => expect(screen.getByTestId('cargando')).toHaveTextContent('false'));
     expect(screen.getByTestId('usuario')).toHaveTextContent('admin');
-    expect(leerSesionConfirmada).toHaveBeenCalled();
+    expect(obtenerSesionConfiable).toHaveBeenCalled();
   });
 
   it('confirma cierre de sesión antes de aplicar sesion-actualizada con autenticado false', async () => {
@@ -68,14 +66,7 @@ describe('SesionProvider', () => {
     );
     await waitFor(() => expect(screen.getByTestId('cargando')).toHaveTextContent('false'));
 
-    vi.mocked(consultarSesionInventario).mockResolvedValue({
-      autenticado: false,
-      usuario: null,
-      roles: [],
-      puede_editar: false,
-      puede_eliminar: false,
-    });
-    vi.mocked(leerSesionConfirmada).mockResolvedValue({
+    vi.mocked(obtenerSesionConfiable).mockResolvedValue({
       autenticado: false,
       usuario: null,
       roles: [],
@@ -96,14 +87,11 @@ describe('SesionProvider', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('autenticado')).toHaveTextContent('false'));
-    expect(consultarSesionInventario).toHaveBeenCalled();
+    expect(obtenerSesionConfiable).toHaveBeenCalled();
   });
 
   it('ignora un autenticado false puntual si la re-lectura confirma sesión activa', async () => {
-    vi.mocked(leerSesionConfirmada)
-      .mockResolvedValueOnce(SESION_ADMIN)
-      .mockResolvedValueOnce({ ...SESION_ADMIN, autenticado: false, usuario: null, puede_editar: false })
-      .mockResolvedValueOnce(SESION_ADMIN);
+    vi.mocked(obtenerSesionConfiable).mockResolvedValue(SESION_ADMIN);
 
     render(
       <SesionProvider>

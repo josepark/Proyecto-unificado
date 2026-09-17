@@ -191,6 +191,8 @@ class SesionPlataformaActivosTest(TestCase):
         r_lista = self.client.get("/api/activos/")
         self.assertEqual(r_lista.status_code, 200, r_lista.content)
         self.assertEqual(r_lista.json()["count"], 0)
+        r_meta = self.client.get("/api/activos/meta/")
+        self.assertEqual(r_meta.status_code, 200, r_meta.content)
 
 class PanelEjecutivoUnificadoTest(TestCase):
     """El Panel ejecutivo consolida indicadores propios del Inventario con
@@ -2249,6 +2251,23 @@ class IntegracionRiesgosOla8Test(TestCase):
             r = self.client.get("/api/activos/")
         fila = r.json()["results"][0]
         self.assertIsNone(fila["vinculado_riesgos"])
+
+
+class CrearRolesDemoTest(TestCase):
+    """Usuarios demo deben tener proyectos asignados (evita 403 en /api/activos/meta/)."""
+
+    def test_crear_roles_asigna_modulos_demo(self):
+        from django.core.management import call_command
+        from inventario.models import PerfilPlataforma
+
+        call_command("crear_roles")
+        perfil = PerfilPlataforma.objects.get(user__username="consultor")
+        self.assertEqual(set(perfil.modulos_acceso), {"inventario", "rbac"})
+        perfil_admin = PerfilPlataforma.objects.get(user__username="admin")
+        self.assertEqual(
+            set(perfil_admin.modulos_acceso),
+            {"inventario", "rbac", "riesgos"},
+        )
 
 
 class UsuariosPlataformaAPITest(TestCase):

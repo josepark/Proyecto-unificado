@@ -57,3 +57,10 @@ def tiene_modulo(user, modulo):
 
 def ruta_exenta_modulo_inventario(path):
     return any(path.startswith(prefix) for prefix in RUTAS_API_SIN_MODULO_INVENTARIO)
+
+
+def modulos_demo_para(username, rol=None):
+    """Proyectos por defecto para cuentas demo (admin / consultor / dinamizador)."""
+    if username == "admin" or rol == ROL_ADMIN:
+        return list(MODULOS_PLATAFORMA)
+    return [MODULO_INVENTARIO, MODULO_RBAC]

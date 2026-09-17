@@ -38,15 +38,19 @@ class Command(BaseCommand):
         admin.save()
         admin.groups.add(grupos["Administrador"])
         from inventario.espacio_datos import espacio_datos_de
+        from inventario.modulos_plataforma import modulos_demo_para
         from inventario.models import PerfilPlataforma
 
         espacio_datos_de(admin)
         perfil, _ = PerfilPlataforma.objects.get_or_create(user=admin)
+        perfil.modulos_acceso = modulos_demo_para("admin", "Administrador")
+        campos_perfil = ["modulos_acceso"]
         if perfil.mfa_habilitado or perfil.mfa_totp_secreto:
             perfil.mfa_habilitado = False
             perfil.mfa_totp_secreto = ""
-            perfil.save(update_fields=["mfa_habilitado", "mfa_totp_secreto"])
+            campos_perfil.extend(["mfa_habilitado", "mfa_totp_secreto"])
             self.stdout.write("  MFA desactivado en admin (heredado de SQLite)")
+        perfil.save(update_fields=campos_perfil)
         estado_admin = "creado" if admin_creado else ("contraseña restablecida" if reset else "verificado")
         self.stdout.write(
             f"  Usuario 'admin' (Administrador) {estado_admin}"
@@ -67,6 +71,9 @@ class Command(BaseCommand):
             u.save()
             u.groups.set([grupos[grupo]])
             espacio_datos_de(u)
+            perfil, _ = PerfilPlataforma.objects.get_or_create(user=u)
+            perfil.modulos_acceso = modulos_demo_para(username, grupo)
+            perfil.save(update_fields=["modulos_acceso"])
             if creado:
                 estado = "creado"
             elif reset:

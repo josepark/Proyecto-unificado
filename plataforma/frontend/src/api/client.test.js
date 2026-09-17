@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { crearCliente, eventosApi, consultarSesionInventario } from './client';
+import { crearCliente, eventosApi, consultarSesionInventario, obtenerSesionConfiable } from './client';
 
 describe('client — manejo de 401', () => {
   beforeEach(() => {
@@ -139,5 +139,35 @@ describe('client — manejo de 401', () => {
   it('consultarSesionInventario devuelve autenticado false si la petición falla', async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new Error('network'));
     await expect(consultarSesionInventario()).resolves.toEqual({ autenticado: false });
+  });
+
+  it('obtenerSesionConfiable reconfirma antes de devolver sesión cerrada', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ autenticado: false }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ autenticado: false }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          autenticado: true,
+          usuario: 'admin',
+          roles: ['Administrador'],
+          puede_editar: true,
+          puede_eliminar: true,
+        }),
+      });
+
+    await expect(obtenerSesionConfiable()).resolves.toMatchObject({
+      autenticado: true,
+      usuario: 'admin',
+    });
   });
 });

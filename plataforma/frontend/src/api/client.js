@@ -59,6 +59,15 @@ export async function leerSesionConfirmada() {
   return s;
 }
 
+/** Confirma cierre de sesión antes de aplicarlo (evita falsos negativos tras login). */
+export async function obtenerSesionConfiable() {
+  let s = await leerSesionConfirmada();
+  if (s.autenticado) return s;
+  const confirm = await consultarSesionInventario();
+  if (confirm.autenticado) return confirm;
+  return leerSesionConfirmada();
+}
+
 async function notificar401(url) {
   // RBAC solo expone /rbac/api/ protegida por auth_request de nginx — un 401
   // ahí significa "sin rol Dinamizador/Administrador" o un fallo puntual de la
