@@ -64,3 +64,26 @@ class RbacReadApiTest(TestCase):
     def test_matriz_comparar_requiere_params(self):
         r = self.client.get('/rbac/api/matriz/comparar')
         self.assertEqual(r.status_code, 400)
+
+    def test_sistemas_lista(self):
+        r = self.client.get('/rbac/api/sistemas')
+        self.assertEqual(r.status_code, 200, r.content)
+        data = r.json()
+        self.assertGreater(len(data), 0)
+        self.assertIn('n_roles', data[0])
+        self.assertIn('categoria', data[0])
+
+    def test_excepciones_lista(self):
+        r = self.client.get('/rbac/api/excepciones')
+        self.assertEqual(r.status_code, 200, r.content)
+        data = r.json()
+        self.assertIn('filas', data)
+        self.assertIn('total_vigentes', data)
+
+    def test_auditoria_lista(self):
+        r = self.client.get('/rbac/api/auditoria')
+        self.assertEqual(r.status_code, 200, r.content)
+        data = r.json()
+        self.assertIn('registros', data)
+        self.assertIn('total', data)
+        self.assertGreaterEqual(data['total'], len(data['registros']))

@@ -180,7 +180,7 @@ def inicio(esp, using='rbac'):
            FROM matriz_acceso ma JOIN rol r ON r.id = ma.rol_id
            JOIN sistema s ON s.id = ma.sistema_id
            WHERE ma.nivel_codigo='A' AND s.espacio_codigo=%s
-           GROUP BY r.id ORDER BY n_admin DESC""",
+           GROUP BY r.id, r.abreviatura, r.denominacion ORDER BY n_admin DESC""",
         [esp], using=using,
     )
     temporales = fetchall(
@@ -306,10 +306,10 @@ def obtener_rol(rid, esp, using='rbac'):
 def listar_sistemas(esp, q='', categoria='', clasificacion='', incluir_inactivos=False, using='rbac'):
     hoy = hoy_sql(using)
     sql = """SELECT s.*, cs.nombre categoria,
-                    SUM(CASE WHEN ma.nivel_codigo<>'—' THEN 1 ELSE 0 END) n_roles
+                    (SELECT COUNT(*) FROM matriz_acceso ma
+                     WHERE ma.sistema_id = s.id AND ma.nivel_codigo <> '—') n_roles
              FROM sistema s
              JOIN categoria_sistema cs ON cs.id = s.categoria_id
-             LEFT JOIN matriz_acceso ma ON ma.sistema_id = s.id
              WHERE s.espacio_codigo = %s"""
     params = [esp]
     if not incluir_inactivos:
@@ -323,7 +323,7 @@ def listar_sistemas(esp, q='', categoria='', clasificacion='', incluir_inactivos
     if clasificacion in CLASIFICACIONES:
         sql += ' AND s.clasificacion = %s'
         params.append(clasificacion)
-    sql += ' GROUP BY s.id ORDER BY s.id'
+    sql += ' ORDER BY s.id'
     sistemas = fetchall(sql, params, using=using)
 
     accesos = fetchall(
@@ -513,7 +513,7 @@ def matriz_heatmap(esp, using='rbac'):
            JOIN matriz_acceso ma ON ma.sistema_id = s.id
            JOIN rol r ON r.id = ma.rol_id AND {sql_activo('r.activo', using)}
            WHERE {sql_activo('s.activo', using)} AND s.espacio_codigo=%s
-           GROUP BY cat.id ORDER BY n_admin DESC, cat.nombre""",
+           GROUP BY cat.id, cat.nombre ORDER BY n_admin DESC, cat.nombre""",
         [esp], using=using,
     )
 
@@ -617,21 +617,22 @@ def listar_excepciones(esp, incluir_vencidas=False, using='rbac'):
 def auditoria(entidad='', accion='', q='', pagina=1, limite=50, using='rbac'):
     pagina = max(1, pagina)
     por_pagina = max(1, min(limite, 500))
-    sql = 'SELECT id, fecha, entidad, accion, detalle, responsable, hash FROM log_auditoria WHERE 1=1'
+    where = ' WHERE 1=1'
     params = []
     if entidad:
-        sql += ' AND entidad=%s'
+        where += ' AND entidad=%s'
         params.append(entidad)
     if accion:
-        sql += ' AND accion=%s'
+        where += ' AND accion=%s'
         params.append(accion)
     if q:
-        sql += ' AND (detalle LIKE %s OR responsable LIKE %s)'
+        where += ' AND (detalle LIKE %s OR responsable LIKE %s)'
         params += [f'%{q}%', f'%{q}%']
-    total = scalar(sql.replace('SELECT id, fecha', 'SELECT COUNT(*) n', 1), params, using=using)
+    total = scalar(f'SELECT COUNT(*) n FROM log_auditoria{where}', params, using=using)
     offset = (pagina - 1) * por_pagina
     registros = fetchall(
-        sql + ' ORDER BY id DESC LIMIT %s OFFSET %s',
+        'SELECT id, fecha, entidad, accion, detalle, responsable, hash '
+        f'FROM log_auditoria{where} ORDER BY id DESC LIMIT %s OFFSET %s',
         params + [por_pagina, offset],
         using=using,
     )
